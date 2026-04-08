@@ -1,0 +1,81 @@
+{
+  "blog_id": "superprof-ressources",
+  "display_name": "Superprof Ressources FR",
+  "domain": "superprof.fr",
+  "url_base": "https://www.superprof.fr/ressources/",
+  "gsc_property": "https://www.superprof.fr/",
+
+  "content_type": "blog_article",
+  "subject_category": "education_general",
+  "language": "fr",
+
+  "tone_profile": {
+    "style": "natural_informal",
+    "formality": "informal",
+    "voice": "encouraging_educator",
+    "characteristics": [
+      "Truthful",
+      "Ambitious",
+      "Understanding",
+      "Conversational without being careless",
+      "Frame things positively",
+      "Inspire learning and growth"
+    ],
+    "todo": "Tone & voice complet en attente de la PO Manager — pour l'instant, suivre Guide 1 (Voice & Tone)"
+  },
+
+  "seo_settings": {
+    "min_word_count": 1500,
+    "max_word_count": 2500,
+    "max_external_links": 2,
+    "money_keywords_in_blog_anchors_forbidden": true
+  },
+
+  "refresh_thresholds": {
+    "stale_months": 12,
+    "critical_months": 24,
+    "ctr_low_threshold": 2.0,
+    "impression_high_threshold": 1000,
+    "position_decline_alert": 5
+  },
+
+  "editorial_guides": [
+    "_shared/prompts/sites/superprof-ressources/guide-1-blog-writing-foundations.md",
+    "_shared/prompts/sites/superprof-ressources/guide-2-blog-writing-reference.md",
+    "_shared/prompts/sites/superprof-ressources/guide-3-working-with-refreshes.md"
+  ],
+
+  "brand_rules": {
+    "name": "Superprof",
+    "forbidden_spellings": ["Super Prof", "SuperProf", "SP"],
+    "no_pronouns": true
+  },
+
+  "linking_rules": {
+    "blog_to_blog_anchor_types": ["warm", "cold"],
+    "blog_to_landing_anchor_types": ["money"],
+    "landing_url_marker": "/lessons/",
+    "blog_url_marker": "/blog/"
+  },
+
+  "sheets_config": {
+    "spreadsheet_id": "12r9uGD1G4v0_VQWoVP1dGyepkp8pbKpf0t4bADtNSRk",
+    "input_sheet": "URLs_Input",
+    "results_sheet": "Refresh_Results"
+  },
+
+  "scraping_config": {
+    "article_body": "article.post-content, article.entry-content, .post-content, .entry-content",
+    "exclude_selectors": [
+      "nav",
+      "aside.sidebar",
+      ".navigation",
+      ".comments",
+      "footer.entry-footer",
+      ".related-posts",
+      ".sharedaddy"
+    ],
+    "timeout": 30,
+    "requires_playwright": false
+  }
+}

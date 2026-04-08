@@ -1,0 +1,4 @@
+{
+  "_doc": "Registre des landings Superprof par site. Chaque landing a des KW cibles (P2-P10 DataForSEO), un pool d'ancres variées et un poids de rotation. Le rotator sélectionne la landing + ancre à chaque génération.",
+  "_updated": "2026-04-07"
+}

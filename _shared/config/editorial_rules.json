@@ -1,0 +1,247 @@
+{
+  "$schema": "editorial_rules_schema_v1",
+  "version": "1.0.0",
+  "description": "Editorial validation rules for quality gate (pre-refresh)",
+
+  "topics": {
+    "parcoursup_2026": {
+      "name": "Parcoursup 2026",
+      "category": "education_orientation",
+      "ymyl_level": "high",
+      "required_dates": [
+        {
+          "label": "inscriptions",
+          "date": "2026-01-19",
+          "description": "Ouverture plateforme Parcoursup"
+        },
+        {
+          "label": "vœux",
+          "date": "2026-03-12",
+          "description": "Date limite formulation vœux"
+        },
+        {
+          "label": "finalisation",
+          "date": "2026-04-01",
+          "description": "Date limite finalisation dossier"
+        },
+        {
+          "label": "résultats",
+          "date": "2026-06-02",
+          "description": "Début phase d'admission principale"
+        },
+        {
+          "label": "phase_complémentaire",
+          "date": "2026-06-11",
+          "description": "Ouverture phase complémentaire"
+        }
+      ],
+      "required_entities": [
+        "CAES",
+        "étudiants ambassadeurs",
+        "commission d'accès à l'enseignement supérieur",
+        "vœux multiples",
+        "sous-vœux"
+      ],
+      "authoritative_sources": [
+        "parcoursup.gouv.fr",
+        "parcoursup.fr",
+        "education.gouv.fr",
+        "enseignementsup-recherche.gouv.fr"
+      ],
+      "forbidden_generics": [
+        "il est important de",
+        "il faut absolument",
+        "n'oubliez pas que",
+        "comme chacun sait"
+      ],
+      "obsolete_patterns": [
+        {
+          "pattern": "2025",
+          "context": "dates",
+          "replacement": "2026"
+        },
+        {
+          "pattern": "2024",
+          "context": "dates",
+          "replacement": "2026"
+        }
+      ]
+    },
+
+    "brevet_2026": {
+      "name": "Brevet des Collèges 2026",
+      "category": "education_exams",
+      "ymyl_level": "medium",
+      "required_dates": [
+        {
+          "label": "épreuves_écrites",
+          "date": "2026-06-29",
+          "description": "Premier jour épreuves écrites (français, maths)"
+        },
+        {
+          "label": "épreuves_écrites_jour2",
+          "date": "2026-06-30",
+          "description": "Deuxième jour (histoire-géo, sciences)"
+        }
+      ],
+      "required_entities": [
+        "contrôle continu",
+        "épreuves terminales",
+        "oral",
+        "400 points",
+        "mentions"
+      ],
+      "authoritative_sources": [
+        "eduscol.education.fr",
+        "education.gouv.fr"
+      ],
+      "forbidden_generics": [
+        "il est essentiel de",
+        "ne négligez pas",
+        "pensez à bien"
+      ],
+      "obsolete_patterns": [
+        {
+          "pattern": "2025",
+          "context": "dates",
+          "replacement": "2026"
+        }
+      ]
+    },
+
+    "bac_2026": {
+      "name": "Baccalauréat 2026",
+      "category": "education_exams",
+      "ymyl_level": "medium",
+      "required_dates": [
+        {
+          "label": "épreuves_spécialités",
+          "date": "2026-03-18",
+          "description": "Début épreuves de spécialités"
+        },
+        {
+          "label": "grand_oral",
+          "date": "2026-06-22",
+          "description": "Début période grand oral"
+        },
+        {
+          "label": "philosophie",
+          "date": "2026-06-17",
+          "description": "Épreuve de philosophie"
+        }
+      ],
+      "required_entities": [
+        "contrôle continu",
+        "épreuves terminales",
+        "grand oral",
+        "spécialités",
+        "coefficient"
+      ],
+      "authoritative_sources": [
+        "eduscol.education.fr",
+        "education.gouv.fr",
+        "quandjepasselebac.education.fr"
+      ],
+      "forbidden_generics": [
+        "il est crucial de",
+        "ne sous-estimez pas",
+        "rappelez-vous que"
+      ],
+      "obsolete_patterns": [
+        {
+          "pattern": "2025",
+          "context": "dates",
+          "replacement": "2026"
+        }
+      ]
+    },
+
+    "yoga_health": {
+      "name": "Yoga & Santé",
+      "category": "health_wellness",
+      "ymyl_level": "very_high",
+      "required_disclaimers": [
+        "Ces informations ne remplacent pas un avis médical",
+        "Consultez un professionnel de santé avant de commencer",
+        "Arrêtez en cas de douleur"
+      ],
+      "authoritative_sources": [
+        "has-sante.fr",
+        "inserm.fr",
+        "ameli.fr"
+      ],
+      "forbidden_claims": [
+        "guérit",
+        "traite",
+        "soigne",
+        "remplace un traitement médical"
+      ],
+      "required_contraindications": true,
+      "forbidden_generics": [
+        "tout le monde peut",
+        "sans risque",
+        "100% naturel donc sans danger"
+      ]
+    },
+
+    "sport_fitness": {
+      "name": "Sport & Fitness",
+      "category": "health_safety",
+      "ymyl_level": "very_high",
+      "required_disclaimers": [
+        "Consultez un médecin avant de commencer un programme sportif",
+        "Adaptez les exercices à votre niveau",
+        "Arrêtez en cas de douleur"
+      ],
+      "authoritative_sources": [
+        "sports.gouv.fr",
+        "inserm.fr",
+        "has-sante.fr"
+      ],
+      "forbidden_claims": [
+        "perdre X kg en Y jours garantis",
+        "sans effort",
+        "miracle"
+      ],
+      "required_injury_prevention": true,
+      "forbidden_generics": [
+        "résultats garantis",
+        "sans risque de blessure",
+        "100% sûr"
+      ]
+    }
+  },
+
+  "global_rules": {
+    "min_sources_by_ymyl": {
+      "very_high": 2,
+      "high": 1,
+      "medium": 1,
+      "low": 0
+    },
+    "forbidden_generics_global": [
+      "il va sans dire que",
+      "comme tout le monde le sait",
+      "évidemment",
+      "bien entendu",
+      "inutile de préciser que"
+    ],
+    "stat_freshness_months": 24,
+    "max_generic_statements": 3
+  },
+
+  "scoring": {
+    "truth_weight": 0.40,
+    "eeat_weight": 0.30,
+    "freshness_weight": 0.20,
+    "genericness_weight": 0.10,
+    "penalties": {
+      "critical_factual_error": -2,
+      "obsolete_stat": -1,
+      "missing_source_ymyl": -2,
+      "generic_statement": -0.5,
+      "max_generic_penalty": -2
+    },
+    "quality_gate_threshold": 4
+  }
+}

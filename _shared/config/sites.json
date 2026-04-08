@@ -1,0 +1,56 @@
+{
+  "notion_refresh_tracker_db_id": "44ccd367-afa9-4221-8067-c76ff54ff534",
+  "sites": [
+    {
+      "id": "enseigna",
+      "name": "Enseigna",
+      "domain": "enseigna.fr",
+      "gsc_property": "https://enseigna.fr/",
+      "sheet_id": "SHEET_ID_ENSEIGNA",
+      "credentials": "enseigna-gsc.json",
+      "active": true,
+      "subject_category": "education_reviews",
+      "content_type": "review",
+      "ymyl_level": "medium",
+      "registre": "vouvoiement",
+      "blacklist": [
+        "acadomia.fr",
+        "kelprof.com",
+        "apprentus.fr",
+        "voscours.fr",
+        "completchude.com"
+      ],
+      "rating_system": {
+        "superprof_baseline": "9/10",
+        "competitors_max": "8/10"
+      },
+      "cesu_formula": "(Prix net x 1.8076) x 0.5",
+      "acf_fields": 15,
+      "pbn_website_id": 492,
+      "notion_commandes_db_id": "76294c0e-d26d-4c28-b2af-92fa0b40bc91",
+      "notion_sujets_db_id": ""
+    },
+    {
+      "id": "superprof-ressources",
+      "name": "Superprof Ressources FR",
+      "domain": "superprof.fr",
+      "url_base": "https://www.superprof.fr/ressources/",
+      "gsc_property": "https://www.superprof.fr/",
+      "sheet_id": "12r9uGD1G4v0_VQWoVP1dGyepkp8pbKpf0t4bADtNSRk",
+      "credentials": "superprof-ressources-gsc.json",
+      "active": true,
+      "subject_category": "education_general",
+      "content_type": "blog_article",
+      "ymyl_level": "low",
+      "registre": "tutoiement_informel",
+      "language": "fr",
+      "editorial_guides": [
+        "_shared/prompts/sites/superprof-ressources/guide-1-blog-writing-foundations.md",
+        "_shared/prompts/sites/superprof-ressources/guide-2-blog-writing-reference.md",
+        "_shared/prompts/sites/superprof-ressources/guide-3-working-with-refreshes.md"
+      ],
+      "notion_commandes_db_id": "",
+      "notion_sujets_db_id": ""
+    }
+  ]
+}

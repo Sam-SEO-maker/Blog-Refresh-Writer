@@ -1,0 +1,30 @@
+# SEO Refresh Agent - Dependencies
+# ================================
+
+# API HTTP calls
+requests>=2.31.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# CLI framework
+click>=8.1.0
+
+# Web scraping (Phase 3)
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+# playwright>=1.40.0  # Optional: JS rendering fallback (install manually if needed)
+tenacity>=8.2.0  # Retry logic
+
+# Google Sheets API
+google-api-python-client>=2.0.0
+google-auth-httplib2>=0.1.0
+google-auth-oauthlib>=0.5.0
+
+# Testing framework
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+
+# MCP Protocol (optional - for standalone mode)
+# Note: Claude Code IDE provides MCP client automatically
+# mcp>=0.1.0

@@ -1,0 +1,408 @@
+{
+  "_comment": "Règles de décision pour le moteur de stratégie de refresh",
+
+  "rules": [
+    {
+      "id": "keyword_provided_low_traffic",
+      "name": "Keyword Fourni + Trafic Faible",
+      "description": "Article avec keyword cible fourni mais peu de trafic - analyser gaps concurrents et proposer refresh",
+      "priority": 0,
+      "conditions": {
+        "has_provided_keyword": {"operator": "==", "value": true},
+        "clicks_30d": {"operator": "<=", "value": 1}
+      },
+      "action": "CONTENT_GAP_ANALYSIS",
+      "rewrite_scope": "full_with_gaps",
+      "alert_level": "medium",
+      "alert_message": "Article en attente d'optimisation SEO basee sur analyse des TOP 3 concurrents."
+    },
+    {
+      "id": "insufficient_data",
+      "name": "Données GSC Insuffisantes",
+      "description": "Données insuffisantes pour une analyse fiable - nouveau domaine ou historique court",
+      "priority": 1,
+      "conditions": {
+        "clicks_30d": {"operator": "<=", "value": 0},
+        "impressions_30d": {"operator": "<", "value": 100}
+      },
+      "action": "DATA_COLLECTION_REQUIRED",
+      "rewrite_scope": "none",
+      "alert_level": "info",
+      "alert_message": "Donnees insuffisantes pour decision de refresh. Attendre plus de trafic ou verifier indexation."
+    },
+    {
+      "id": "url_not_on_google",
+      "name": "URL Absente de l'Index Google",
+      "description": "Page crawlée mais absente de l'index - nécessite E-E-A-T rewrite",
+      "priority": 0,
+      "conditions": {
+        "index_diagnostic_scenario": {"operator": "==", "value": "URL_NOT_ON_GOOGLE"}
+      },
+      "action": "FULL_REFRESH",
+      "rewrite_scope": "full_with_eeat",
+      "estimated_tokens": 5000,
+      "alert_level": "high",
+      "alert_message": "URL crawlée mais non indexée - FULL REFRESH avec renforcement E-E-A-T requis"
+    },
+    {
+      "id": "indexing_issue_detected",
+      "name": "Erreurs d'Indexation Détectées",
+      "description": "Page indexée mais avec erreurs mobile/structured data",
+      "priority": 2,
+      "conditions": {
+        "index_diagnostic_scenario": {"operator": "==", "value": "INDEXING_ISSUE"}
+      },
+      "action": "PARTIAL_REFRESH",
+      "rewrite_scope": "structure_fix",
+      "estimated_tokens": 2000,
+      "alert_level": "medium",
+      "alert_message": "Erreurs mobiles ou structured data détectées - correction structure requise"
+    },
+    {
+      "id": "discovered_not_indexed",
+      "name": "URL Découverte Non Crawlée",
+      "description": "URL connue de Google mais jamais crawlée",
+      "priority": 3,
+      "conditions": {
+        "index_diagnostic_scenario": {"operator": "==", "value": "DISCOVERED_NOT_INDEXED"}
+      },
+      "action": "CONTENT_QUALITY_CHECK",
+      "rewrite_scope": "targeted_sections",
+      "estimated_tokens": 2500,
+      "alert_level": "low",
+      "alert_message": "URL découverte mais non crawlée - vérifier qualité et maillage interne"
+    },
+    {
+      "id": "low_ctr_high_impressions",
+      "name": "CTR Faible avec Impressions Élevées",
+      "description": "L'article est visible mais ne génère pas de clics - optimiser titre/meta",
+      "priority": 1,
+      "conditions": {
+        "ctr": {"operator": "<", "value": 2.0, "unit": "percent"},
+        "impressions_30d": {"operator": ">", "value": 500}
+      },
+      "action": "TITLE_OPTIMIZATION",
+      "rewrite_scope": "title_meta_only",
+      "estimated_tokens": 500,
+      "prompt_template": "strategies/title_optimization.md"
+    },
+    {
+      "id": "main_keyword_declining_variants_rising",
+      "name": "Shift Sémantique Détecté",
+      "description": "Le mot-clé principal perd des positions mais les variantes progressent",
+      "priority": 2,
+      "conditions": {
+        "main_keyword_trend": {"operator": "<", "value": -20, "unit": "percent"},
+        "variant_keywords_trend": {"operator": ">", "value": 10, "unit": "percent"}
+      },
+      "action": "SEMANTIC_REORIENTATION",
+      "rewrite_scope": "full_with_eeat",
+      "estimated_tokens": 4000,
+      "prompt_template": "strategies/semantic_reorientation.md",
+      "special_instructions": "Renforcer les signaux E-E-A-T, réorienter vers les variantes performantes"
+    },
+    {
+      "id": "cannibalization_severe",
+      "name": "Cannibalisation Sévère",
+      "description": "Une autre URL du même site performe mieux sur le même mot-clé",
+      "priority": 1,
+      "conditions": {
+        "cannibalization_severity": {"operator": ">=", "value": "HIGH"},
+        "overlap_percentage": {"operator": ">=", "value": 60}
+      },
+      "action": "ALERT_REDIRECT_OR_SPECIALIZE",
+      "sub_actions": [
+        {
+          "condition": "other_url_significantly_stronger",
+          "threshold": {"position_diff": 10, "traffic_ratio": 3},
+          "action": "SUGGEST_301",
+          "alert_message": "Action Requise: Redirect 301 vers {stronger_url}"
+        },
+        {
+          "condition": "similar_performance",
+          "action": "LONG_TAIL_SPECIALIZATION",
+          "alert_message": "Action Requise: Spécialisation longue traîne"
+        }
+      ],
+      "sheets_column_update": "action_requise"
+    },
+    {
+      "id": "format_mismatch",
+      "name": "Format Non Adapté à la SERP",
+      "description": "Le format actuel (ex: Guide) ne correspond pas au format dominant de la SERP (ex: Listicle)",
+      "priority": 3,
+      "conditions": {
+        "current_format": {"operator": "!=", "value": "serp_dominant_format"},
+        "serp_format_confidence": {"operator": ">", "value": 70, "unit": "percent"}
+      },
+      "action": "FORMAT_ADAPTATION",
+      "rewrite_scope": "structure_change",
+      "estimated_tokens": 3000,
+      "prompt_template": "strategies/format_adaptation.md",
+      "format_mappings": {
+        "guide_to_listicle": "Restructurer en liste numérotée avec intro courte",
+        "article_to_faq": "Ajouter section FAQ dominante, restructurer en Q&A",
+        "text_to_comparison": "Ajouter tableau comparatif, structure comparative"
+      }
+    },
+    {
+      "id": "content_stale_moderate",
+      "name": "Contenu Obsolète (Modéré)",
+      "description": "Contenu de plus de 12 mois sans mise à jour substantielle",
+      "priority": 4,
+      "conditions": {
+        "months_since_update": {"operator": ">", "value": 12},
+        "performance_stable": {"operator": "==", "value": true}
+      },
+      "action": "PARTIAL_REFRESH",
+      "rewrite_scope": "diff_based",
+      "estimated_tokens": 1500,
+      "prompt_template": "strategies/partial_refresh.md",
+      "refresh_elements": [
+        "statistics_update",
+        "date_references",
+        "source_links",
+        "faq_paa_update"
+      ]
+    },
+    {
+      "id": "content_stale_critical",
+      "name": "Contenu Obsolète (Critique)",
+      "description": "Contenu de plus de 18 mois ou avec données très obsolètes",
+      "priority": 2,
+      "conditions": {
+        "months_since_update": {"operator": ">", "value": 18}
+      },
+      "action": "FULL_REFRESH",
+      "rewrite_scope": "full_content",
+      "estimated_tokens": 4000,
+      "prompt_template": "prompts/refresh_article.md"
+    },
+    {
+      "id": "position_drop_significant",
+      "name": "Chute de Position Significative",
+      "description": "Perte de plus de 10 positions sur le mot-clé principal",
+      "priority": 2,
+      "conditions": {
+        "position_change_30d": {"operator": ">", "value": 10},
+        "previous_position": {"operator": "<", "value": 20}
+      },
+      "action": "CONTENT_AUDIT_AND_REFRESH",
+      "rewrite_scope": "targeted_sections",
+      "estimated_tokens": 2500,
+      "diagnostic_steps": [
+        "check_competitor_content",
+        "identify_content_gaps",
+        "verify_eeat_signals",
+        "check_technical_issues"
+      ]
+    },
+    {
+      "id": "traffic_drop_severe",
+      "name": "Chute de Trafic Sévère",
+      "description": "Perte de plus de 50% du trafic sur 3 mois",
+      "priority": 1,
+      "conditions": {
+        "traffic_change_90d": {"operator": "<", "value": -50, "unit": "percent"}
+      },
+      "action": "DEEP_AUDIT_AND_REWRITE",
+      "rewrite_scope": "full_with_eeat",
+      "estimated_tokens": 4500,
+      "requires_manual_review": true,
+      "alert_level": "high"
+    },
+    {
+      "id": "deindexed_page",
+      "name": "Page Désindexée",
+      "description": "La page n'apparaît plus dans l'index Google",
+      "priority": 1,
+      "conditions": {
+        "indexation_status": {"operator": "==", "value": "NOT_INDEXED"}
+      },
+      "action": "EEAT_REWRITE",
+      "rewrite_scope": "full_eeat_focus",
+      "estimated_tokens": 5000,
+      "requires_manual_review": true,
+      "diagnostic_checks": [
+        "robots_txt",
+        "noindex_tag",
+        "canonical_issues",
+        "content_quality"
+      ]
+    },
+    {
+      "id": "no_action_needed",
+      "name": "Aucune Action Nécessaire",
+      "description": "L'article performe bien et est à jour",
+      "priority": 10,
+      "conditions": {
+        "months_since_update": {"operator": "<", "value": 6},
+        "position_stable_or_improving": {"operator": "==", "value": true},
+        "ctr": {"operator": ">", "value": 3.0, "unit": "percent"}
+      },
+      "action": "NO_ACTION",
+      "next_check_months": 3
+    }
+  ],
+
+  "action_strategies": {
+    "TITLE_OPTIMIZATION": {
+      "description": "Optimisation du titre H1 et de la meta description uniquement",
+      "rewrite_scope": "title_meta_only",
+      "estimated_tokens": 500,
+      "preserve_content": true,
+      "elements_to_modify": ["h1", "meta_description"],
+      "guidelines": [
+        "Analyser les titres des 3 premiers résultats SERP",
+        "Ajouter l'année si pertinent",
+        "Utiliser des power words pour améliorer le CTR",
+        "Garder sous 60 caractères pour le titre"
+      ]
+    },
+    "SEMANTIC_REORIENTATION": {
+      "description": "Réorientation sémantique vers les variantes de mots-clés performantes",
+      "rewrite_scope": "full_with_eeat",
+      "estimated_tokens": 4000,
+      "preserve_content": false,
+      "elements_to_modify": ["h1", "h2_structure", "content", "meta"],
+      "guidelines": [
+        "Identifier les variantes de mots-clés en progression",
+        "Restructurer le contenu autour de ces variantes",
+        "Renforcer les signaux E-E-A-T",
+        "Ajouter des preuves d'expertise"
+      ]
+    },
+    "FORMAT_ADAPTATION": {
+      "description": "Adaptation du format de l'article au format dominant de la SERP",
+      "rewrite_scope": "structure_change",
+      "estimated_tokens": 3000,
+      "preserve_content": "partial",
+      "elements_to_modify": ["structure", "h2_h3", "formatting"],
+      "guidelines": [
+        "Identifier le format dominant sur la SERP",
+        "Restructurer sans perdre le contenu de valeur",
+        "Adapter les éléments visuels (listes, tableaux)",
+        "Conserver les assets (images, liens)"
+      ]
+    },
+    "PARTIAL_REFRESH": {
+      "description": "Rafraîchissement partiel des éléments obsolètes",
+      "rewrite_scope": "diff_based",
+      "estimated_tokens": 1500,
+      "preserve_content": true,
+      "elements_to_modify": ["statistics", "dates", "sources", "faq"],
+      "guidelines": [
+        "Mettre à jour uniquement les données obsolètes",
+        "Conserver la structure et le style",
+        "Ajouter des sources récentes (2025-2026)",
+        "Actualiser la section FAQ avec les PAA actuels"
+      ]
+    },
+    "SUGGEST_301": {
+      "description": "Suggestion de redirection 301 vers une URL plus performante",
+      "rewrite_scope": "none",
+      "action_type": "redirect",
+      "requires_manual_approval": true,
+      "sheet_update": {
+        "column": "action_requise",
+        "value": "Redirect 301 vers {target_url}"
+      }
+    },
+    "LONG_TAIL_SPECIALIZATION": {
+      "description": "Spécialisation sur une requête longue traîne pour éviter la cannibalisation",
+      "rewrite_scope": "targeted_sections",
+      "estimated_tokens": 2000,
+      "guidelines": [
+        "Identifier une variante longue traîne unique",
+        "Recentrer le contenu sur cette variante",
+        "Différencier clairement de l'autre URL",
+        "Ajuster le maillage interne"
+      ]
+    },
+    "CONTENT_GAP_ANALYSIS": {
+      "description": "Analyse des gaps de contenu vs TOP 3 concurrents et proposition de refresh",
+      "rewrite_scope": "full_with_gaps",
+      "action_type": "refresh",
+      "estimated_tokens": 5000,
+      "requires_manual_review": false,
+      "alert_level": "medium",
+      "guidelines": [
+        "Analyser TOP 3 concurrents pour le keyword fourni",
+        "Identifier manques: images, tableaux, sections, FAQ, pricing, reviews",
+        "Proposer ajouts specifiques selon SERP features (PAA, local pack, videos, etc)",
+        "Rediger contenu en ciblant les 3 intents detectes",
+        "Ajouter E-E-A-T renforce via sources et disclaimers"
+      ],
+      "sheet_update": {
+        "column": "strategy_applied",
+        "value": "CONTENT_GAP_ANALYSIS"
+      },
+      "next_check_months": 1
+    },
+    "DATA_COLLECTION_REQUIRED": {
+      "description": "Collecte de donnees requise avant analyse",
+      "rewrite_scope": "none",
+      "action_type": "diagnostic",
+      "requires_manual_review": true,
+      "alert_level": "warning",
+      "sheet_update": {
+        "column": "action_requise",
+        "value": "En attente donnees GSC/DataForSEO - verifier property GSC et indexation"
+      },
+      "next_check_hours": 24
+    },
+    "NO_ACTION": {
+      "description": "Aucune action nécessaire",
+      "rewrite_scope": "none",
+      "next_check_months": 3
+    }
+  },
+
+  "severity_levels": {
+    "HIGH": {
+      "overlap_percentage_min": 60,
+      "description": "Cannibalisation sévère - action immédiate requise"
+    },
+    "MEDIUM": {
+      "overlap_percentage_min": 40,
+      "overlap_percentage_max": 59,
+      "description": "Cannibalisation modérée - surveillance et action planifiée"
+    },
+    "LOW": {
+      "overlap_percentage_min": 20,
+      "overlap_percentage_max": 39,
+      "description": "Cannibalisation légère - différenciation recommandée"
+    }
+  },
+
+  "thresholds": {
+    "ctr_low": 2.0,
+    "ctr_good": 3.5,
+    "impressions_significant": 500,
+    "position_drop_alert": 5,
+    "position_drop_severe": 10,
+    "traffic_drop_moderate": -30,
+    "traffic_drop_severe": -50,
+    "stale_months_check": 6,
+    "stale_months_refresh": 12,
+    "stale_months_critical": 18
+  },
+
+  "evaluation_order": [
+    "keyword_provided_low_traffic",
+    "insufficient_data",
+    "url_not_on_google",
+    "indexing_issue_detected",
+    "discovered_not_indexed",
+    "deindexed_page",
+    "traffic_drop_severe",
+    "cannibalization_severe",
+    "low_ctr_high_impressions",
+    "main_keyword_declining_variants_rising",
+    "position_drop_significant",
+    "format_mismatch",
+    "content_stale_critical",
+    "content_stale_moderate",
+    "no_action_needed"
+  ]
+}

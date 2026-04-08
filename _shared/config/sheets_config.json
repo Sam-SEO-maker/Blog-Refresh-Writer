@@ -1,0 +1,38 @@
+{
+  "spreadsheet_id": "12r9uGD1G4v0_VQWoVP1dGyepkp8pbKpf0t4bADtNSRk",
+  "spreadsheet_name": "Content Writer — Refresh Tracker",
+  "description": "Operational spreadsheet for Content Writer (Enseigna + Superprof Ressources FR)",
+  "sheets": {
+    "Refreshs_Audit": {
+      "type": "primary",
+      "description": "Unified sheet — single source of truth for all refresh ops"
+    }
+  },
+  "columns": [
+    "blog_id",
+    "blogpost_url",
+    "main_keyword",
+    "title",
+    "action_blogpost",
+    "status",
+    "audit_gsc",
+    "audit_serp",
+    "impressions_30d",
+    "clicks_30d",
+    "ctr_30d",
+    "people_also_ask",
+    "secondary_keywords",
+    "new_h1_title",
+    "new_h2_titles",
+    "word_count_before",
+    "images_count",
+    "internal_links_count",
+    "error_message",
+    "Index Diagnostic",
+    "blocking_issues_count"
+  ],
+  "notes": [
+    "Spreadsheet ID set to the new Content Writer tracker.",
+    "Column schema is the single source of truth — sheets_client.py mappings must match this list."
+  ]
+}
