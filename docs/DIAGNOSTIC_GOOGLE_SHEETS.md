@@ -1,4 +1,4 @@
-# 🔍 Diagnostic Google Sheets - Super Refresh Writer
+# 🔍 Diagnostic Google Sheets - Content Writer
 
 ## ✅ Ce qui fonctionne
 

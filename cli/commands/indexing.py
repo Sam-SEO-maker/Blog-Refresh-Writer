@@ -2,9 +2,9 @@
 Commandes d'indexation.
 
 Usage:
-    srw indexing request --blog enseigna [--spreadsheet-id <ID>]
-    srw indexing scan --blog enseigna
-    srw indexing bulk-diagnostic --blog enseigna
+    cw indexing request --blog enseigna [--spreadsheet-id <ID>]
+    cw indexing scan --blog enseigna
+    cw indexing bulk-diagnostic --blog enseigna
 """
 
 import click

@@ -53,12 +53,12 @@ Le cache contient :
 Détecte les articles publiés depuis le dernier crawl :
 
 ```bash
-python sitemap_discovery.py --blog educationetdevenir.fr --detect-new
+python sitemap_discovery.py --blog enseigna --detect-new
 ```
 
 **Output** :
 ```
-📡 Découverte nouvelles URLs pour educationetdevenir.fr...
+📡 Découverte nouvelles URLs pour enseigna...
   ✅ URLs actuelles: 157
   📊 URLs précédentes: 128
   🆕 Nouvelles URLs: 29
@@ -70,12 +70,12 @@ python sitemap_discovery.py --blog educationetdevenir.fr --detect-new
 Identifie les articles nécessitant un refresh :
 
 ```bash
-python sitemap_discovery.py --blog moments-yoga.fr --find-stale --months 6
+python sitemap_discovery.py --blog enseigna --find-stale --months 6
 ```
 
 **Output** :
 ```
-🔍 Recherche contenu obsolète pour moments-yoga.fr (> 6 mois)...
+🔍 Recherche contenu obsolète pour enseigna (> 6 mois)...
   ✅ URLs obsolètes trouvées: 73
 
   📊 Répartition par priorité:
@@ -105,7 +105,7 @@ python sitemap_discovery.py --all-blogs --find-stale --months 6 --min-priority 3
 Fonctionnalité en cours d'implémentation :
 
 ```bash
-python sitemap_discovery.py --blog educationetdevenir.fr --find-stale --export-to-sheets --dry-run
+python sitemap_discovery.py --blog enseigna --find-stale --export-to-sheets --dry-run
 ```
 
 ---
@@ -130,7 +130,7 @@ python sitemap_discovery.py --blog educationetdevenir.fr --find-stale --export-t
 
 ```bash
 # Trouver tout le contenu > 6 mois
-python sitemap_discovery.py --blog educationetdevenir.fr --find-stale --months 6 --min-priority 3
+python sitemap_discovery.py --blog enseigna --find-stale --months 6 --min-priority 3
 
 # Résultat : 128 URLs obsolètes
 # Action : Ajouter les priorités 5 et 4 (101 URLs) dans Google Sheets pour refresh
@@ -166,9 +166,9 @@ python sitemap_discovery.py --all-blogs --find-stale --months 12 --min-priority 
 **Objectif** : Refresh urgent pour blogs santé/finance (YMYL).
 
 ```bash
-# moments-yoga.fr et coachsportlyon.fr : YMYL VERY HIGH
-python sitemap_discovery.py --blog moments-yoga.fr --find-stale --months 4 --min-priority 4
-python sitemap_discovery.py --blog coachsportlyon.fr --find-stale --months 4 --min-priority 4
+# enseigna et enseigna : YMYL VERY HIGH
+python sitemap_discovery.py --blog enseigna --find-stale --months 4 --min-priority 4
+python sitemap_discovery.py --blog enseigna --find-stale --months 4 --min-priority 4
 
 # Action : Priorité absolue pour ces URLs (disclaimers, sources médicales)
 ```
@@ -236,9 +236,9 @@ Chaque blog peut spécifier l'URL de son sitemap dans sa config JSON :
 
 ```json
 {
-  "blog_id": "educationetdevenir",
-  "domain": "educationetdevenir.fr",
-  "sitemap_url": "https://educationetdevenir.fr/sitemap.xml",
+  "blog_id": "enseigna",
+  "domain": "enseigna",
+  "sitemap_url": "https://enseigna/sitemap.xml",
   ...
 }
 ```
@@ -268,12 +268,12 @@ Chaque blog peut spécifier l'URL de son sitemap dans sa config JSON :
 
 ## Exemples Réels
 
-### Exemple 1 : educationetdevenir.fr
+### Exemple 1 : enseigna
 
 ```bash
-$ python sitemap_discovery.py --blog educationetdevenir.fr --find-stale --months 6
+$ python sitemap_discovery.py --blog enseigna --find-stale --months 6
 
-🔍 Recherche contenu obsolète pour educationetdevenir.fr (> 6 mois)...
+🔍 Recherche contenu obsolète pour enseigna (> 6 mois)...
   ✅ URLs obsolètes trouvées: 128
 
   📊 Répartition par priorité:
@@ -282,9 +282,9 @@ $ python sitemap_discovery.py --blog educationetdevenir.fr --find-stale --months
     ⭐⭐⭐ Priorité 3: 27 URLs
 
   Top 10 URLs à refresh en priorité:
-    1. ⭐⭐⭐⭐⭐ https://educationetdevenir.fr/quel-est-le-prix-dun-cours-particulier/
+    1. ⭐⭐⭐⭐⭐ https://enseigna/quel-est-le-prix-dun-cours-particulier/
        Âge: 702 jours (1.9 ans)
-    2. ⭐⭐⭐⭐⭐ https://educationetdevenir.fr/ou-peut-on-donner-des-cours-particuliers/
+    2. ⭐⭐⭐⭐⭐ https://enseigna/ou-peut-on-donner-des-enseigna/
        Âge: 702 jours
     ...
 ```
@@ -293,12 +293,12 @@ $ python sitemap_discovery.py --blog educationetdevenir.fr --find-stale --months
 - 73 articles > 1 an → Refresh urgent (données Parcoursup obsolètes)
 - Priorité haute pour articles "cours particuliers" (forte concurrence)
 
-### Exemple 2 : moments-yoga.fr (YMYL)
+### Exemple 2 : enseigna (YMYL)
 
 ```bash
-$ python sitemap_discovery.py --blog moments-yoga.fr --find-stale --months 4 --min-priority 4
+$ python sitemap_discovery.py --blog enseigna --find-stale --months 4 --min-priority 4
 
-🔍 Recherche contenu obsolète pour moments-yoga.fr (> 4 mois)...
+🔍 Recherche contenu obsolète pour enseigna (> 4 mois)...
   ✅ URLs obsolètes trouvées: 45
 
   📊 Répartition par priorité:
@@ -343,11 +343,11 @@ ls -lh _shared/temp/sitemaps/*/sitemap_cache.json
 | Blog ID | Domain | Sitemap Status |
 |---------|--------|----------------|
 | enseigna | enseigna.fr | ✅ Auto-découverte |
-| cours-particuliers | cours-particuliers.com | ✅ Auto-découverte |
-| educationetdevenir | educationetdevenir.fr | ✅ Auto-découverte |
-| moments-yoga | moments-yoga.fr | ✅ Auto-découverte |
-| mymusicteacher | mymusicteacher.fr | ✅ Auto-découverte |
-| coachsportlyon | coachsportlyon.fr | ✅ Auto-découverte |
+| enseigna | enseigna | ✅ Auto-découverte |
+| enseigna | enseigna | ✅ Auto-découverte |
+| enseigna | enseigna | ✅ Auto-découverte |
+| enseigna | enseigna | ✅ Auto-découverte |
+| enseigna | enseigna | ✅ Auto-découverte |
 
 ### Dépendances
 

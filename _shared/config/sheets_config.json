@@ -1,38 +1,38 @@
 {
-  "spreadsheet_id": "12r9uGD1G4v0_VQWoVP1dGyepkp8pbKpf0t4bADtNSRk",
-  "spreadsheet_name": "Content Writer — Refresh Tracker",
-  "description": "Operational spreadsheet for Content Writer (Enseigna + Superprof Ressources FR)",
-  "sheets": {
-    "Refreshs_Audit": {
-      "type": "primary",
-      "description": "Unified sheet — single source of truth for all refresh ops"
+  "_doc": "Configuration des spreadsheets opérationnelles. 2 spreadsheets distinctes : une par client.",
+
+  "spreadsheets": {
+    "superprof_ressources": {
+      "id": "1Vutb06Fcm3awnANPbtLkI1EvhbE9d-TXrZRLTrmmLlQ",
+      "name": "Articles Ressources",
+      "owner_email": "samuel@superprof.com",
+      "sheets": {
+        "main": "TODO_nom_onglet"
+      },
+      "columns_main": [
+        "TODO_a_recuperer_avec_la_sheet"
+      ]
+    },
+    "enseigna": {
+      "id": "1rNRU2WzlqfsAvFDjJHDN3ChCZ3u0NIfRaPoM4s1MzEM",
+      "name": "Enseigna - Refresh List",
+      "sheets": {
+        "avis": "Avis",
+        "versus": "Versus"
+      },
+      "columns_avis": [
+        "TODO_a_definir"
+      ],
+      "columns_versus": [
+        "TODO_a_definir"
+      ]
     }
   },
-  "columns": [
-    "blog_id",
-    "blogpost_url",
-    "main_keyword",
-    "title",
-    "action_blogpost",
-    "status",
-    "audit_gsc",
-    "audit_serp",
-    "impressions_30d",
-    "clicks_30d",
-    "ctr_30d",
-    "people_also_ask",
-    "secondary_keywords",
-    "new_h1_title",
-    "new_h2_titles",
-    "word_count_before",
-    "images_count",
-    "internal_links_count",
-    "error_message",
-    "Index Diagnostic",
-    "blocking_issues_count"
-  ],
+
   "notes": [
-    "Spreadsheet ID set to the new Content Writer tracker.",
-    "Column schema is the single source of truth — sheets_client.py mappings must match this list."
+    "Spreadsheet Superprof Ressources : ID 1Vutb06F... (compte samuel@superprof.com)",
+    "Spreadsheet Enseigna : à créer/fournir avec 2 onglets Avis + Versus",
+    "Les colonnes exactes seront alignées sur sheets_client.py une fois les libellés réels reçus",
+    "Anciennes spreadsheets SRW (1F99FtN... et 12r9uGD1...) : abandonnées"
   ]
 }

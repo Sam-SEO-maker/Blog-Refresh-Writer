@@ -21,7 +21,7 @@ Agent autonome de rafraîchissement de contenus SEO, piloté par Google Sheets, 
 
 ```bash
 # Cloner le projet
-cd "Super Refresh Writer"
+cd "Content Writer"
 
 # Installer les dépendances
 pip install -r requirements.txt
@@ -118,7 +118,7 @@ python main.py --mode single \
 ## Architecture
 
 ```
-Super Refresh Writer/
+Content Writer/
 ├── _shared/                # Ressources partagées centralisées
 │   ├── cache/              # Futures fonctionnalités de cache
 │   ├── config/             # Configuration blogs et règles

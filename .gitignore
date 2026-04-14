@@ -154,3 +154,7 @@ _shared/cache/
 # Logs (keep README)
 logs/*.log
 logs/*.txt
+
+# Ahrefs / SEO exports at repo root (bulk data, kept local)
+/*.csv
+_shared/config/ahrefs_state.json

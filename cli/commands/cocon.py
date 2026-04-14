@@ -2,9 +2,9 @@
 Commandes de cocons sémantiques.
 
 Usage:
-    srw cocon identify [--output json|txt|csv]
-    srw cocon detect-cannibalization <url>
-    srw cocon validate <url>
+    cw cocon identify [--output json|txt|csv]
+    cw cocon detect-cannibalization <url>
+    cw cocon validate <url>
 """
 
 import click
@@ -45,7 +45,7 @@ def identify(spreadsheet_id, output):
     if not json_files:
         click.echo("❌ Aucun fichier de structure trouvé dans outputs/", err=True)
         click.echo("Lancez d'abord l'extraction des structures avec:", err=True)
-        click.echo("  srw debug extract-structures --spreadsheet-id <ID>", err=True)
+        click.echo("  cw debug extract-structures --spreadsheet-id <ID>", err=True)
         raise click.Abort()
 
     latest_json = json_files[-1]
@@ -249,7 +249,7 @@ def detect_cannibalization(url, spreadsheet_id):
     """
     Détecte la cannibalization pour une URL.
 
-    Alias de: srw audit cannibalization <url>
+    Alias de: cw audit cannibalization <url>
     """
     from .audit import audit
     ctx = click.Context(audit)

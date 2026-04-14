@@ -292,37 +292,36 @@ def insert_or_update_in_spreadsheet(
                 if verbose:
                     print(f"    ➕ URL not found → INSERT new row")
 
-                # Créer nouvelle ligne avec structure complète (29 colonnes A-AC)
+                # Créer nouvelle ligne avec structure complète (28 colonnes A-AB, post-suppression cocon_branch)
                 row = [
                     blog_id,                    # A - blog_id
-                    "",                         # B - cocon_branch (vide)
-                    url,                        # C - blogpost_url
-                    "",                         # D - main_keyword (vide)
-                    "",                         # E - title (vide, sera scrapé par workflow)
-                    "STANDALONE",               # F - post_type
-                    "",                         # G - action_blogpost (vide, décision à venir)
-                    "",                         # H - status
-                    "",                         # I - audit_gsc (vide → sera traité par batch audit-gsc)
-                    "",                         # J - audit_serp (vide)
-                    0,                          # K - impressions_30d
-                    0,                          # L - clicks_30d
-                    0.0,                        # M - ctr_30d
-                    "",                         # N - people_also_ask
-                    "",                         # O - secondary_keywords
-                    "",                         # P - new_h1_title
-                    "",                         # Q - new_h2_titles
-                    0,                          # R - word_count_before
-                    0,                          # S - images_count
-                    0,                          # T - internal_links_count
-                    "NO",                       # U - cannibalization_flag
-                    "",                         # V - cannibalization_urls
-                    "",                         # W - error_message
-                    scenario,                   # X - index_diagnostic ✅
-                    "",                         # Y - editorial_audit_score
-                    "",                         # Z - editorial_audit_date
-                    "",                         # AA - editorial_verdict
-                    "",                         # AB - blocking_issues_count
-                    ""                          # AC - editorial_audit_report_url
+                    url,                        # B - blogpost_url
+                    "",                         # C - main_keyword (vide)
+                    "",                         # D - title (vide, sera scrapé par workflow)
+                    "STANDALONE",               # E - post_type
+                    "",                         # F - action_blogpost (vide, décision à venir)
+                    "",                         # G - status
+                    "",                         # H - audit_gsc (vide → sera traité par batch audit-gsc)
+                    "",                         # I - audit_serp (vide)
+                    0,                          # J - impressions_30d
+                    0,                          # K - clicks_30d
+                    0.0,                        # L - ctr_30d
+                    "",                         # M - people_also_ask
+                    "",                         # N - secondary_keywords
+                    "",                         # O - new_h1_title
+                    "",                         # P - new_h2_titles
+                    0,                          # Q - word_count_before
+                    0,                          # R - images_count
+                    0,                          # S - internal_links_count
+                    "NO",                       # T - cannibalization_flag
+                    "",                         # U - cannibalization_urls
+                    "",                         # V - error_message
+                    scenario,                   # W - index_diagnostic
+                    "",                         # X - editorial_audit_score
+                    "",                         # Y - editorial_audit_date
+                    "",                         # Z - editorial_verdict
+                    "",                         # AA - blocking_issues_count
+                    ""                          # AB - editorial_audit_report_url
                 ]
 
                 if not dry_run:

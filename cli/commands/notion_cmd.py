@@ -2,10 +2,10 @@
 Commandes Notion.
 
 Usage:
-    srw notion sync [--blog moments-yoga]
-    srw notion check-title --blog moments-yoga --title "Les bienfaits du yoga"
-    srw notion list-sujets [--blog moments-yoga]
-    srw notion create-sujet --blog moments-yoga --title "Nouveau sujet" --db-id ABC123
+    cw notion sync [--blog moments-yoga]
+    cw notion check-title --blog moments-yoga --title "Les bienfaits du yoga"
+    cw notion list-sujets [--blog moments-yoga]
+    cw notion create-sujet --blog moments-yoga --title "Nouveau sujet" --db-id ABC123
 """
 
 import json

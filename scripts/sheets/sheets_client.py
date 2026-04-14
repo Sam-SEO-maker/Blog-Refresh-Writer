@@ -55,37 +55,36 @@ class SheetsClient:
     SHEET_AUDIT_RESULTS = "Audit_Results"
     SHEET_ASSETS = "Assets_Inventory"
 
-    # NEW: Structure des colonnes Refreshs_Audit (29 colonnes A-AC)
+    # Structure des colonnes Refreshs_Audit (28 colonnes A-AB, post-suppression cocon_branch)
     COLS_REFRESHS_AUDIT = [
         "blog_id",                  # A
-        "cocon_branch",             # B (numéro de branche cocon, 0 = pas de cocon)
-        "blogpost_url",             # C
-        "main_keyword",             # D
-        "title",                    # E
-        "post_type",                # F
-        "action_blogpost",          # G
-        "status",                   # H
-        "audit_gsc",                # I
-        "audit_serp",               # J
-        "impressions_30d",          # K
-        "clicks_30d",               # L
-        "ctr_30d",                  # M
-        "people_also_ask",          # N
-        "secondary_keywords",       # O
-        "new_h1_title",             # P
-        "new_h2_titles",            # Q
-        "word_count_before",        # R
-        "images_count",             # S
-        "internal_links_count",     # T
-        "cannibalization_flag",     # U
-        "cannibalization_urls",     # V
-        "error_message",            # W
-        "index_diagnostic",         # X
-        "editorial_audit_score",    # Y (Phase 4: Editorial Audit)
-        "editorial_audit_date",     # Z
-        "editorial_verdict",        # AA
-        "blocking_issues_count",    # AB
-        "editorial_audit_report_url",  # AC
+        "blogpost_url",             # B
+        "main_keyword",             # C
+        "title",                    # D
+        "post_type",                # E
+        "action_blogpost",          # F
+        "status",                   # G
+        "audit_gsc",                # H
+        "audit_serp",               # I
+        "impressions_30d",          # J
+        "clicks_30d",               # K
+        "ctr_30d",                  # L
+        "people_also_ask",          # M
+        "secondary_keywords",       # N
+        "new_h1_title",             # O
+        "new_h2_titles",            # P
+        "word_count_before",        # Q
+        "images_count",             # R
+        "internal_links_count",     # S
+        "cannibalization_flag",     # T
+        "cannibalization_urls",     # U
+        "error_message",            # V
+        "index_diagnostic",         # W
+        "editorial_audit_score",    # X (Phase 4: Editorial Audit)
+        "editorial_audit_date",     # Y
+        "editorial_verdict",        # Z
+        "blocking_issues_count",    # AA
+        "editorial_audit_report_url",  # AB
     ]
 
     # LEGACY: Structure des colonnes URLs_Input (kept for backwards compatibility)
@@ -721,12 +720,12 @@ class SheetsClient:
 
                 # Filter by post_type if specified (column F, index 5)
                 if post_type:
-                    row_post_type = row[5] if len(row) > 5 else ""
+                    row_post_type = row[4] if len(row) > 4 else ""
                     if row_post_type != post_type:
                         continue
 
                 # H (status) - index 7: Remplacer anciens statuts par TODO
-                status = row[7] if len(row) > 7 else ""
+                status = row[6] if len(row) > 6 else ""
                 if status in OLD_STATUSES or status == "":
                     updates.append({"cell": f"H{i}", "value": "TODO"})
                     stats["status_reset"] += 1
@@ -764,15 +763,12 @@ class SheetsClient:
     def _find_url_row(self, url: str, sheet_name: str) -> Optional[int]:
         """Trouve l'index de ligne d'une URL.
 
-        Note: Pour Refreshs_Audit, l'URL est en colonne C (index 2).
-        Colonne A = blog_id, Colonne B = cocon_branch, Colonne C = blogpost_url
+        Note: Pour Refreshs_Audit, l'URL est en colonne B (index 1).
+        Colonne A = blog_id, Colonne B = blogpost_url.
         Pour les autres sheets (legacy), l'URL est en colonne B (index 1).
         """
         data = self._read_sheet(sheet_name)
-        if sheet_name == self.SHEET_REFRESHS_AUDIT:
-            url_col_idx = 2  # Column C
-        else:
-            url_col_idx = 1  # Column B (legacy)
+        url_col_idx = 1  # Column B for both Refreshs_Audit and legacy
         for i, row in enumerate(data[1:], start=2):  # Skip header
             if row and len(row) > url_col_idx and row[url_col_idx] == url:
                 return i
@@ -794,7 +790,7 @@ class SheetsClient:
             rows = []
             for i, row in enumerate(data[1:], start=2):
                 # NEW: Accepter I vide (auto-init) ou I="AUDITING"
-                audit_gsc = row[8] if len(row) > 8 else ""
+                audit_gsc = row[7] if len(row) > 7 else ""
                 if audit_gsc in ("", "AUDITING"):
                         try:
                             audit_row = RefreshAuditRow.from_list(row, i)
@@ -823,34 +819,33 @@ class SheetsClient:
 
                                 # Créer une row minimale
                                 try:
-                                    post_type = PostType(row[5]) if len(row) > 5 and row[5] else PostType.STANDALONE
+                                    post_type = PostType(row[4]) if len(row) > 4 and row[4] else PostType.STANDALONE
                                 except (ValueError, KeyError):
                                     post_type = PostType.STANDALONE
 
                                 audit_row = RefreshAuditRow(
                                     blog_id=row[0] if len(row) > 0 else "",
-                                    cocon_branch=safe_int(row[1]) if len(row) > 1 else 0,
-                                    blogpost_url=row[2] if len(row) > 2 else "",
-                                    main_keyword=row[3] if len(row) > 3 else "",
-                                    title=row[4] if len(row) > 4 else "",
+                                    blogpost_url=row[1] if len(row) > 1 else "",
+                                    main_keyword=row[2] if len(row) > 2 else "",
+                                    title=row[3] if len(row) > 3 else "",
                                     post_type=post_type,
-                                    action_blogpost=row[6] if len(row) > 6 else "",
-                                    status=row[7] if len(row) > 7 else "",
-                                    audit_gsc=row[8] if len(row) > 8 else "",
-                                    audit_serp=row[9] if len(row) > 9 else "",
-                                    impressions_30d=safe_int(row[10]),
-                                    clicks_30d=safe_int(row[11]),
-                                    ctr_30d=safe_float(row[12]),
-                                    people_also_ask=row[13] if len(row) > 13 else "",
-                                    secondary_keywords=row[14] if len(row) > 14 else "",
-                                    new_h1_title=row[15] if len(row) > 15 else "",
-                                    new_h2_titles=row[16] if len(row) > 16 else "",
-                                    word_count_before=safe_int(row[17]),
-                                    images_count=safe_int(row[18]),
-                                    internal_links_count=safe_int(row[19]),
-                                    cannibalization_flag=(row[20] == "YES") if len(row) > 20 else False,
-                                    cannibalization_urls=row[21] if len(row) > 21 else "",
-                                    error_message=row[22] if len(row) > 22 else "",
+                                    action_blogpost=row[5] if len(row) > 5 else "",
+                                    status=row[6] if len(row) > 6 else "",
+                                    audit_gsc=row[7] if len(row) > 7 else "",
+                                    audit_serp=row[8] if len(row) > 8 else "",
+                                    impressions_30d=safe_int(row[9]),
+                                    clicks_30d=safe_int(row[10]),
+                                    ctr_30d=safe_float(row[11]),
+                                    people_also_ask=row[12] if len(row) > 12 else "",
+                                    secondary_keywords=row[13] if len(row) > 13 else "",
+                                    new_h1_title=row[14] if len(row) > 14 else "",
+                                    new_h2_titles=row[15] if len(row) > 15 else "",
+                                    word_count_before=safe_int(row[16]),
+                                    images_count=safe_int(row[17]),
+                                    internal_links_count=safe_int(row[18]),
+                                    cannibalization_flag=(row[19] == "YES") if len(row) > 19 else False,
+                                    cannibalization_urls=row[20] if len(row) > 20 else "",
+                                    error_message=row[21] if len(row) > 21 else "",
                                     row_index=i,
                                 )
                                 if not blog_id or audit_row.blog_id == blog_id:
@@ -913,8 +908,8 @@ class SheetsClient:
         # Collect rows where col F is empty, grouped by blog
         rows_to_classify: list[tuple[int, str, str]] = []  # (row_num, url, detected_blog_id)
         for i, row in enumerate(data[1:], start=2):
-            url = row[2] if len(row) > 2 else ""
-            existing_type = row[5] if len(row) > 5 else ""
+            url = row[1] if len(row) > 1 else ""
+            existing_type = row[4] if len(row) > 4 else ""
             if not url or not url.startswith("http"):
                 continue
             if existing_type in ("PARENT", "CHILD", "STANDALONE"):
@@ -1007,17 +1002,17 @@ class SheetsClient:
             rows = []
             for i, row in enumerate(data[1:], start=2):
                 # Vérifier que main_keyword (col D, index 3) est vide
-                main_kw = row[3] if len(row) > 3 else ""
+                main_kw = row[2] if len(row) > 2 else ""
                 if main_kw.strip():
                     continue  # Déjà rempli, skip
 
                 # Vérifier qu'on a au moins une URL
-                url = row[2] if len(row) > 2 else ""
+                url = row[1] if len(row) > 1 else ""
                 if not url.strip():
                     continue
 
                 # Vérifier que le status n'est pas BLOCKED/DONE (pas besoin de re-découvrir)
-                status = row[7] if len(row) > 7 else ""
+                status = row[6] if len(row) > 6 else ""
                 if status in ("DONE",):
                     continue
 
@@ -1028,7 +1023,7 @@ class SheetsClient:
                 except Exception:
                     # Fallback minimal
                     try:
-                        post_type_str = row[5] if len(row) > 5 and row[5] else "STANDALONE"
+                        post_type_str = row[4] if len(row) > 4 and row[4] else "STANDALONE"
                         try:
                             post_type = PostType(post_type_str)
                         except (ValueError, KeyError):
@@ -1036,12 +1031,11 @@ class SheetsClient:
 
                         audit_row = RefreshAuditRow(
                             blog_id=row[0] if len(row) > 0 else "",
-                            cocon_branch=0,
                             blogpost_url=url,
                             main_keyword="",
-                            title=row[4] if len(row) > 4 else "",
+                            title=row[3] if len(row) > 3 else "",
                             post_type=post_type,
-                            action_blogpost=row[6] if len(row) > 6 else "",
+                            action_blogpost=row[5] if len(row) > 5 else "",
                             status=status,
                             audit_gsc="",
                             audit_serp="",
@@ -1080,7 +1074,7 @@ class SheetsClient:
         try:
             data = self._read_sheet(self.SHEET_REFRESHS_AUDIT)
             for i, row in enumerate(data[1:], start=2):
-                if row and len(row) > 2 and row[2] == url:
+                if row and len(row) > 1 and row[1] == url:
                     updates = [{"cell": f"D{i}", "value": keyword}]
                     self._batch_update_cells(updates)
                     logger.info(f"[STEP 0] main_keyword='{keyword}' written to D{i} (source: {source})")
@@ -1103,16 +1097,16 @@ class SheetsClient:
             rows = []
             for i, row in enumerate(data[1:], start=2):
                 # Ne prendre que les lignes avec un keyword existant
-                main_kw = row[3] if len(row) > 3 else ""
+                main_kw = row[2] if len(row) > 2 else ""
                 if not main_kw.strip():
                     continue
 
-                url = row[2] if len(row) > 2 else ""
+                url = row[1] if len(row) > 1 else ""
                 if not url.strip():
                     continue
 
                 # Ne pas re-traiter les lignes déjà terminées
-                status = row[7] if len(row) > 7 else ""
+                status = row[6] if len(row) > 6 else ""
                 if status == "DONE":
                     continue
 
@@ -1122,19 +1116,18 @@ class SheetsClient:
                         rows.append(audit_row)
                 except Exception:
                     try:
-                        post_type_str = row[5] if len(row) > 5 and row[5] else "STANDALONE"
+                        post_type_str = row[4] if len(row) > 4 and row[4] else "STANDALONE"
                         try:
                             post_type = PostType(post_type_str)
                         except (ValueError, KeyError):
                             post_type = PostType.STANDALONE
                         audit_row = RefreshAuditRow(
                             blog_id=row[0] if len(row) > 0 else "",
-                            cocon_branch=0,
                             blogpost_url=url,
                             main_keyword=main_kw,
-                            title=row[4] if len(row) > 4 else "",
+                            title=row[3] if len(row) > 3 else "",
                             post_type=post_type,
-                            action_blogpost=row[6] if len(row) > 6 else "",
+                            action_blogpost=row[5] if len(row) > 5 else "",
                             status=status,
                             audit_gsc="",
                             audit_serp="",
@@ -1173,7 +1166,7 @@ class SheetsClient:
             rows = []
             for i, row in enumerate(data[1:], start=2):
                 # Check if editorial audit not done yet (column AA empty)
-                editorial_verdict = row[26] if len(row) > 26 else ""
+                editorial_verdict = row[25] if len(row) > 25 else ""
 
                 if not editorial_verdict or editorial_verdict.strip() == "":
                     try:
@@ -1188,28 +1181,6 @@ class SheetsClient:
             print(f"[ERROR] read_pending_for_editorial_audit: {e}")
             return []
 
-    def read_cocon_branch(self, blog_id: str, cocon_branch: int) -> list["RefreshAuditRow"]:
-        """Lit toutes les lignes d'un cocon (même blog_id + même cocon_branch)."""
-        try:
-            from _shared.core.models import RefreshAuditRow
-            data = self._read_sheet(self.SHEET_REFRESHS_AUDIT)
-            rows = []
-            for i, row in enumerate(data[1:], start=2):
-                if len(row) < 3:
-                    continue
-                # A=blog_id (0), B=cocon_branch (1)
-                if row[0] == blog_id and str(row[1]) == str(cocon_branch):
-                    try:
-                        audit_row = RefreshAuditRow.from_list(row, i)
-                        rows.append(audit_row)
-                    except Exception as e:
-                        logger.warning(f"Impossible de parser ligne {i} pour cocon_branch: {e}")
-                        continue
-            return rows
-        except Exception as e:
-            logger.error(f"read_cocon_branch error: {e}")
-            return []
-
     def read_pending_for_serp_audit(self, blog_id: Optional[str] = None) -> list["RefreshAuditRow"]:
         """
         Lit les lignes où audit_serp est vide ou AUDITING.
@@ -1222,7 +1193,7 @@ class SheetsClient:
             rows = []
             for i, row in enumerate(data[1:], start=2):
                 # NEW: Accepter J vide (auto-init) ou J="AUDITING"
-                audit_serp = row[9] if len(row) > 9 else ""
+                audit_serp = row[8] if len(row) > 8 else ""
                 if audit_serp in ("", "AUDITING"):
                         try:
                             audit_row = RefreshAuditRow.from_list(row, i)
@@ -1251,34 +1222,33 @@ class SheetsClient:
 
                                 # Créer une row minimale
                                 try:
-                                    post_type = PostType(row[5]) if len(row) > 5 and row[5] else PostType.STANDALONE
+                                    post_type = PostType(row[4]) if len(row) > 4 and row[4] else PostType.STANDALONE
                                 except (ValueError, KeyError):
                                     post_type = PostType.STANDALONE
 
                                 audit_row = RefreshAuditRow(
                                     blog_id=row[0] if len(row) > 0 else "",
-                                    cocon_branch=safe_int(row[1]) if len(row) > 1 else 0,
-                                    blogpost_url=row[2] if len(row) > 2 else "",
-                                    main_keyword=row[3] if len(row) > 3 else "",
-                                    title=row[4] if len(row) > 4 else "",
+                                    blogpost_url=row[1] if len(row) > 1 else "",
+                                    main_keyword=row[2] if len(row) > 2 else "",
+                                    title=row[3] if len(row) > 3 else "",
                                     post_type=post_type,
-                                    action_blogpost=row[6] if len(row) > 6 else "",
-                                    status=row[7] if len(row) > 7 else "",
-                                    audit_gsc=row[8] if len(row) > 8 else "",
-                                    audit_serp=row[9] if len(row) > 9 else "",
-                                    impressions_30d=safe_int(row[10]),
-                                    clicks_30d=safe_int(row[11]),
-                                    ctr_30d=safe_float(row[12]),
-                                    people_also_ask=row[13] if len(row) > 13 else "",
-                                    secondary_keywords=row[14] if len(row) > 14 else "",
-                                    new_h1_title=row[15] if len(row) > 15 else "",
-                                    new_h2_titles=row[16] if len(row) > 16 else "",
-                                    word_count_before=safe_int(row[17]),
-                                    images_count=safe_int(row[18]),
-                                    internal_links_count=safe_int(row[19]),
-                                    cannibalization_flag=(row[20] == "YES") if len(row) > 20 else False,
-                                    cannibalization_urls=row[21] if len(row) > 21 else "",
-                                    error_message=row[22] if len(row) > 22 else "",
+                                    action_blogpost=row[5] if len(row) > 5 else "",
+                                    status=row[6] if len(row) > 6 else "",
+                                    audit_gsc=row[7] if len(row) > 7 else "",
+                                    audit_serp=row[8] if len(row) > 8 else "",
+                                    impressions_30d=safe_int(row[9]),
+                                    clicks_30d=safe_int(row[10]),
+                                    ctr_30d=safe_float(row[11]),
+                                    people_also_ask=row[12] if len(row) > 12 else "",
+                                    secondary_keywords=row[13] if len(row) > 13 else "",
+                                    new_h1_title=row[14] if len(row) > 14 else "",
+                                    new_h2_titles=row[15] if len(row) > 15 else "",
+                                    word_count_before=safe_int(row[16]),
+                                    images_count=safe_int(row[17]),
+                                    internal_links_count=safe_int(row[18]),
+                                    cannibalization_flag=(row[19] == "YES") if len(row) > 19 else False,
+                                    cannibalization_urls=row[20] if len(row) > 20 else "",
+                                    error_message=row[21] if len(row) > 21 else "",
                                     row_index=i,
                                 )
                                 if not blog_id or audit_row.blog_id == blog_id:
@@ -1298,9 +1268,9 @@ class SheetsClient:
             data = self._read_sheet(self.SHEET_REFRESHS_AUDIT)
             rows = []
             for i, row in enumerate(data[1:], start=2):
-                if len(row) > 9:
+                if len(row) > 8:
                     # I=audit_gsc (8), J=audit_serp (9), G=action_blogpost (6)
-                    if row[8] == "DONE" and row[9] == "DONE" and (len(row) <= 6 or not row[6]):
+                    if row[7] == "DONE" and row[8] == "DONE" and (len(row) <= 6 or not row[5]):
                         try:
                             audit_row = RefreshAuditRow.from_list(row, i)
                             if not blog_id or audit_row.blog_id == blog_id:
@@ -1328,34 +1298,33 @@ class SheetsClient:
 
                                 # Créer une row minimale
                                 try:
-                                    post_type = PostType(row[5]) if len(row) > 5 and row[5] else PostType.STANDALONE
+                                    post_type = PostType(row[4]) if len(row) > 4 and row[4] else PostType.STANDALONE
                                 except (ValueError, KeyError):
                                     post_type = PostType.STANDALONE
 
                                 audit_row = RefreshAuditRow(
                                     blog_id=row[0] if len(row) > 0 else "",
-                                    cocon_branch=safe_int(row[1]) if len(row) > 1 else 0,
-                                    blogpost_url=row[2] if len(row) > 2 else "",
-                                    main_keyword=row[3] if len(row) > 3 else "",
-                                    title=row[4] if len(row) > 4 else "",
+                                    blogpost_url=row[1] if len(row) > 1 else "",
+                                    main_keyword=row[2] if len(row) > 2 else "",
+                                    title=row[3] if len(row) > 3 else "",
                                     post_type=post_type,
-                                    action_blogpost=row[6] if len(row) > 6 else "",
-                                    status=row[7] if len(row) > 7 else "",
-                                    audit_gsc=row[8] if len(row) > 8 else "",
-                                    audit_serp=row[9] if len(row) > 9 else "",
-                                    impressions_30d=safe_int(row[10]),
-                                    clicks_30d=safe_int(row[11]),
-                                    ctr_30d=safe_float(row[12]),
-                                    people_also_ask=row[13] if len(row) > 13 else "",
-                                    secondary_keywords=row[14] if len(row) > 14 else "",
-                                    new_h1_title=row[15] if len(row) > 15 else "",
-                                    new_h2_titles=row[16] if len(row) > 16 else "",
-                                    word_count_before=safe_int(row[17]),
-                                    images_count=safe_int(row[18]),
-                                    internal_links_count=safe_int(row[19]),
-                                    cannibalization_flag=(row[20] == "YES") if len(row) > 20 else False,
-                                    cannibalization_urls=row[21] if len(row) > 21 else "",
-                                    error_message=row[22] if len(row) > 22 else "",
+                                    action_blogpost=row[5] if len(row) > 5 else "",
+                                    status=row[6] if len(row) > 6 else "",
+                                    audit_gsc=row[7] if len(row) > 7 else "",
+                                    audit_serp=row[8] if len(row) > 8 else "",
+                                    impressions_30d=safe_int(row[9]),
+                                    clicks_30d=safe_int(row[10]),
+                                    ctr_30d=safe_float(row[11]),
+                                    people_also_ask=row[12] if len(row) > 12 else "",
+                                    secondary_keywords=row[13] if len(row) > 13 else "",
+                                    new_h1_title=row[14] if len(row) > 14 else "",
+                                    new_h2_titles=row[15] if len(row) > 15 else "",
+                                    word_count_before=safe_int(row[16]),
+                                    images_count=safe_int(row[17]),
+                                    internal_links_count=safe_int(row[18]),
+                                    cannibalization_flag=(row[19] == "YES") if len(row) > 19 else False,
+                                    cannibalization_urls=row[20] if len(row) > 20 else "",
+                                    error_message=row[21] if len(row) > 21 else "",
                                     row_index=i,
                                 )
                                 if not blog_id or audit_row.blog_id == blog_id:
@@ -1384,10 +1353,10 @@ class SheetsClient:
             ]
 
             for i, row in enumerate(data[1:], start=2):
-                if len(row) > 7:
+                if len(row) > 6:
                     # G=action_blogpost (6), H=status (7)
-                    action_value = row[6] if len(row) > 6 else ""
-                    if action_value in action_variants and row[7] not in ("DONE", "CONTENT DONE"):
+                    action_value = row[5] if len(row) > 5 else ""
+                    if action_value in action_variants and row[6] not in ("DONE", "CONTENT DONE"):
                         try:
                             audit_row = RefreshAuditRow.from_list(row, i)
                             if not blog_id or audit_row.blog_id == blog_id:
@@ -1415,34 +1384,33 @@ class SheetsClient:
 
                                 # Créer une row minimale avec essentiels pour batch_refresh
                                 try:
-                                    post_type = PostType(row[5]) if len(row) > 5 and row[5] else PostType.STANDALONE
+                                    post_type = PostType(row[4]) if len(row) > 4 and row[4] else PostType.STANDALONE
                                 except (ValueError, KeyError):
                                     post_type = PostType.STANDALONE
 
                                 audit_row = RefreshAuditRow(
                                     blog_id=row[0] if len(row) > 0 else "",
-                                    cocon_branch=safe_int(row[1]) if len(row) > 1 else 0,
-                                    blogpost_url=row[2] if len(row) > 2 else "",
-                                    main_keyword=row[3] if len(row) > 3 else "",
-                                    title=row[4] if len(row) > 4 else "",
+                                    blogpost_url=row[1] if len(row) > 1 else "",
+                                    main_keyword=row[2] if len(row) > 2 else "",
+                                    title=row[3] if len(row) > 3 else "",
                                     post_type=post_type,
-                                    action_blogpost=row[6] if len(row) > 6 else "",
-                                    status=row[7] if len(row) > 7 else "",
-                                    audit_gsc=row[8] if len(row) > 8 else "",
-                                    audit_serp=row[9] if len(row) > 9 else "",
-                                    impressions_30d=safe_int(row[10]),
-                                    clicks_30d=safe_int(row[11]),
-                                    ctr_30d=safe_float(row[12]),
-                                    people_also_ask=row[13] if len(row) > 13 else "",
-                                    secondary_keywords=row[14] if len(row) > 14 else "",
-                                    new_h1_title=row[15] if len(row) > 15 else "",
-                                    new_h2_titles=row[16] if len(row) > 16 else "",
-                                    word_count_before=safe_int(row[17]),
-                                    images_count=safe_int(row[18]),
-                                    internal_links_count=safe_int(row[19]),
-                                    cannibalization_flag=(row[20] == "YES") if len(row) > 20 else False,
-                                    cannibalization_urls=row[21] if len(row) > 21 else "",
-                                    error_message=row[22] if len(row) > 22 else "",
+                                    action_blogpost=row[5] if len(row) > 5 else "",
+                                    status=row[6] if len(row) > 6 else "",
+                                    audit_gsc=row[7] if len(row) > 7 else "",
+                                    audit_serp=row[8] if len(row) > 8 else "",
+                                    impressions_30d=safe_int(row[9]),
+                                    clicks_30d=safe_int(row[10]),
+                                    ctr_30d=safe_float(row[11]),
+                                    people_also_ask=row[12] if len(row) > 12 else "",
+                                    secondary_keywords=row[13] if len(row) > 13 else "",
+                                    new_h1_title=row[14] if len(row) > 14 else "",
+                                    new_h2_titles=row[15] if len(row) > 15 else "",
+                                    word_count_before=safe_int(row[16]),
+                                    images_count=safe_int(row[17]),
+                                    internal_links_count=safe_int(row[18]),
+                                    cannibalization_flag=(row[19] == "YES") if len(row) > 19 else False,
+                                    cannibalization_urls=row[20] if len(row) > 20 else "",
+                                    error_message=row[21] if len(row) > 21 else "",
                                     row_index=i,
                                 )
                                 if not blog_id or audit_row.blog_id == blog_id:
@@ -1474,7 +1442,7 @@ class SheetsClient:
             data = self._read_sheet(self.SHEET_REFRESHS_AUDIT)
 
             for i, row in enumerate(data[1:], start=2):
-                if row and len(row) > 2 and row[2] == url:  # C=blogpost_url (2)
+                if row and len(row) > 1 and row[1] == url:  # C=blogpost_url (2)
                     # OPTIMIZED: Use batch update to avoid API quota (60 writes/min)
                     updates = [
                         {"cell": f"I{i}", "value": status}
@@ -1520,7 +1488,7 @@ class SheetsClient:
             data = self._read_sheet(self.SHEET_REFRESHS_AUDIT)
 
             for i, row in enumerate(data[1:], start=2):
-                if row and len(row) > 2 and row[2] == url:
+                if row and len(row) > 1 and row[1] == url:
                     # OPTIMIZED: Use batch update to avoid API quota
                     updates = [
                         {"cell": f"J{i}", "value": status}
@@ -1561,7 +1529,7 @@ class SheetsClient:
             data = self._read_sheet(self.SHEET_REFRESHS_AUDIT)
 
             for i, row in enumerate(data[1:], start=2):
-                if row and len(row) > 2 and row[2] == url:
+                if row and len(row) > 1 and row[1] == url:
                     # OPTIMIZED: Use batch update to avoid API quota
                     updates = [
                         {"cell": f"G{i}", "value": action_blogpost},
@@ -1597,7 +1565,7 @@ class SheetsClient:
             data = self._read_sheet(self.SHEET_REFRESHS_AUDIT)
 
             for i, row in enumerate(data[1:], start=2):
-                if row and len(row) > 2 and row[2] == url:
+                if row and len(row) > 1 and row[1] == url:
                     # OPTIMIZED: Use batch update to avoid API quota
                     updates = [
                         {"cell": f"H{i}", "value": status}

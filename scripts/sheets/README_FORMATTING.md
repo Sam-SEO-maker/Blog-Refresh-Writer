@@ -1,6 +1,6 @@
 # 📊 Sheet Formatting - Guide Complet
 
-Bienvenue dans la mise en forme visuelle avancée du sheet **Refreshs_Audit** pour le workflow v2.0 du projet **Super Refresh Writer**.
+Bienvenue dans la mise en forme visuelle avancée du sheet **Refreshs_Audit** pour le workflow v2.0 du projet **Content Writer**.
 
 ## 🗺️ Navigation
 

@@ -35,7 +35,7 @@ jobs:
         env:
           GOOGLE_SA_PATH: ~/.credentials/google/google-service-account.json
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
-        run: python srw.py report monday-indexation --save-json
+        run: python content_writer.py report monday-indexation --save-json
 
       - name: Upload report artifact
         if: always()

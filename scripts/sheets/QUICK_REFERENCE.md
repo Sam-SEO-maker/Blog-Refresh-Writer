@@ -37,7 +37,7 @@
 
 ### 1️⃣ Standalone Script (Plus Simple ✨ RECOMMANDÉ)
 ```bash
-cd "c:\Users\samue\OneDrive\Bureau\Claude Code\Super Refresh Writer"
+cd "c:\Users\samue\OneDrive\Bureau\Claude Code\Content Writer"
 python scripts/sheets/apply_sheet_formatting.py
 ```
 ✅ Auto-charge spreadsheet_id depuis config

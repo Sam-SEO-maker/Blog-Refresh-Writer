@@ -18,7 +18,7 @@ SPREADSHEET_ID = "1F99FtN8fWQlQm0ZTJphBRz_c64iDs2DvohyHyM2Tk1M"
 
 def main():
     print("=" * 60)
-    print("TEST WORKFLOW COMPLET - Super Refresh Writer")
+    print("TEST WORKFLOW COMPLET - Content Writer")
     print("=" * 60)
 
     # Initialiser le client Sheets

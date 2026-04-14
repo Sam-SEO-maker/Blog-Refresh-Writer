@@ -142,13 +142,195 @@ Contact : [email]
 
 | Blog | Level | Minimum Sources | Disclaimers | Expertise Exemple |
 |------|-------|-----------------|-------------|------------------|
-| **moments-yoga** | VERY HIGH | 2 (INSERM, HAS) | OUI (santé) | Coach de yoga expérimenté |
-| **coachsportlyon** | VERY HIGH | 2 (INSERM, sports.gouv) | OUI (sport) | Coach diplômé d'État |
 | **enseigna** | HIGH | 1 (DEPP ou étude) | OUI (indépendance) | Test personnel + source |
-| **educationetdevenir** | HIGH | 1 (ONISEP, INSEE) | Non | Data chiffrées actuelles |
-| **cours-particuliers** | HIGH | 1 (eduscol, DEPP) | Non | Conseiller expérience |
-| **mymusicteacher** | MEDIUM_HIGH | 0 (optionnel) | Non | Professeur musique passionné |
+| **superprof-ressources** | HIGH | 1 | Non | Voir Guide 1 Superprof (E-E-A-T via expérience pédagogique) |
 
 ---
 
-*Version 2.0 - Février 2026*
+## Importance en 2026
+
+Avec les AI Overviews, les recherches zero-click et les systèmes d'évaluation de contenu plus stricts, suivre les standards E-E-A-T est **indispensable**, particulièrement pour les industries YMYL.
+
+**Principe clé** : la **Confiance (Trust)** est l'élément le plus important. Sans confiance, les autres signaux E-E-A sont insuffisants.
+
+---
+
+## YMYL (Your Money or Your Life)
+
+### Définition
+Topics qui impactent le bonheur, la santé ou la stabilité financière des lecteurs.
+
+### Catégories YMYL pour nos blogs
+
+| Blog | Catégorie YMYL | Niveau E-E-A-T requis |
+|------|----------------|----------------------|
+| enseigna.fr | Éducation, Finance (tarifs) | Élevé |
+| superprof.fr/ressources/ | Éducation | Élevé |
+
+### Exigences YMYL spécifiques
+
+**Pour les sujets Éducation** :
+- Sources institutionnelles (education.gouv.fr, eduscol.education.fr, ONISEP)
+- Données officielles (taux de réussite, programmes)
+- Expertise pédagogique démontrée
+
+**Pour les sujets Finance/Tarifs** (Enseigna) :
+- Transparence sur les prix
+- Comparaisons objectives
+- Mention des conditions générales et de l'indépendance éditoriale
+
+---
+
+## Structure d'Auteur E-E-A-T Conforme
+
+### Bio d'Auteur
+
+```markdown
+## À propos de l'auteur
+
+**[Prénom Nom]** est [titre/profession] avec [X] années d'expérience
+dans [domaine]. [Il/Elle] a [credentials vérifiables : diplômes,
+certifications, publications].
+
+**Expertise** : [Liste des domaines d'expertise]
+**Formation** : [Diplômes pertinents]
+**Contact** : [Email professionnel ou lien LinkedIn]
+```
+
+### Page Auteur Dédiée
+Chaque auteur devrait avoir une page dédiée sur le site avec photo professionnelle, bio complète, liste des articles publiés, credentials vérifiables, liens vers profils professionnels.
+
+---
+
+## Éléments E-E-A-T par Type de Contenu
+
+### Article Informatif Standard
+
+| Élément | Obligatoire | Recommandé |
+|---------|-------------|------------|
+| Auteur identifié | ✅ | - |
+| Date de publication | ✅ | - |
+| Date de mise à jour | ✅ | - |
+| 2+ sources institutionnelles | ✅ | 3-4 sources |
+| Section expérience | - | ✅ |
+| Citation d'expert | - | ✅ |
+
+### Article Comparatif/Review (Enseigna.fr)
+
+| Élément | Obligatoire | Recommandé |
+|---------|-------------|------------|
+| Méthodologie de test | ✅ | - |
+| Critères d'évaluation clairs | ✅ | - |
+| Période de test | ✅ | - |
+| Déclaration d'indépendance | ✅ | - |
+| Preuves de test (screenshots) | - | ✅ |
+
+---
+
+## Checklist E-E-A-T Pré-Publication
+
+### Confiance (Trust) — Le Plus Important
+- [ ] Site en HTTPS
+- [ ] Page "À propos" complète et accessible
+- [ ] Mentions légales présentes
+- [ ] Contact facilement trouvable
+- [ ] Aucun lien cassé dans l'article
+- [ ] Informations à jour (vérifier les dates citées)
+
+### Expérience (Experience)
+- [ ] Au moins une section montrant une expérience réelle
+- [ ] Détails spécifiques que seul un utilisateur réel connaîtrait
+- [ ] Photos/captures d'écran originales si applicable
+
+### Expertise (Expertise)
+- [ ] Termes techniques correctement utilisés et définis
+- [ ] Explications approfondies (pas superficielles)
+- [ ] Sources et références citées
+- [ ] Données récentes (2025-2026)
+
+### Autorité (Authoritativeness)
+- [ ] Auteur identifié avec bio/credentials
+- [ ] Liens vers des sources autoritaires
+- [ ] Pas de liens vers des sources douteuses
+- [ ] Cohérence avec l'expertise du site
+
+---
+
+## Audit E-E-A-T d'un Article Existant
+
+**Score d'expérience** (0-25) :
+- Aucune expérience démontrée : 0
+- Mentions génériques : 10
+- Expérience spécifique documentée : 25
+
+**Score d'expertise** (0-25) :
+- Contenu superficiel : 0
+- Contenu correct mais basique : 10
+- Contenu approfondi avec sources : 25
+
+**Score d'autorité** (0-25) :
+- Aucun signal d'autorité : 0
+- Auteur identifié : 10
+- Auteur avec credentials + sources autoritaires : 25
+
+**Score de confiance** (0-25) :
+- Informations obsolètes/liens cassés : 0
+- Correct mais incomplet : 10
+- Transparent, à jour, bien sourcé : 25
+
+**Score total** : /100
+- < 40 : Réécriture totale recommandée
+- 40-60 : Réécriture partielle (enrichissement E-E-A-T)
+- 60-80 : Mise à jour ciblée
+- > 80 : Refresh léger (statistiques, dates)
+
+---
+
+## Templates E-E-A-T
+
+### Introduction avec Preuve d'Expertise
+
+```markdown
+## [Titre H2]
+
+[Affirmation principale basée sur notre expérience/expertise].
+
+Selon [Source institutionnelle 2026], [statistique pertinente].
+Notre équipe a [expérience concrète] pendant [durée], ce qui nous
+permet d'affirmer que [insight basé sur l'expérience].
+
+> "[Citation d'expert]" - [Nom], [Titre], [Organisation]
+```
+
+### Section "Notre Méthodologie" (pour Reviews Enseigna)
+
+```markdown
+## Notre méthodologie de test
+
+Pour ce comparatif, nous avons :
+
+1. **Testé** [X] plateformes pendant [durée]
+2. **Évalué** [critères précis] selon [grille d'évaluation]
+3. **Interrogé** [X] utilisateurs réels
+4. **Vérifié** les informations auprès de [sources]
+
+**Période de test** : [dates]
+**Dernière vérification** : [date]
+
+*Note : Cet article est indépendant. Nous ne recevons aucune
+compensation des plateformes testées.*
+```
+
+---
+
+## Sources
+
+- [E-E-A-T Ultimate Guide 2026 - SEO Kreativ](https://www.seo-kreativ.de/en/blog/e-e-a-t-guide-for-more-trust-and-top-rankings/)
+- [Google Quality Rater Guidelines - Google Developers](https://developers.google.com/search/blog/2022/12/google-raters-guidelines-e-e-a-t)
+- [Creating Helpful Content - Google Documentation](https://developers.google.com/search/docs/fundamentals/creating-helpful-content)
+- [E-E-A-T How to Demonstrate - Search Engine Journal](https://www.searchenginejournal.com/google-e-e-a-t-how-to-demonstrate-first-hand-experience/474446/)
+- [E-E-A-T Standards 2026 - Chapters EG](https://chapters-eg.com/blog/seo-blog/guide-to-e-e-a-t-standards-in-2026/)
+
+---
+
+*Version 3.0 - Avril 2026 (fusion EEAT_GUIDE + EEAT_2026_GUIDELINES)*

@@ -2,7 +2,7 @@
 Commandes de refresh pour une URL unique.
 
 Usage:
-    srw refresh <url> --blog enseigna [--strategy FULL_REFRESH]
+    cw refresh <url> --blog enseigna [--strategy FULL_REFRESH]
 """
 
 import os

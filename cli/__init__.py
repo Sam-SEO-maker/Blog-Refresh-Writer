@@ -1,1 +1,1 @@
-"""CLI package for Super Refresh Writer."""
+"""CLI package for Content Writer."""

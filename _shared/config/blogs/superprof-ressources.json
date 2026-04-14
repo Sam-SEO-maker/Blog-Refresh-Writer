@@ -3,7 +3,8 @@
   "display_name": "Superprof Ressources FR",
   "domain": "superprof.fr",
   "url_base": "https://www.superprof.fr/ressources/",
-  "gsc_property": "https://www.superprof.fr/",
+  "gsc_property": "https://www.superprof.fr/ressources/",
+  "gsc_credentials_filename": "google-service-account.json",
 
   "content_type": "blog_article",
   "subject_category": "education_general",
@@ -21,7 +22,8 @@
       "Frame things positively",
       "Inspire learning and growth"
     ],
-    "todo": "Tone & voice complet en attente de la PO Manager — pour l'instant, suivre Guide 1 (Voice & Tone)"
+    "registre_tu_vous": "TODO_a_confirmer_PO",
+    "todo": "Tone & voice complet en attente de la PO Manager — pour l'instant, suivre Guide 1 (Voice & Tone). Le registre tu/vous n'est PAS spécifié dans les guides anglais (Guide 1 dit seulement 'natural and tends toward informal')."
   },
 
   "seo_settings": {
@@ -59,9 +61,9 @@
   },
 
   "sheets_config": {
-    "spreadsheet_id": "12r9uGD1G4v0_VQWoVP1dGyepkp8pbKpf0t4bADtNSRk",
-    "input_sheet": "URLs_Input",
-    "results_sheet": "Refresh_Results"
+    "spreadsheet_id": "1Vutb06Fcm3awnANPbtLkI1EvhbE9d-TXrZRLTrmmLlQ",
+    "spreadsheet_name": "Articles Ressources",
+    "main_sheet": "⬆️ Growing"
   },
 
   "scraping_config": {

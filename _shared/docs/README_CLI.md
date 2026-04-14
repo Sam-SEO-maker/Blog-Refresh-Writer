@@ -1,4 +1,4 @@
-# SRW - Super Refresh Writer CLI
+# Content Writer - Content Writer CLI
 
 ## 📖 Description
 
@@ -11,7 +11,7 @@ CLI unifié pour le workflow de refresh SEO. Remplace les scripts ad-hoc dispers
 pip install click
 
 # Rendre le CLI exécutable (optionnel)
-chmod +x srw.py
+chmod +x content_writer.py
 ```
 
 ## 📋 Commandes Disponibles
@@ -22,16 +22,16 @@ Refresh une URL unique avec workflow complet.
 
 ```bash
 # Refresh simple
-srw refresh https://enseigna.fr/article --blog enseigna
+cw refresh https://enseigna.fr/article --blog enseigna
 
 # Avec stratégie forcée
-srw refresh https://enseigna.fr/article --blog enseigna --strategy FULL_REFRESH
+cw refresh https://enseigna.fr/article --blog enseigna --strategy FULL_REFRESH
 
 # Avec mot-clé spécifique (force analyse SERP)
-srw refresh https://enseigna.fr/article --blog enseigna --keyword "parcoursup"
+cw refresh https://enseigna.fr/article --blog enseigna --keyword "parcoursup"
 
 # Mode debug (affiche traceback complet)
-srw refresh https://enseigna.fr/article --blog enseigna --debug
+cw refresh https://enseigna.fr/article --blog enseigna --debug
 ```
 
 **Stratégies disponibles** :
@@ -50,13 +50,13 @@ Workflow complet avec mise à jour spreadsheet.
 
 ```bash
 # Workflow complet pour une URL
-srw workflow run https://enseigna.fr/article --blog enseigna
+cw workflow run https://enseigna.fr/article --blog enseigna
 
 # Avec spreadsheet ID
-srw workflow run https://enseigna.fr/article --blog enseigna --spreadsheet-id "1ABC..."
+cw workflow run https://enseigna.fr/article --blog enseigna --spreadsheet-id "1ABC..."
 
 # Traiter une ligne spécifique du spreadsheet
-srw workflow run https://enseigna.fr/article --blog enseigna --row 3
+cw workflow run https://enseigna.fr/article --blog enseigna --row 3
 ```
 
 **Équivalent à** : `run_workflow_parcoursup.py`
@@ -72,7 +72,7 @@ Différents types d'audits.
 Quality Gate : score < 4.0/10 bloque le refresh.
 
 ```bash
-srw audit editorial https://enseigna.fr/article --blog enseigna
+cw audit editorial https://enseigna.fr/article --blog enseigna
 ```
 
 **Critères** :
@@ -86,7 +86,7 @@ srw audit editorial https://enseigna.fr/article --blog enseigna
 Détecte si des H2 cannibalisent les H1 des siblings.
 
 ```bash
-srw audit cannibalization https://enseigna.fr/article --spreadsheet-id "1ABC..."
+cw audit cannibalization https://enseigna.fr/article --spreadsheet-id "1ABC..."
 ```
 
 **Seuil** : Similarity ≥ 0.75 = HIGH risk
@@ -97,10 +97,10 @@ Analyse SERP (PAA, secondary keywords).
 
 ```bash
 # Avec keyword explicite
-srw audit serp https://enseigna.fr/article --keyword "parcoursup"
+cw audit serp https://enseigna.fr/article --keyword "parcoursup"
 
 # Sans keyword (extrait du title)
-srw audit serp https://enseigna.fr/article
+cw audit serp https://enseigna.fr/article
 ```
 
 ---
@@ -115,19 +115,19 @@ Analyse les relations H1 CHILD = H2 PARENT.
 
 ```bash
 # Tous les formats (JSON, TXT, CSV)
-srw cocon identify --spreadsheet-id "1ABC..."
+cw cocon identify --spreadsheet-id "1ABC..."
 
 # Format spécifique
-srw cocon identify --spreadsheet-id "1ABC..." --output json
-srw cocon identify --spreadsheet-id "1ABC..." --output txt
-srw cocon identify --spreadsheet-id "1ABC..." --output csv
+cw cocon identify --spreadsheet-id "1ABC..." --output json
+cw cocon identify --spreadsheet-id "1ABC..." --output txt
+cw cocon identify --spreadsheet-id "1ABC..." --output csv
 ```
 
 **Équivalent à** : `identify_cocons.py`
 
 **Pré-requis** : Exécuter d'abord :
 ```bash
-srw debug extract-structures --spreadsheet-id "1ABC..."
+cw debug extract-structures --spreadsheet-id "1ABC..."
 ```
 
 #### Valider les Cocons
@@ -135,7 +135,7 @@ srw debug extract-structures --spreadsheet-id "1ABC..."
 Vérifie que les liens PARENT-CHILD sont présents.
 
 ```bash
-srw cocon validate https://enseigna.fr/article --spreadsheet-id "1ABC..."
+cw cocon validate https://enseigna.fr/article --spreadsheet-id "1ABC..."
 ```
 
 ---
@@ -150,13 +150,13 @@ Récupère données GSC pour toutes les URLs en attente.
 
 ```bash
 # Tous les blogs
-srw batch audit-gsc --spreadsheet-id "1ABC..."
+cw batch audit-gsc --spreadsheet-id "1ABC..."
 
 # Blog spécifique
-srw batch audit-gsc --spreadsheet-id "1ABC..." --blog enseigna
+cw batch audit-gsc --spreadsheet-id "1ABC..." --blog enseigna
 
 # Avec limite
-srw batch audit-gsc --spreadsheet-id "1ABC..." --limit 10
+cw batch audit-gsc --spreadsheet-id "1ABC..." --limit 10
 ```
 
 #### Batch Audit SERP
@@ -164,8 +164,8 @@ srw batch audit-gsc --spreadsheet-id "1ABC..." --limit 10
 Récupère PAA et secondary keywords.
 
 ```bash
-srw batch audit-serp --spreadsheet-id "1ABC..."
-srw batch audit-serp --spreadsheet-id "1ABC..." --blog enseigna
+cw batch audit-serp --spreadsheet-id "1ABC..."
+cw batch audit-serp --spreadsheet-id "1ABC..." --blog enseigna
 ```
 
 #### Batch Decision
@@ -173,8 +173,8 @@ srw batch audit-serp --spreadsheet-id "1ABC..." --blog enseigna
 Prend des décisions de stratégie pour toutes les URLs auditées.
 
 ```bash
-srw batch decision --spreadsheet-id "1ABC..."
-srw batch decision --spreadsheet-id "1ABC..." --blog enseigna
+cw batch decision --spreadsheet-id "1ABC..."
+cw batch decision --spreadsheet-id "1ABC..." --blog enseigna
 ```
 
 **Output** :
@@ -188,8 +188,8 @@ srw batch decision --spreadsheet-id "1ABC..." --blog enseigna
 Génère le contenu pour toutes les URLs avec l'action spécifiée.
 
 ```bash
-srw batch refresh --spreadsheet-id "1ABC..." --action FULL_REFRESH
-srw batch refresh --spreadsheet-id "1ABC..." --action PARTIAL_REFRESH --blog enseigna
+cw batch refresh --spreadsheet-id "1ABC..." --action FULL_REFRESH
+cw batch refresh --spreadsheet-id "1ABC..." --action PARTIAL_REFRESH --blog enseigna
 ```
 
 **Actions** :
@@ -203,13 +203,13 @@ Workflow automatisé complet : GSC → SERP → Decision → Refresh.
 
 ```bash
 # Avec auto-refresh
-srw batch workflow-auto --spreadsheet-id "1ABC..."
+cw batch workflow-auto --spreadsheet-id "1ABC..."
 
 # Sans auto-refresh (decision seulement)
-srw batch workflow-auto --spreadsheet-id "1ABC..." --no-auto-refresh
+cw batch workflow-auto --spreadsheet-id "1ABC..." --no-auto-refresh
 
 # Blog spécifique
-srw batch workflow-auto --spreadsheet-id "1ABC..." --blog enseigna
+cw batch workflow-auto --spreadsheet-id "1ABC..." --blog enseigna
 ```
 
 ---
@@ -223,7 +223,7 @@ Gestion de l'indexation Google.
 Soumet les URLs avec status "CONTENT DONE" à l'API Google Indexing.
 
 ```bash
-srw indexing request --blog enseigna --spreadsheet-id "1ABC..."
+cw indexing request --blog enseigna --spreadsheet-id "1ABC..."
 ```
 
 #### Scan Indexation
@@ -231,8 +231,8 @@ srw indexing request --blog enseigna --spreadsheet-id "1ABC..."
 Vérifie l'état d'indexation via GSC API.
 
 ```bash
-srw indexing scan --blog enseigna
-srw indexing scan --blog enseigna --limit 100
+cw indexing scan --blog enseigna
+cw indexing scan --blog enseigna --limit 100
 ```
 
 #### Diagnostic Bulk
@@ -240,7 +240,7 @@ srw indexing scan --blog enseigna --limit 100
 Exécute le diagnostic bulk d'indexation.
 
 ```bash
-srw indexing bulk-diagnostic --blog enseigna --spreadsheet-id "1ABC..."
+cw indexing bulk-diagnostic --blog enseigna --spreadsheet-id "1ABC..."
 ```
 
 ---
@@ -254,8 +254,8 @@ Utilitaires de debug.
 Exécute le workflow avec traceback complet.
 
 ```bash
-srw debug workflow https://enseigna.fr/article --blog enseigna
-srw debug workflow https://enseigna.fr/article --blog enseigna --strategy FULL_REFRESH
+cw debug workflow https://enseigna.fr/article --blog enseigna
+cw debug workflow https://enseigna.fr/article --blog enseigna --strategy FULL_REFRESH
 ```
 
 **Équivalent à** : `debug_workflow.py`
@@ -266,13 +266,13 @@ Vérifie les configurations chargées.
 
 ```bash
 # Résumé
-srw debug config
+cw debug config
 
 # Blog spécifique
-srw debug config --blog enseigna
+cw debug config --blog enseigna
 
 # Tous les blogs
-srw debug config --show-all
+cw debug config --show-all
 ```
 
 #### Extraire Structures
@@ -280,12 +280,12 @@ srw debug config --show-all
 Extrait les structures H1/H2 de toutes les URLs.
 
 ```bash
-srw debug extract-structures --spreadsheet-id "1ABC..."
+cw debug extract-structures --spreadsheet-id "1ABC..."
 ```
 
 **Output** : `outputs/articles_structure_YYYYMMDD_HHMMSS.json`
 
-Requis pour `srw cocon identify`.
+Requis pour `cw cocon identify`.
 
 ---
 
@@ -296,8 +296,8 @@ Guides sémantiques basés sur les vrais scores concurrents SOSEO/DSEO.
 #### Créer un guide
 
 ```bash
-srw ytg create-guide --keyword "bienfaits yoga"
-srw ytg create-guide --keyword "musculation dos" --lang fr --country fr
+cw ytg create-guide --keyword "bienfaits yoga"
+cw ytg create-guide --keyword "musculation dos" --lang fr --country fr
 ```
 
 **Output** : guide_id + scores TOP 3/TOP 10 + termes colorés (bleu/orange/rouge/vert).
@@ -305,23 +305,23 @@ srw ytg create-guide --keyword "musculation dos" --lang fr --country fr
 #### Vérifier un guide existant
 
 ```bash
-srw ytg check-guide --guide-id ABC123
+cw ytg check-guide --guide-id ABC123
 ```
 
 #### Pré-fetch batch (recommandé avant workflow)
 
 Crée les guides pour toutes les URLs avec `main_keyword` mais sans `ytg_guide_id` en cache.
-À lancer **avant** `srw batch audit-serp` pour que le STEP 2.5 soit instantané.
+À lancer **avant** `cw batch audit-serp` pour que le STEP 2.5 soit instantané.
 
 ```bash
-srw ytg batch-prefetch --spreadsheet-id "1ABC..."
-srw ytg batch-prefetch --spreadsheet-id "1ABC..." --blog moments-yoga
+cw ytg batch-prefetch --spreadsheet-id "1ABC..."
+cw ytg batch-prefetch --spreadsheet-id "1ABC..." --blog enseigna
 ```
 
 #### Analyser un HTML contre un guide
 
 ```bash
-srw ytg analyze --guide-id ABC123 --html-file _shared/context/.../refreshed.html
+cw ytg analyze --guide-id ABC123 --html-file _shared/context/.../refreshed.html
 ```
 
 **Output** : SOSEO et DSEO obtenus pour notre contenu + termes sous-optimisés / en surdose.
@@ -342,14 +342,14 @@ Intégration avec les bases Notion (commandes d'articles, sujets à traiter).
 #### Synchroniser les commandes
 
 ```bash
-srw notion sync --blog moments-yoga --db-id "abc123def456..."
+cw notion sync --blog enseigna --db-id "abc123def456..."
 ```
 
 #### Vérifier un titre (anti-cannibalisation)
 
 ```bash
-srw notion check-title --blog moments-yoga --title "Les bienfaits du yoga pour la santé"
-srw notion check-title --blog moments-yoga --title "..." --threshold 0.80
+cw notion check-title --blog enseigna --title "Les bienfaits du yoga pour la santé"
+cw notion check-title --blog enseigna --title "..." --threshold 0.80
 ```
 
 **Seuil par défaut** : 0.85 (Jaccard sur les mots). Descendre à 0.75 pour plus de sensibilité.
@@ -357,14 +357,14 @@ srw notion check-title --blog moments-yoga --title "..." --threshold 0.80
 #### Lister les sujets à traiter
 
 ```bash
-srw notion list-sujets --db-id "abc123..."
-srw notion list-sujets --db-id "abc123..." --blog coachsportlyon
+cw notion list-sujets --db-id "abc123..."
+cw notion list-sujets --db-id "abc123..." --blog enseigna
 ```
 
 #### Créer un nouveau sujet
 
 ```bash
-srw notion create-sujet --blog moments-yoga --title "Yoga pour les seniors" \
+cw notion create-sujet --blog enseigna --title "Yoga pour les seniors" \
   --db-id "abc123..." --category wellness --priority high
 ```
 
@@ -382,7 +382,7 @@ NOTION_TOKEN=secret_votre_token_integration
 ## 🗂️ Architecture
 
 ```
-srw.py (point d'entrée)
+content_writer.py (point d'entrée)
 cli/
   commands/
     ├── refresh.py      # Refresh URL unique
@@ -402,11 +402,11 @@ cli/
 
 | Script Ancien | Commande CLI |
 |---------------|--------------|
-| `debug_workflow.py` | `srw debug workflow <url> --blog <ID>` |
-| `identify_cocons.py` | `srw cocon identify --spreadsheet-id <ID>` |
-| `run_workflow_parcoursup.py` | `srw workflow run <url> --blog <ID>` |
-| `scripts/tests/fetch_child_h1s.py` | `srw debug extract-structures --spreadsheet-id <ID>` |
-| `scripts/indexing/bulk_index_diagnostic.py` | `srw indexing bulk-diagnostic --blog <ID> --spreadsheet-id <ID>` |
+| `debug_workflow.py` | `cw debug workflow <url> --blog <ID>` |
+| `identify_cocons.py` | `cw cocon identify --spreadsheet-id <ID>` |
+| `run_workflow_parcoursup.py` | `cw workflow run <url> --blog <ID>` |
+| `scripts/tests/fetch_child_h1s.py` | `cw debug extract-structures --spreadsheet-id <ID>` |
+| `scripts/indexing/bulk_index_diagnostic.py` | `cw indexing bulk-diagnostic --blog <ID> --spreadsheet-id <ID>` |
 
 ---
 
@@ -416,7 +416,7 @@ cli/
 
 ```bash
 # Refresh une URL avec audit complet
-srw refresh https://enseigna.fr/avis-superprof --blog enseigna
+cw refresh https://enseigna.fr/avis-superprof --blog enseigna
 ```
 
 ### Workflow Complet (Row-based)
@@ -430,20 +430,20 @@ python main.py --mode batch-workflow-auto --spreadsheet-id "1ABC..." --row 3
 
 ```bash
 # 1. Extraire structures
-srw debug extract-structures --spreadsheet-id "1ABC..."
+cw debug extract-structures --spreadsheet-id "1ABC..."
 
 # 2. Identifier cocons
-srw cocon identify --spreadsheet-id "1ABC..."
+cw cocon identify --spreadsheet-id "1ABC..."
 
 # 3. Vérifier cannibalization
-srw audit cannibalization https://enseigna.fr/article --spreadsheet-id "1ABC..."
+cw audit cannibalization https://enseigna.fr/article --spreadsheet-id "1ABC..."
 ```
 
 ### Batch Workflow Automatisé
 
 ```bash
 # Workflow complet automatisé pour blog enseigna
-srw batch workflow-auto --spreadsheet-id "1ABC..." --blog enseigna
+cw batch workflow-auto --spreadsheet-id "1ABC..." --blog enseigna
 ```
 
 ---
@@ -481,12 +481,12 @@ Credentials : `C:/Users/samue/.credentials/dataforseo/credentials.json`
 
 ```bash
 # Aide générale
-srw --help
+cw --help
 
 # Aide commande spécifique
-srw refresh --help
-srw batch --help
-srw batch audit-gsc --help
+cw refresh --help
+cw batch --help
+cw batch audit-gsc --help
 ```
 
 ---

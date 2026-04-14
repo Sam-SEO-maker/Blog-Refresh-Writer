@@ -29,12 +29,9 @@ for sheet in sheets:
     title = sheet.get('properties', {}).get('title', 'Unknown')
 
     try:
-        # For Refreshs_Audit, URLs are in column C (after cocon_branch in B)
-        # For other sheets, URLs are in column B
-        if title == 'Refreshs_Audit':
-            col_range = f"{title}!C2:F"
-        else:
-            col_range = f"{title}!B2:E"
+        # For Refreshs_Audit (post-suppression cocon_branch), URLs are in column B.
+        # For other sheets too, URLs are in column B.
+        col_range = f"{title}!B2:E"
 
         result = client._sheets_service.spreadsheets().values().get(
             spreadsheetId=spreadsheet_id,

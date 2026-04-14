@@ -243,10 +243,8 @@ Article Parent
 
 | Blog | Catégorie YMYL | Exigence |
 |------|----------------|----------|
-| moments-yoga.fr | Santé | Source médicale obligatoire, précautions |
-| coachsportlyon.fr | Santé/Sécurité | Source médicale, contre-indications |
 | enseigna.fr | Éducation/Finance | Méthodologie de test, indépendance |
-| Autres | Éducation | Sources institutionnelles |
+| superprof.fr/ressources/ | Éducation | Sources institutionnelles, suivre les 3 guides Superprof |
 
 ### Auteur Obligatoire
 

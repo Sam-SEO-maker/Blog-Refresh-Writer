@@ -2,9 +2,9 @@
 Commandes de debug.
 
 Usage:
-    srw debug workflow <url> --blog enseigna
-    srw debug config [--blog enseigna]
-    srw debug extract-structures --spreadsheet-id <ID>
+    cw debug workflow <url> --blog enseigna
+    cw debug config [--blog enseigna]
+    cw debug extract-structures --spreadsheet-id <ID>
 """
 
 import os
@@ -128,7 +128,7 @@ def config(blog, show_all):
         click.echo(f"{'='*70}")
         click.echo(f"Domain:        {blog_config.get('domain')}")
         click.echo(f"GSC Property:  {blog_config.get('gsc_property')}")
-        click.echo(f"Spreadsheet:   {blog_config.get('sheets_config', {}).get('spreadsheet_id')}")
+        click.echo(f"Spreadsheet:   {blog_config.get('sheet_id') or blog_config.get('sheets_config', {}).get('spreadsheet_id')}")
         click.echo(f"YMYL:          {blog_config.get('ymyl_level')}")
         click.echo(f"E-E-A-T:       {blog_config.get('eeat_level')}")
 
@@ -228,4 +228,4 @@ def extract_structures(spreadsheet_id):
 
     click.echo(f"  ✓ Fichier créé: {json_file}")
     click.echo(f"\n✅ Extraction terminée")
-    click.echo(f"Utilisez maintenant: srw cocon identify --spreadsheet-id {spreadsheet_id}")
+    click.echo(f"Utilisez maintenant: cw cocon identify --spreadsheet-id {spreadsheet_id}")

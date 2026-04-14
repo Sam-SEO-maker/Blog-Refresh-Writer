@@ -2636,35 +2636,10 @@ class RefreshOrchestrator:
                         self.logger = __import__("logging").getLogger("RefreshOrchestrator")
                         self.logger.warning(f"Asset validation error: {str(asset_err)[:50]}")
 
-                # STEP 5.5: INTERNAL LINKING (POST-ASSET-RESTORATION)
-                try:
-                    from _shared.core.models.enums import PostType
-                    if row.post_type in (PostType.PARENT, PostType.CHILD) and getattr(row, 'cocon_branch', 0) > 0:
-                        from scripts.linking.cocon_auto_mapper import CoconAutoMapper
-                        from scripts.linking import LinkInjector
-
-                        auto_mapper = CoconAutoMapper(self.sheets_client, self.stseo_client)
-                        all_mappings = auto_mapper.generate_mappings(row.blog_id, row.cocon_branch)
-
-                        # Filter to only mappings where THIS article is url_source
-                        this_article_mappings = [
-                            m for m in all_mappings
-                            if m.url_source == row.blogpost_url
-                        ]
-
-                        if this_article_mappings:
-                            injector = LinkInjector(site_id=row.blog_id)
-                            refreshed_html, link_results = injector.inject_into_html(
-                                refreshed_html, this_article_mappings
-                            )
-                            injected_count = sum(1 for r in link_results if r.success)
-                            logger.info(
-                                f"[STEP 5.5] Injected {injected_count}/{len(this_article_mappings)} "
-                                f"internal links for cocon branch {row.cocon_branch}"
-                            )
-                except Exception as linking_err:
-                    logger.warning(f"[STEP 5.5] Internal linking skipped: {linking_err}")
-                    # Non-blocking: continue workflow even if linking fails
+                # STEP 5.5: INTERNAL LINKING — DISABLED
+                # Le pipeline cocon-aware basé sur cocon_branch a été retiré (avril 2026).
+                # Pour réinjecter du linking interne, utiliser LinkInjector avec un mapping
+                # CSV manuel (cf. _shared/config/linking_maps/).
 
                 # STEP 5.6: YTG POST-VALIDATION (SEMANTIC DENSITY CHECK)
                 ytg_post_scores = {}

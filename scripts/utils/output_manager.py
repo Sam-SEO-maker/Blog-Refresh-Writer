@@ -341,6 +341,11 @@ class OutputManager:
         output_file.write_text(html_content, encoding="utf-8")
         logger.info(f"Saved refreshed HTML: {output_file}")
 
+        from scripts.utils.gutenberg_formatter import to_gutenberg
+        gutenberg_file = html_dir / f"{file_slug}_refreshed.gutenberg.html"
+        gutenberg_file.write_text(to_gutenberg(html_content), encoding="utf-8")
+        logger.info(f"Saved Gutenberg HTML: {gutenberg_file}")
+
         # Clean up temp file for this article after successful delivery
         self._cleanup_temp(site_id, url_slug)
 

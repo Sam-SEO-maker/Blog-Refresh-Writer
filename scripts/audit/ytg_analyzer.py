@@ -108,7 +108,7 @@ class YTGAnalyzer:
     GUIDE_ENDPOINT = "/guides"
     ANALYZE_ENDPOINT = "/guides/{guide_id}/check"
 
-    # Projet/groupe par défaut pour les guides SRW (thematic-websites)
+    # Projet/groupe par défaut pour les guides Content Writer (thematic-websites)
     DEFAULT_PROJECT_ID = 106774
     DEFAULT_GROUP_ID = 82174
 

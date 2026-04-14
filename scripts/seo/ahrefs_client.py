@@ -161,3 +161,76 @@ class AhrefsClient:
                 results.append({"keyword": kw, "volume": vol})
 
         return results
+
+    def get_organic_keywords(
+        self,
+        target: str,
+        country: str = "fr",
+        mode: str = "prefix",
+        date: Optional[str] = None,
+        limit: int = 10000,
+        page_size: int = 1000,
+    ) -> list[dict]:
+        """
+        Récupère tous les keywords organiques positionnés pour un domaine/préfixe Ahrefs.
+
+        Endpoint: /v3/site-explorer/organic-keywords
+        Pagine via offset jusqu'à `limit` ou épuisement.
+
+        Args:
+            target: Domain ou URL préfixe (ex: "https://www.superprof.fr/ressources/")
+            country: Code pays ISO (ex: "fr")
+            mode: "prefix" | "subdomains" | "domain" | "exact"
+            date: Date snapshot YYYY-MM-DD (défaut: aujourd'hui)
+            limit: Nombre max total de KW à récupérer
+            page_size: Taille de page Ahrefs (max 1000)
+
+        Returns:
+            Liste de dicts: {keyword, volume, cpc, kd, position, url, traffic, sf}
+        """
+        if not self._token or not target:
+            return []
+
+        select = "keyword,volume,cpc,keyword_difficulty,best_position,best_position_url,traffic,serp_features"
+        all_rows: list[dict] = []
+        offset = 0
+
+        while len(all_rows) < limit:
+            params = {
+                "country": country,
+                "target": target,
+                "protocol": "both",
+                "mode": mode,
+                "select": select,
+                "limit": min(page_size, limit - len(all_rows)),
+                "offset": offset,
+                "order_by": "traffic:desc",
+            }
+            if date:
+                params["date"] = date
+
+            data = self._get("/site-explorer/organic-keywords", params)
+            if not data:
+                break
+
+            batch = data.get("keywords", [])
+            if not batch:
+                break
+
+            for item in batch:
+                all_rows.append({
+                    "keyword": item.get("keyword", ""),
+                    "volume": item.get("volume", 0) or 0,
+                    "cpc": item.get("cpc", 0) or 0,
+                    "kd": item.get("keyword_difficulty", 0) or 0,
+                    "position": item.get("best_position", 0) or 0,
+                    "url": item.get("best_position_url", "") or "",
+                    "traffic": item.get("traffic", 0) or 0,
+                    "serp_features": item.get("serp_features", "") or "",
+                })
+
+            if len(batch) < page_size:
+                break
+            offset += len(batch)
+
+        return all_rows

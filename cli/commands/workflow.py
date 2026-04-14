@@ -2,7 +2,7 @@
 Commandes de workflow complet.
 
 Usage:
-    srw workflow run <url> --blog enseigna [--row 3]
+    cw workflow run <url> --blog enseigna [--row 3]
 """
 
 import os

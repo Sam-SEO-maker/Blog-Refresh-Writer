@@ -2,12 +2,12 @@
 Commandes de traitement batch.
 
 Usage:
-    srw batch keyword-discovery [--blog enseigna] [--post-type CHILD]
-    srw batch audit-gsc [--blog enseigna] [--limit 10]
-    srw batch audit-serp [--blog enseigna]
-    srw batch decision [--blog enseigna]
-    srw batch refresh --action FULL_REFRESH [--blog enseigna]
-    srw batch workflow-auto [--blog enseigna] [--no-auto-refresh]
+    cw batch keyword-discovery [--blog enseigna] [--post-type CHILD]
+    cw batch audit-gsc [--blog enseigna] [--limit 10]
+    cw batch audit-serp [--blog enseigna]
+    cw batch decision [--blog enseigna]
+    cw batch refresh --action FULL_REFRESH [--blog enseigna]
+    cw batch workflow-auto [--blog enseigna] [--no-auto-refresh]
 """
 
 import click

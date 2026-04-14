@@ -2,10 +2,10 @@
 Commandes YourTextGuru (YTG).
 
 Usage:
-    srw ytg create-guide --keyword "bienfaits yoga"
-    srw ytg check-guide --guide-id ABC123
-    srw ytg batch-prefetch --spreadsheet-id ID [--blog moments-yoga]
-    srw ytg analyze --guide-id ABC123 --html-file path/to/article.html
+    cw ytg create-guide --keyword "bienfaits yoga"
+    cw ytg check-guide --guide-id ABC123
+    cw ytg batch-prefetch --spreadsheet-id ID [--blog moments-yoga]
+    cw ytg analyze --guide-id ABC123 --html-file path/to/article.html
 """
 
 import json
@@ -87,7 +87,7 @@ def create_guide(keyword, lang, country):
         sys.exit(1)
     except YTGGuideTimeoutError as e:
         click.echo(f"[TIMEOUT] Guide non pret apres {e.attempts} tentatives.", err=True)
-        click.echo(f"Reessayer plus tard : srw ytg check-guide --guide-id {e.guide_id}")
+        click.echo(f"Reessayer plus tard : cw ytg check-guide --guide-id {e.guide_id}")
         sys.exit(1)
 
 
@@ -190,7 +190,7 @@ def batch_prefetch(spreadsheet_id, blog, lang, country, create_missing):
     4. Pour chaque match → écrit ytg_guide_id dans audit_data.json
     5. Avec --create-missing : crée les guides absents
 
-    A lancer AVANT srw batch audit-serp pour que le STEP 2.5 soit
+    A lancer AVANT cw batch audit-serp pour que le STEP 2.5 soit
     un cache hit (< 1s) et n'impacte pas le temps du workflow principal.
     """
     import glob

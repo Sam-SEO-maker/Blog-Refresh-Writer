@@ -32,11 +32,8 @@ _shared/temp/
 ├── enseigna.fr/
 │   ├── avis-acadomia.html
 │   └── cours-maths-primaire.html
-├── cours-particuliers.com/
-├── educationetdevenir.fr/
-├── moments-yoga.fr/
-├── mymusicteacher.fr/
-└── coachsportlyon.fr/
+├── enseigna-vs-concurrent/
+└── superprof-ressources/
 ```
 
 **Méthodes OutputManager**:
@@ -76,11 +73,11 @@ _shared/outputs/enseigna.fr/
 └── editorial_audits/
     └── avis-acadomia_editorial_audit.md
 
-_shared/outputs/educationetdevenir.fr/
-├── parcoursup-2026-guide_refreshed.html
-├── parcoursup-2026-guide_metadata.json
+_shared/outputs/superprof-ressources/
+├── apprendre-piano_refreshed.html
+├── apprendre-piano_metadata.json
 └── editorial_audits/
-    └── parcoursup-2026-guide_editorial_audit.md
+    └── apprendre-piano_editorial_audit.md
 ```
 
 **Méthodes OutputManager**:
@@ -98,11 +95,8 @@ _shared/outputs/educationetdevenir.fr/
 | Site ID | Domain | Type |
 |---------|--------|------|
 | `enseigna.fr` | enseigna.fr | Reviews soutien scolaire |
-| `cours-particuliers.com` | cours-particuliers.com | Conseils parents/élèves |
-| `educationetdevenir.fr` | educationetdevenir.fr | Orientation & débouchés |
-| `moments-yoga.fr` | moments-yoga.fr | Yoga & bien-être |
-| `mymusicteacher.fr` | mymusicteacher.fr | Cours musique |
-| `coachsportlyon.fr` | coachsportlyon.fr | Musculation & fitness |
+| `enseigna-vs-concurrent` | enseigna.fr | Comparatifs Enseigna vs concurrents |
+| `superprof-ressources` | superprof.fr/ressources/ | Blog éducatif Superprof FR |
 
 **Validation stricte**:
 ```python
@@ -183,8 +177,8 @@ if not all_exist:
 ```python
 stats = output_mgr.get_workspace_stats()
 # {
-#   "temp_cache": {"enseigna.fr": 12, "moments-yoga.fr": 8},
-#   "outputs": {"enseigna.fr": 45, "moments-yoga.fr": 32},
+#   "temp_cache": {"enseigna.fr": 12, "superprof-ressources": 8},
+#   "outputs": {"enseigna.fr": 45, "superprof-ressources": 32},
 #   "total_temp_size_mb": 2.4,
 #   "total_output_size_mb": 18.7
 # }

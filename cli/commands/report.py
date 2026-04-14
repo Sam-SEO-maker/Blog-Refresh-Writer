@@ -2,9 +2,9 @@
 Commandes de rapports planifies.
 
 Usage:
-    srw report monday-indexation
-    srw report monday-indexation --blog moments-yoga --dry-run
-    srw report monday-indexation --save-json --limit 10
+    cw report monday-indexation
+    cw report monday-indexation --blog moments-yoga --dry-run
+    cw report monday-indexation --save-json --limit 10
 """
 
 import os
