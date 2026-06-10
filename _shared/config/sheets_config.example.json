@@ -1,0 +1,36 @@
+{
+  "_doc": "Configuration des spreadsheets opérationnelles. Copier ce fichier en sheets_config.json et remplir les IDs réels.",
+
+  "spreadsheets": {
+    "superprof_ressources": {
+      "id": "YOUR_SUPERPROF_SPREADSHEET_ID",
+      "name": "Articles Ressources",
+      "owner_email": "your@email.com",
+      "sheets": {
+        "main": "TODO_nom_onglet"
+      },
+      "columns_main": [
+        "TODO_a_recuperer_avec_la_sheet"
+      ]
+    },
+    "enseigna": {
+      "id": "YOUR_ENSEIGNA_SPREADSHEET_ID",
+      "name": "Enseigna - Refresh List",
+      "sheets": {
+        "avis": "Avis",
+        "versus": "Versus"
+      },
+      "columns_avis": [
+        "TODO_a_definir"
+      ],
+      "columns_versus": [
+        "TODO_a_definir"
+      ]
+    }
+  },
+
+  "notes": [
+    "Récupérer l'ID d'un Google Sheet depuis son URL : docs.google.com/spreadsheets/d/{ID}/edit",
+    "Le compte de service Google doit avoir accès en lecture/écriture à chaque spreadsheet"
+  ]
+}

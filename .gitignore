@@ -158,3 +158,4 @@ logs/*.txt
 # Ahrefs / SEO exports at repo root (bulk data, kept local)
 /*.csv
 _shared/config/ahrefs_state.json
+_shared/config/sheets_config.json
