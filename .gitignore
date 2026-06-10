@@ -159,3 +159,4 @@ logs/*.txt
 /*.csv
 _shared/config/ahrefs_state.json
 _shared/config/sheets_config.json
+_shared/config/sites.json

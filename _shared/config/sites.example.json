@@ -1,12 +1,12 @@
 {
-  "notion_refresh_tracker_db_id": "44ccd367-afa9-4221-8067-c76ff54ff534",
+  "notion_refresh_tracker_db_id": "YOUR_NOTION_DB_ID",
   "sites": [
     {
       "id": "enseigna",
       "name": "Enseigna",
       "domain": "enseigna.fr",
       "gsc_property": "https://enseigna.fr/",
-      "sheet_id": "1rNRU2WzlqfsAvFDjJHDN3ChCZ3u0NIfRaPoM4s1MzEM",
+      "sheet_id": "YOUR_ENSEIGNA_SHEET_ID",
       "credentials": "enseigna-gsc.json",
       "active": true,
       "subject_category": "education_reviews",
@@ -26,8 +26,8 @@
       },
       "cesu_formula": "(Prix net x 1.8076) x 0.5",
       "acf_fields": 15,
-      "pbn_website_id": 492,
-      "notion_commandes_db_id": "76294c0e-d26d-4c28-b2af-92fa0b40bc91",
+      "pbn_website_id": 0,
+      "notion_commandes_db_id": "YOUR_NOTION_COMMANDES_DB_ID",
       "notion_sujets_db_id": ""
     },
     {
@@ -36,7 +36,7 @@
       "domain": "superprof.fr",
       "url_base": "https://www.superprof.fr/ressources/",
       "gsc_property": "https://www.superprof.fr/ressources/",
-      "sheet_id": "1Vutb06Fcm3awnANPbtLkI1EvhbE9d-TXrZRLTrmmLlQ",
+      "sheet_id": "YOUR_SUPERPROF_SHEET_ID",
       "credentials": "google-service-account.json",
       "active": true,
       "subject_category": "education_general",
