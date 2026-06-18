@@ -155,6 +155,9 @@ _shared/cache/
 logs/*.log
 logs/*.txt
 
+# Local-only data (bulk source exports, kept off git — ex: landings-superprof-fr.csv)
+_local/
+
 # Ahrefs / SEO exports at repo root (bulk data, kept local)
 /*.csv
 _shared/config/ahrefs_state.json

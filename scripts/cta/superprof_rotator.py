@@ -106,8 +106,20 @@ class SuperprofRotator:
         if not landings:
             return self._fallback(site_id)
 
-        subject = self._normalize_subject(article_subject, site_config)
+        # Matière : article_subject explicite > dérivée de l'URL > défaut du site.
+        # (article_subject n'est aujourd'hui jamais peuplé en amont ; l'URL
+        # /ressources/{matiere}/... est la source fiable de la matière.)
+        subject = (article_subject or "").strip().lower()
+        if not subject:
+            subject = self._derive_subject_from_url(article_url)
+        if not subject:
+            subject = site_config.get("default_subject", "")
         matched = [l for l in landings if self._matches_subject(l, subject)]
+        # Préférer un match exact de matière (slug == subject) pour éviter qu'une
+        # sous-chaîne l'emporte (ex: "physique" matchant un article "physique-chimie").
+        exact = [l for l in matched if subject in l.get("subject_match", [])]
+        if exact:
+            matched = exact
         if not matched:
             matched = landings
 
@@ -140,7 +152,9 @@ class SuperprofRotator:
 
         # Extraire la ville du slug et générer le contexte géographique
         city = self._extract_city(slug)
-        geo_context = self._generate_geo_context(city, subject, rng)
+        geo_context = self._generate_geo_context(
+            city, subject, rng, selected.get("city_display", "")
+        )
 
         return {
             "url": f"{SUPERPROF_BASE_URL}{slug}",
@@ -267,6 +281,22 @@ class SuperprofRotator:
         landings = site_config.get("landings", [])
         return {landing["slug"] for landing in landings}
 
+    def _derive_subject_from_url(self, url: str) -> str:
+        """Extrait la matière d'une URL Superprof.
+
+        /ressources/{matiere}/...  (article du blog)  -> {matiere}
+        /cours/{matiere}/{ville}/  (landing)          -> {matiere}
+        """
+        if not url:
+            return ""
+        parts = [p for p in url.split("/") if p and "." not in p]
+        for marker in ("ressources", "cours"):
+            if marker in parts:
+                i = parts.index(marker)
+                if i + 1 < len(parts):
+                    return parts[i + 1].lower()
+        return ""
+
     def _normalize_subject(self, article_subject: str, site_config: dict) -> str:
         if article_subject:
             return article_subject.lower().strip()
@@ -334,15 +364,30 @@ class SuperprofRotator:
         return "france"
 
     def _generate_geo_context(
-        self, city: str, subject: str, rng: random.Random
+        self,
+        city: str,
+        subject: str,
+        rng: random.Random,
+        city_display: str = "",
     ) -> str:
         """Génère une phrase d'accroche géographique pour naturaliser le CTA."""
         city_key = city.lower()
-        templates = GEO_CONTEXTS.get(city_key, GEO_CONTEXTS["france"])
-        template = rng.choice(templates)
-        # Remplacer {discipline} par le sujet
         discipline = subject.replace("-", " ") if subject else "cette discipline"
-        return template.format(discipline=discipline)
+
+        if city_key in GEO_CONTEXTS:
+            return rng.choice(GEO_CONTEXTS[city_key]).format(discipline=discipline)
+
+        # Ville réelle hors liste : gabarit générique avec son nom d'affichage.
+        if city_key and city_key != "france":
+            disp = city_display or city.capitalize()
+            generic = [
+                f"À {disp}, de nombreux profs proposent un accompagnement en {discipline}.",
+                f"Du côté de {disp}, l'offre de cours en {discipline} s'est bien développée.",
+                f"À {disp}, trouver un accompagnement en {discipline} est devenu simple.",
+            ]
+            return rng.choice(generic)
+
+        return rng.choice(GEO_CONTEXTS["france"]).format(discipline=discipline)
 
     def _select_anchor(
         self,
@@ -375,14 +420,20 @@ class SuperprofRotator:
         return min(anchor_pool, key=lambda a: anchor_counts.get(a, 0))
 
     def _fallback(self, site_id: str) -> dict:
-        """Fallback dynamique : extrait le sujet du site_id ou utilise un générique."""
-        subject = site_id.replace("-", " ").replace("_", " ").split()[0] if site_id else "soutien-scolaire"
+        """Fallback sûr : ne JAMAIS deviner une landing /cours/{matiere}/{ville}/.
+
+        L'ancienne version dérivait la matière du site_id
+        ("superprof-ressources".split()[0] -> "superprof"), produisant
+        https://www.superprof.fr/cours/superprof/france/ qui renvoie une 404,
+        toujours avec la même ancre "professeur particulier". On pointe désormais
+        vers la home Superprof (toujours valide) avec une ancre de marque.
+        """
         return {
-            "url": f"{SUPERPROF_BASE_URL}/cours/{subject}/france/",
-            "slug": f"/cours/{subject}/france/",
-            "anchor": "professeur particulier",
+            "url": f"{SUPERPROF_BASE_URL}/",
+            "slug": "/",
+            "anchor": "Superprof",
             "city": "france",
-            "geo_context": "De nombreux professionnels proposent leurs services à domicile ou en visio.",
+            "geo_context": "",
             "target_keywords": [],
-            "reason": f"Fallback (site '{site_id}' non configuré)",
+            "reason": f"Fallback sûr (site '{site_id}' non configuré, pas de landing devinée)",
         }
