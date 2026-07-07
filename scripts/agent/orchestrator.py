@@ -40,6 +40,7 @@ from ..notion import NotionClient  # Notion anti-cannibalization
 
 # Imports pour action_formatter
 from ..utils.action_formatter import generate_to_do_action, generate_recommended_actions, map_action_to_blogpost
+from ..utils.output_manager import dated_batch_folder_name
 
 
 class RefreshOrchestrator:
@@ -833,6 +834,7 @@ class RefreshOrchestrator:
                 assets_valid=True,
                 errors=errors,
                 execution_time_seconds=(datetime.now() - start_time).total_seconds(),
+                main_keyword=audit_dict.get("main_keyword", ""),
             )
 
         except Exception as e:
@@ -1694,8 +1696,15 @@ class RefreshOrchestrator:
             print(f"[AUTO-PROCESS] Action FULL_REFRESH détectée pour: {row.blogpost_url}")
             print(f"[AUTO-PROCESS] Préparation du contexte pour génération automatique...")
 
-        # Create a slug from URL
+        # Create a slug from URL (used for the context bundle directory name)
         url_slug = re.sub(r'[^a-z0-9]+', '_', row.blogpost_url.lower()).strip('_')
+
+        # Output slug: last URL path segment only (article slug), without domain/categories.
+        # Used to name delivered files (e.g. "distance-zero-soustraction.html", not the full
+        # domain+category-encoded url_slug) so the html/ folder stays readable at a glance.
+        output_slug = row.blogpost_url.rstrip('/').rsplit('/', 1)[-1]
+        if output_slug.endswith('.html'):
+            output_slug = output_slug[:-len('.html')]
 
         # Create context directory
         context_dir = Path("_shared/context") / url_slug
@@ -1759,7 +1768,8 @@ class RefreshOrchestrator:
             f.write(f"GUIDELINES SYSTÈME:\n{seo_guidelines[:3000]}\n\n")
             f.write(f"GUIDELINES SITE {row.blog_id}:\n{site_prompt[:1500]}\n")
 
-        html_subdir = "html"
+        batch_folder = dated_batch_folder_name()
+        html_subdir = f"html/{batch_folder}"
 
         # Build task instructions
         instructions = [
@@ -1767,13 +1777,21 @@ class RefreshOrchestrator:
             "Lis les données d'audit dans audit_data.json",
             "Lis les guidelines dans guidelines.txt",
             "Génère le HTML optimisé en respectant la RÈGLE D'OR",
-            f"Sauvegarde le résultat dans _shared/outputs/{row.blog_id}/{html_subdir}/{url_slug}_refreshed.html",
-            f"Sauvegarde les métadonnées dans _shared/outputs/{row.blog_id}/metadata/{url_slug}_metadata.json",
+            f"Sauvegarde le résultat dans _shared/outputs/{row.blog_id}/{html_subdir}/{output_slug}_refreshed.html",
+            f"Sauvegarde les métadonnées dans _shared/outputs/{row.blog_id}/metadata/{output_slug}_metadata.json",
         ]
         if row.blog_id == "superprof-ressources":
+            refreshed_html_path = f"_shared/outputs/{row.blog_id}/{html_subdir}/{output_slug}_refreshed.html"
+            instructions.append(
+                f"Exécute en Bash depuis la racine du projet (extraction CSV des tableaux, "
+                f"OBLIGATOIRE avant l'étape suivante, même si le rapport de génération dit "
+                f"que les tableaux ont été traités) : "
+                f".venv/bin/python content_writer.py batch extract-tables "
+                f"--site-id {row.blog_id} --file {refreshed_html_path}"
+            )
             instructions.append(
                 f"Exécute en Bash depuis la racine du projet : "
-                f".venv/bin/python content_writer.py statuts '{row.blogpost_url}' 'Rédigé'"
+                f".venv/bin/python content_writer.py ngl-status '{row.blogpost_url}' 'Rédigé'"
             )
 
         # Create task bundle
@@ -1782,6 +1800,7 @@ class RefreshOrchestrator:
             "status": "READY",
             "created_at": datetime.now().isoformat(),
             "url_slug": url_slug,
+            "output_slug": output_slug,
             "files": {
                 "input": {
                     "original_html": str(html_file.absolute()),
@@ -1789,8 +1808,8 @@ class RefreshOrchestrator:
                     "guidelines": str(guidelines_file.absolute())
                 },
                 "output": {
-                    "refreshed_html": f"_shared/outputs/{row.blog_id}/{html_subdir}/{url_slug}_refreshed.html",
-                    "metadata": f"_shared/outputs/{row.blog_id}/metadata/{url_slug}_metadata.json"
+                    "refreshed_html": f"_shared/outputs/{row.blog_id}/{html_subdir}/{output_slug}_refreshed.html",
+                    "metadata": f"_shared/outputs/{row.blog_id}/metadata/{output_slug}_metadata.json"
                 }
             },
             "instructions": instructions,
@@ -1833,10 +1852,13 @@ class RefreshOrchestrator:
             context_dir = self._prepare_context_for_claude_code(original_html, action, row, extraction_result, ytg_data=ytg_data)
 
             url_slug = re.sub(r'[^a-z0-9]+', '_', row.blogpost_url.lower()).strip('_')
+            output_slug = row.blogpost_url.rstrip('/').rsplit('/', 1)[-1]
+            if output_slug.endswith('.html'):
+                output_slug = output_slug[:-len('.html')]
 
             # STEP 2: Check if Claude Code should be invoked
             # Define expected output paths using OutputManager (title-based naming)
-            outputs = self.output_mgr.get_output_files(row.blog_id, url_slug, title=row.title)
+            outputs = self.output_mgr.get_output_files(row.blog_id, output_slug, title=row.title)
             refreshed_file = outputs["refreshed_html"]
             metadata_file = outputs["metadata"]
 

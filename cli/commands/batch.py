@@ -409,14 +409,21 @@ def benchmark(blog, source_sheet, rows, spreadsheet_id):
               default=None, help='Dossier HTML source (défaut: _shared/outputs/{site_id}/html/)')
 @click.option('--output-dir', type=click.Path(file_okay=False, path_type=Path),
               default=None, help='Dossier CSV destination (défaut: _shared/outputs/{site_id}/csv/)')
-def extract_tables(site_id, input_dir, output_dir):
+@click.option('--file', 'single_file', type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              default=None,
+              help="Ne traiter qu'un seul fichier *_refreshed.html (chemin exact), au lieu de scanner --input-dir")
+def extract_tables(site_id, input_dir, output_dir, single_file):
     """Extrait les tableaux HTML des articles en fichiers CSV pour TablePress.
 
-    Scanne tous les *_refreshed.html du dossier source et génère un CSV par
-    tableau trouvé : {slug}_table_1.csv, _table_2.csv, etc.
+    Sans --file : scanne récursivement tous les *_refreshed.html du dossier
+    source (y compris sous-dossiers) et génère un CSV par tableau trouvé.
+    Avec --file : ne traite que ce fichier précis (utilisé en fin de Phase 2,
+    juste après la génération d'un article, pour garantir l'extraction sans
+    dépendre d'un scan global).
 
     Exemple:
       cw batch extract-tables --site-id superprof-ressources
+      cw batch extract-tables --site-id superprof-ressources --file _shared/outputs/superprof-ressources/html/mon-article_refreshed.html
     """
     import logging
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
@@ -428,19 +435,20 @@ def extract_tables(site_id, input_dir, output_dir):
     html_dir = input_dir or base_dir / "html"
     csv_dir = output_dir or base_dir / "csv"
 
-    if not html_dir.exists():
-        click.echo(f"Dossier introuvable : {html_dir}", err=True)
-        raise click.Abort()
-
-    html_files = sorted(html_dir.glob("*_refreshed.html"))
-    if not html_files:
-        click.echo(f"Aucun fichier *_refreshed.html trouvé dans {html_dir}")
-        return
+    if single_file:
+        html_files = [single_file]
+    else:
+        if not html_dir.exists():
+            click.echo(f"Dossier introuvable : {html_dir}", err=True)
+            raise click.Abort()
+        html_files = sorted(html_dir.rglob("*_refreshed.html"))
+        if not html_files:
+            click.echo(f"Aucun fichier *_refreshed.html trouvé dans {html_dir}")
+            return
 
     click.echo(f"\nExtraction CSV — {site_id}")
-    click.echo(f"Source : {html_dir}")
     click.echo(f"Destination : {csv_dir}")
-    click.echo(f"Fichiers trouvés : {len(html_files)}\n")
+    click.echo(f"Fichiers à traiter : {len(html_files)}\n")
 
     total_tables = 0
     files_with_tables = 0
@@ -457,6 +465,7 @@ def extract_tables(site_id, input_dir, output_dir):
             click.echo(f"  ✓ {file_slug} → {len(csv_files)} tableau(x)")
         else:
             files_without_tables += 1
+            click.echo(f"  - {file_slug} → 0 tableau (aucune balise <table>)")
 
     click.echo(f"\nRésultat : {total_tables} tableaux extraits "
                f"({files_with_tables} articles avec tableaux, "

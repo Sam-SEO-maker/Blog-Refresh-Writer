@@ -13,7 +13,7 @@ from _shared.core.models import ContentDiff, RewriteResult
 from _shared.core.prompt_composer import PromptComposer
 from scripts.audit.semantic_checker import SemanticChecker
 from scripts.cta.superprof_rotator import SuperprofRotator
-from scripts.utils.output_manager import title_to_slug
+from scripts.utils.output_manager import title_to_slug, dated_batch_folder_name
 from .diff_engine import DiffEngine
 
 
@@ -675,8 +675,8 @@ Retourne l'article complet réécrit en HTML:
                 "assets_before": assets.get("counts") or {},
             },
             "output_files": {
-                "html": str(output_dir / "html" / f"{self._title_to_slug(audit_data.get('title', '')) or context_dir.name}_refreshed.html"),
-                "metadata": str(output_dir / "json" / f"{context_dir.name}_metadata.json")
+                "html": str(output_dir / "html" / dated_batch_folder_name() / f"{self._title_to_slug(audit_data.get('title', '')) or context_dir.name}_refreshed.html"),
+                "metadata": str(output_dir / "json" / dated_batch_folder_name() / f"{context_dir.name}_metadata.json")
             }
         }
 

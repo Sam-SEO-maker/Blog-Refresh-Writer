@@ -22,6 +22,7 @@ import re
 import shutil
 import unicodedata
 from datetime import datetime
+import locale
 import logging
 
 
@@ -34,6 +35,25 @@ def title_to_slug(title: str) -> str:
     s = re.sub(r'\s+', '-', s.strip())
     s = re.sub(r'-+', '-', s)
     return s[:150] or "unknown"
+
+
+def dated_batch_folder_name(dt: Optional[datetime] = None) -> str:
+    """Nom de sous-dossier de lot daté, ex. 'articles_7_juillet_2026'.
+
+    Utilisé pour ranger html/, csv_zips/ et json/ par date de génération plutôt
+    que de tout accumuler à plat dans un seul dossier (cf. réorganisation
+    manuelle du 2026-07-07 en articles_juin_2026 / articles_7_juillet_2026).
+    """
+    dt = dt or datetime.now()
+    try:
+        locale.setlocale(locale.LC_TIME, "fr_FR.UTF-8")
+    except locale.Error:
+        pass
+    mois_fr = [
+        "janvier", "fevrier", "mars", "avril", "mai", "juin",
+        "juillet", "aout", "septembre", "octobre", "novembre", "decembre",
+    ]
+    return f"articles_{dt.day}_{mois_fr[dt.month - 1]}_{dt.year}"
 
 logger = logging.getLogger(__name__)
 
@@ -328,6 +348,19 @@ class OutputManager:
         csv_files = extract_tables_to_csv(html_content, csv_dir, file_slug)
         if csv_files:
             logger.info(f"[CSV] {len(csv_files)} tableau(x) extrait(s) → {csv_dir}")
+            import zipfile
+            zip_dir = self.get_site_output_dir(site_id) / "csv_zips"
+            zip_dir.mkdir(parents=True, exist_ok=True)
+            zip_path = zip_dir / f"{file_slug}_tableaux.zip"
+            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                for p in csv_files:
+                    zf.write(p, p.name)
+            logger.info(f"[ZIP] {zip_path.name}")
+
+        from scripts.utils.acf_extractor import save_acf_if_literary
+        acf_path = save_acf_if_literary(site_id, file_slug, html_content, self.outputs_root)
+        if acf_path:
+            logger.info(f"[ACF] fiche de lecture détectée → {acf_path}")
 
         # Clean up temp file for this article after successful delivery
         self._cleanup_temp(site_id, url_slug)
