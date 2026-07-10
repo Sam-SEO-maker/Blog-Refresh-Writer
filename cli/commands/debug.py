@@ -173,9 +173,19 @@ def extract_structures(spreadsheet_id):
     click.echo(f"Spreadsheet: {spreadsheet_id}\n")
 
     # Read spreadsheet
+    # ⚠️ L'onglet "Refreshs_Audit" est obsolète (n'existe plus dans les Sheets réels).
+    # Les onglets réels sont Enseigna → "Avis"/"Versus", Superprof → "New Growing List".
     click.echo("[1/3] Lecture spreadsheet...")
     sheets_client = SheetsClient(spreadsheet_id)
     sheet_data = sheets_client._read_sheet('Refreshs_Audit')
+    if not sheet_data:
+        click.echo(
+            "[ERREUR] Onglet 'Refreshs_Audit' introuvable/vide (obsolète). "
+            "Utiliser les onglets réels : 'Avis'/'Versus' (Enseigna) ou "
+            "'New Growing List' (Superprof).",
+            err=True,
+        )
+        return
 
     articles = []
     for i, row in enumerate(sheet_data[1:], start=2):

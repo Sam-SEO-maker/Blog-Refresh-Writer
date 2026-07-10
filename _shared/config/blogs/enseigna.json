@@ -14,6 +14,14 @@
   "content_type": "review_comparatif",
   "subject_category": "education_reviews",
 
+  "ytg": {
+    "enabled": true,
+    "gate": false,
+    "group_id": 82174,
+    "lang": "fr",
+    "keyword_sources": ["notion", "sheet", "gsc", "slug"]
+  },
+
   "tone_profile": {
     "style": "expert_analytique",
     "formality": "formal",

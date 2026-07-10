@@ -124,6 +124,24 @@ Pour chaque article avis comparatif, ajouter **AVANT le titre principal** :
 
 ---
 
+## Réécriture réelle vs calque de l'original (OBLIGATOIRE)
+
+Un refresh Enseigna (FULL_REFRESH le plus souvent, parfois PARTIAL_REFRESH ou TITLE_OPTIMIZATION) n'est **pas** une paraphrase de l'article existant. L'HTML original fourni sert de **source de faits et d'assets à préserver**, pas de gabarit rédactionnel à recopier phrase par phrase.
+
+❌ **Interdit** :
+- Reprendre l'accroche d'introduction de l'original en la reformulant à peine (même angle, même première image mentale, même enchaînement de phrases).
+- Conserver l'ordre et la formulation des paragraphes de l'original quand un meilleur déroulé est possible.
+- Recopier une anecdote personnelle de l'original comme si c'était la nôtre (ex. souvenir d'enfance du rédacteur d'origine).
+
+✅ **Attendu** :
+- **Introduction repensée à partir de zéro** : nouvelle accroche (chiffre-clé actualisé, question du lecteur, constat terrain du test), différente de celle de l'original. Si l'original ouvre sur une scène ou une anecdote, changer d'angle plutôt que de la paraphraser.
+- Structure des H2 réordonnée/optimisée si cela sert le lecteur (les H2 ne sont jamais recopiés tels quels, sauf H2 = H1 d'un article enfant en cocon).
+- Le fil narratif, les transitions et les exemples sont réécrits, pas décalqués.
+
+**Règle de contrôle** : si l'introduction générée pourrait être obtenue en passant l'intro originale dans un simple reformulateur, elle est à refaire.
+
+---
+
 ## Maillage interne (ce site)
 
 Sur enseigna.fr, les liens internes renvoient vers **d'autres articles du site** (avis, comparatifs), pas vers les landings commerciales de Superprof.

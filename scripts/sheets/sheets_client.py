@@ -18,6 +18,7 @@ from _shared.core.models import (
     AuditResultRow,
     RefreshResultRow,
     RefreshAuditRow,
+    EnseignaAvisRow,
 )
 from _shared.core.models.sheets_models import _safe_int, _safe_float
 
@@ -38,15 +39,20 @@ class SheetsClient:
     """
     Client Google Sheets pour le pilotage du workflow.
 
-    V2.0 : Architecture single-sheet
-    Gère les interactions avec le spreadsheet de pilotage:
-    - Refreshs_Audit: Feuille unifiée (remplace URLs_Input, Audit_Results, Refresh_Results)
-    - Decision_Log: Archive des décisions (lecture seule pour workflow)
-    - Refresh_Results: Archive des refreshes (lecture seule pour workflow)
+    Gère les interactions avec le spreadsheet de pilotage.
+
+    ⚠️ OBSOLÈTE : l'onglet "Refreshs_Audit" (et le modèle RefreshAuditRow associé)
+    n'existe PLUS dans les Google Sheets réels — le lire provoque un HTTP 400.
+    Onglets réels utilisés aujourd'hui :
+      - Enseigna  → "Avis" / "Versus" (voir ENSEIGNA_TABS, read_pending_for_refresh_enseigna)
+      - Superprof → "New Growing List" (voir scripts/agent/prepare_weekly_batch.py)
+    Les méthodes read_pending_* ci-dessous qui pointent SHEET_REFRESHS_AUDIT sont
+    de l'ancien système fork ; elles loguent désormais une erreur explicite au lieu
+    de retourner silencieusement 0 ligne.
     """
 
-    # Noms des feuilles (NEW ARCHITECTURE)
-    SHEET_REFRESHS_AUDIT = "Refreshs_Audit"  # Main single sheet (29 colonnes A-AC)
+    # Nom d'onglet LEGACY (obsolète — voir docstring de classe).
+    SHEET_REFRESHS_AUDIT = "Refreshs_Audit"  # ⚠️ n'existe plus dans les Sheets réels
     SHEET_DECISION_LOG = "Decision_Log"      # Archive for traceability
     SHEET_REFRESH_RESULTS = "Refresh_Results"  # Archive for traceability
 
@@ -1178,7 +1184,16 @@ class SheetsClient:
                                 print(f"[ERROR] Impossible de créer même une row minimale pour ligne {i}: {fallback_error}")
                                 continue
             return rows
-        except Exception:
+        except Exception as e:
+            # NE PAS avaler silencieusement : l'onglet "Refreshs_Audit" n'existe plus
+            # dans les Google Sheets réels (HTTP 400). Ce log rend visible toute
+            # erreur d'onglet au lieu de retourner 0 ligne sans explication.
+            print(
+                f"[ERROR] read_pending_for_refresh({action!r}, blog={blog_id!r}) a échoué "
+                f"sur l'onglet '{self.SHEET_REFRESHS_AUDIT}': {e}. "
+                "Cet onglet est obsolète — le pipeline Superprof passe par 'New Growing List' "
+                "(prepare_weekly_batch.py) et Enseigna par 'Avis'/'Versus'."
+            )
             return []
 
     def update_audit_gsc(
@@ -1346,6 +1361,100 @@ class SheetsClient:
             import traceback
             traceback.print_exc()
             return False
+
+    # =========================================================================
+    # Enseigna Avis/Versus Operations (onglets réels de production)
+    # =========================================================================
+    #
+    # "Avis" et "Versus" partagent le même schéma 14 colonnes A-N (voir EnseignaAvisRow).
+    # Ces onglets sont régénérés en colonnes A-J par scripts/audit/enseigna_refresh_list.py
+    # (snapshot GSC). Les colonnes K-N (suggested_action, publish_date, refresh_date) sont
+    # pilotées séparément — on ne les touche donc qu'en cellule ciblée, jamais en clear+rewrite.
+
+    ENSEIGNA_TABS = ["Avis", "Versus"]
+
+    def read_pending_for_refresh_enseigna(
+        self, action: str, tabs: Optional[list[str]] = None
+    ) -> list["EnseignaAvisRow"]:
+        """
+        Lit les lignes des onglets Avis/Versus où suggested_action = action.
+
+        Contrairement à l'architecture V2 (Refreshs_Audit), il n'y a pas de colonne
+        status TODO/DONE : une ligne est considérée "à traiter" si suggested_action
+        matche et si elle n'a pas déjà un refresh_date (colonne N) — le pipeline ne
+        maintient aucun état persisté au-delà de cette date.
+
+        Args:
+            action: Action recherchée (ex: "FULL_REFRESH", "PARTIAL_REFRESH", "TITLE_OPTIMIZATION")
+            tabs: Onglets à scanner (défaut: Avis + Versus)
+
+        Returns:
+            Liste de EnseignaAvisRow avec suggested_action = action et refresh_date vide
+        """
+        action_variants = {action, action.replace("_", " "), action.replace(" ", "_")}
+        rows: list[EnseignaAvisRow] = []
+
+        for tab in (tabs or self.ENSEIGNA_TABS):
+            data = self._read_sheet(tab)
+            if not data:
+                continue
+            for i, raw_row in enumerate(data[1:], start=2):
+                if len(raw_row) < 4:
+                    continue
+                suggested_action = raw_row[3]
+                if suggested_action not in action_variants:
+                    continue
+                audit_row = EnseignaAvisRow.from_list(raw_row, row_index=i, tab_name=tab)
+                if audit_row.refresh_date:
+                    continue  # déjà refreshé, pas de re-traitement automatique
+                rows.append(audit_row)
+
+        return rows
+
+    def update_refresh_status_enseigna(
+        self, url: str, refresh_date: str, new_h1_title: Optional[str] = None
+    ) -> bool:
+        """
+        Marque une URL Avis/Versus comme refreshée (colonne N) via update ciblé
+        (jamais de clear+rewrite — préserve toutes les autres colonnes).
+
+        Args:
+            url: URL de l'article (colonne A)
+            refresh_date: Timestamp ISO à écrire en colonne N
+            new_h1_title: Optionnel — pas de colonne dédiée sur Avis/Versus,
+                          ignoré ici (le nouveau H1 vit dans le HTML généré,
+                          pas dans le sheet, contrairement à l'architecture V2)
+
+        Returns:
+            True si la ligne a été trouvée et mise à jour
+        """
+        for tab in self.ENSEIGNA_TABS:
+            row_index = self._find_url_row_col_a(url, tab)
+            if row_index is None:
+                continue
+            ok = self._batch_update_cells([
+                {"sheet": tab, "cell": f"N{row_index}", "value": refresh_date},
+            ])
+            if not ok:
+                print(f"[SHEETS] ✗ update_refresh_status_enseigna: échec écriture pour {url[:60]}")
+            return ok
+
+        print(f"[SHEETS] ✗ update_refresh_status_enseigna: URL introuvable dans Avis/Versus: {url[:80]}")
+        return False
+
+    def _find_url_row_col_a(self, url: str, sheet_name: str) -> Optional[int]:
+        """
+        Trouve l'index de ligne d'une URL en colonne A.
+
+        Contrairement à `_find_url_row` (câblé pour l'architecture V2 où
+        l'URL est en colonne B), les onglets Avis/Versus/A ajouter ont l'URL
+        en colonne A.
+        """
+        data = self._read_sheet(sheet_name)
+        for i, row in enumerate(data[1:], start=2):
+            if row and len(row) > 0 and row[0] == url:
+                return i
+        return None
 
     # =========================================================================
     # Sheet Creation (pour initialisation)

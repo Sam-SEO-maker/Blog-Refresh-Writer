@@ -7,6 +7,7 @@ Orchestrateur principal qui coordonne le workflow complet de refresh.
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from dataclasses import dataclass, field
 import logging
 import requests
 import time
@@ -570,6 +571,15 @@ class RefreshOrchestrator:
             # continue avec les termes statiques de la catégorie.
             try:
                 main_kw = audit_dict.get("performance", {}).get("main_keyword", "")
+                # Fallback multi-source si l'audit GSC n'a pas fourni de mot-clé.
+                if not main_kw:
+                    try:
+                        from scripts.audit.keyword_resolver import KeywordResolver
+                        main_kw, _kw_src = KeywordResolver().resolve(blog_id, url=url)
+                        if main_kw:
+                            logger.info(f"[STEP 2.5] main_keyword résolu '{main_kw}' (source={_kw_src})")
+                    except Exception as _kw_e:
+                        logger.warning(f"[STEP 2.5] résolution KW échouée: {_kw_e}")
                 ytg_result = self._fetch_ytg_guide(main_kw, audit_dict)
                 if ytg_result:
                     audit_dict["ytg_guide_id"] = ytg_result.guide_id
@@ -906,6 +916,17 @@ class RefreshOrchestrator:
             guide_id=cached_guide_id,
             keyword=keyword,
         )
+
+    def _ytg_gate_enabled(self, blog_id: str) -> bool:
+        """Lit ytg.gate depuis _shared/config/blogs/{blog_id}.json (défaut: False)."""
+        try:
+            cfg_path = self.base_path / "_shared" / "config" / "blogs" / f"{blog_id}.json"
+            if not cfg_path.exists():
+                return False
+            with open(cfg_path, encoding="utf-8") as f:
+                return bool(json.load(f).get("ytg", {}).get("gate", False))
+        except Exception:
+            return False
 
     def _get_notion_commandes_db_id(self, blog_id: str) -> Optional[str]:
         """Lit notion_commandes_db_id depuis sites.json pour ce blog."""
@@ -2047,6 +2068,40 @@ class RefreshOrchestrator:
 
         return results
 
+    def _enseigna_rows_for_refresh(self, action: str) -> list:
+        """
+        Adapte les EnseignaAvisRow (onglets Avis/Versus réels) à l'interface
+        attendue par la boucle de `batch_refresh` (row.blog_id, row.title, etc.),
+        sans dupliquer la logique de génération/validation qui suit.
+        """
+        @dataclass
+        class _EnseignaRefreshRow:
+            blog_id: str = "enseigna"
+            blogpost_url: str = ""
+            main_keyword: str = ""
+            title: str = ""
+            post_type: str = ""
+            impressions_30d: int = 0
+            clicks_30d: int = 0
+            ctr_30d: float = 0.0
+            index_diagnostic: str = ""
+            _source: object = field(default=None, repr=False)
+
+        avis_rows = self.sheets_client.read_pending_for_refresh_enseigna(action)
+        return [
+            _EnseignaRefreshRow(
+                blogpost_url=r.url,
+                main_keyword=r.top_keyword,
+                title="",  # pas de colonne title sur Avis/Versus — le ghostwriter part du H1 scrapé
+                post_type="review",
+                impressions_30d=r.impressions_30d,
+                clicks_30d=r.clicks_30d,
+                ctr_30d=r.ctr,
+                _source=r,
+            )
+            for r in avis_rows
+        ]
+
     def batch_refresh(self, action: str, blog_id: Optional[str] = None, post_type: Optional[str] = None, limit: Optional[int] = None) -> dict:
         """
         Batch refresh pour lignes where action_blogpost = action.
@@ -2080,7 +2135,12 @@ class RefreshOrchestrator:
         if not self.sheets_client:
             return {"processed": 0, "success": 0, "failed": 0, "assets_restored": 0, "errors": []}
 
-        rows = self.sheets_client.read_pending_for_refresh(action, blog_id)
+        # Enseigna n'a pas d'onglet Refreshs_Audit (architecture V2) — router vers
+        # les onglets réels Avis/Versus via l'adaptateur dédié.
+        if blog_id == "enseigna":
+            rows = self._enseigna_rows_for_refresh(action)
+        else:
+            rows = self.sheets_client.read_pending_for_refresh(action, blog_id)
 
         # Filter by post_type if specified
         if post_type:
@@ -2222,6 +2282,7 @@ class RefreshOrchestrator:
 
                 # STEP 5.6: YTG POST-VALIDATION (SEMANTIC DENSITY CHECK)
                 ytg_post_scores = {}
+                ytg_gate_block = False
                 try:
                     # Lazy init YTG analyzer
                     if self.ytg_analyzer is None:
@@ -2242,9 +2303,25 @@ class RefreshOrchestrator:
                             except Exception:
                                 pass
 
-                        # Fallback: fetch/create guide from keyword
+                        # Fallback: fetch/create guide from keyword.
+                        # Le main_keyword du row peut être vide (blogs sans col
+                        # keyword remplie) → résolution multi-source (Notion/Sheet/GSC/slug).
                         if not ytg_guide_id:
-                            ytg_result = self._fetch_ytg_guide(row.main_keyword, {})
+                            resolved_kw = row.main_keyword
+                            if not resolved_kw:
+                                try:
+                                    from scripts.audit.keyword_resolver import KeywordResolver
+                                    resolved_kw, kw_src = KeywordResolver().resolve(
+                                        row.blog_id, url=row.blogpost_url
+                                    )
+                                    if resolved_kw:
+                                        logger.info(
+                                            f"[STEP 5.6] main_keyword résolu '{resolved_kw}' "
+                                            f"(source={kw_src})"
+                                        )
+                                except Exception as _kw_err:
+                                    logger.warning(f"[STEP 5.6] résolution KW échouée: {_kw_err}")
+                            ytg_result = self._fetch_ytg_guide(resolved_kw, {})
                             if ytg_result:
                                 ytg_guide_id = ytg_result.guide_id
                                 ytg_targets = {
@@ -2276,17 +2353,19 @@ class RefreshOrchestrator:
                                     "ytg_guide_id": ytg_guide_id,
                                 }
 
-                                # Log results
+                                # Log results + verdict structuré (OPTIMAL / A_CORRIGER)
                                 soseo_ok = our_soseo >= top3_soseo if top3_soseo else True
                                 dseo_ok = our_dseo <= top3_dseo if top3_dseo else True
 
                                 if soseo_ok and dseo_ok:
+                                    ytg_verdict = "OPTIMAL"
                                     logger.info(
                                         f"[STEP 5.6] YTG OPTIMAL — SOSEO: {our_soseo:.0f}% "
                                         f"(cible TOP3: {top3_soseo:.0f}%) | "
                                         f"DSEO: {our_dseo:.0f}% (cible TOP3: {top3_dseo:.0f}%)"
                                     )
                                 else:
+                                    ytg_verdict = "A_CORRIGER"
                                     warnings = []
                                     if not soseo_ok:
                                         warnings.append(
@@ -2299,6 +2378,19 @@ class RefreshOrchestrator:
                                     logger.warning(
                                         f"[STEP 5.6] YTG WARNING — {' | '.join(warnings)} "
                                         f"— {row.blogpost_url[:60]}"
+                                    )
+
+                                ytg_post_scores["verdict"] = ytg_verdict
+                                ytg_post_scores["soseo_ok"] = soseo_ok
+                                ytg_post_scores["dseo_ok"] = dseo_ok
+
+                                # Gate optionnel (config blog ytg.gate) : si le contenu
+                                # n'est pas OPTIMAL, ne pas marquer DONE → à revoir avant WP.
+                                if ytg_verdict != "OPTIMAL" and self._ytg_gate_enabled(blog_id):
+                                    ytg_gate_block = True
+                                    logger.warning(
+                                        f"[STEP 5.6] YTG GATE actif ({blog_id}) — "
+                                        f"{row.blogpost_url[:60]} passe en révision (pas DONE)"
                                     )
 
                                 # Persist scores in context audit_data.json for traceability
@@ -2317,18 +2409,29 @@ class RefreshOrchestrator:
                     logger.warning(f"[STEP 5.6] YTG post-validation non-blocking error: {ytg_err}")
 
                 # STEP 7: Mark as done (REFONTE Feb 2026: unified status)
-                new_status = "DONE"
+                # Gate YTG : si actif et contenu sous-optimisé → révision, pas DONE.
+                new_status = "NEEDS_REVIEW" if ytg_gate_block else "DONE"
 
                 # STEP 8: Update sheet with new titles
-                update_ok = self.sheets_client.update_refresh_status(
-                    url=row.blogpost_url,
-                    status=new_status,
-                    new_titles=refreshed_titles
-                )
-                if not update_ok:
-                    logger.error(f"[STEP 8] ÉCHEC écriture spreadsheet H/P/Q pour {row.blogpost_url[:60]}")
+                if blog_id == "enseigna":
+                    update_ok = self.sheets_client.update_refresh_status_enseigna(
+                        url=row.blogpost_url,
+                        refresh_date=datetime.now().strftime("%Y-%m-%d"),
+                    )
+                    if not update_ok:
+                        logger.error(f"[STEP 8] ÉCHEC écriture Avis/Versus (refresh_date) pour {row.blogpost_url[:60]}")
+                    else:
+                        logger.info(f"[STEP 8] ✓ Avis/Versus mis à jour: refresh_date écrit pour {row.blogpost_url[:60]}")
                 else:
-                    logger.info(f"[STEP 8] ✓ Spreadsheet mis à jour: H=DONE, P={refreshed_titles.get('new_h1_title', '')[:40]}, Q=H2s")
+                    update_ok = self.sheets_client.update_refresh_status(
+                        url=row.blogpost_url,
+                        status=new_status,
+                        new_titles=refreshed_titles
+                    )
+                    if not update_ok:
+                        logger.error(f"[STEP 8] ÉCHEC écriture spreadsheet H/P/Q pour {row.blogpost_url[:60]}")
+                    else:
+                        logger.info(f"[STEP 8] ✓ Spreadsheet mis à jour: H=DONE, P={refreshed_titles.get('new_h1_title', '')[:40]}, Q=H2s")
 
                 # STEP 9: Log to Notion refresh tracker (non-blocking)
                 try:
@@ -2376,14 +2479,19 @@ class RefreshOrchestrator:
                 results["errors"].append(error_msg)
                 logger.error(f"[batch_refresh] Exception pour {row.blogpost_url[:60]}: {error_msg}")
                 # Écriture partielle: marquer BLOCKED avec l'erreur dans la spreadsheet
-                try:
-                    self.sheets_client.update_refresh_status(
-                        url=row.blogpost_url,
-                        status="BLOCKED"
-                    )
-                    logger.info(f"[batch_refresh] Status BLOCKED écrit pour {row.blogpost_url[:60]}")
-                except Exception:
-                    pass  # Si même ça échoue, on ne peut rien faire
+                if blog_id == "enseigna":
+                    # Avis/Versus n'ont pas de colonne status/BLOCKED — ne pas écrire
+                    # refresh_date laisse la ligne éligible au prochain run.
+                    logger.info(f"[batch_refresh] Enseigna: pas de refresh_date écrit (échec) pour {row.blogpost_url[:60]}")
+                else:
+                    try:
+                        self.sheets_client.update_refresh_status(
+                            url=row.blogpost_url,
+                            status="BLOCKED"
+                        )
+                        logger.info(f"[batch_refresh] Status BLOCKED écrit pour {row.blogpost_url[:60]}")
+                    except Exception:
+                        pass  # Si même ça échoue, on ne peut rien faire
 
         return results
 

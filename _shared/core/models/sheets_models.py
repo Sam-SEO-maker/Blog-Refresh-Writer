@@ -3,12 +3,14 @@ Sheets Models Module
 
 Modèles pour l'intégration avec Google Sheets.
 
-Architecture :
-- `ContentWriterRow`    — modèle unifié Content Writer (20 colonnes A-T) — à utiliser pour les 2 blogs
-- `RefreshAuditRow`     — modèle SRW legacy (28 colonnes A-AB) — à terme supprimer
-- `SuperprofAuditRow`   — onglet "GSC_Perfs" de la spreadsheet Superprof (lecture seule, 15 colonnes)
-- `EnseignaAvisRow`     — onglet "Avis" de la spreadsheet Enseigna (à venir)
-- `EnseignaVersusRow`   — onglet "Versus" de la spreadsheet Enseigna (à venir)
+Architecture (alignée sur les spreadsheets réels de production, pas un schéma théorique) :
+- `EnseignaAvisRow`     — onglets "Avis" ET "Versus" de la spreadsheet Enseigna (même schéma 14 col A-N)
+- `SuperprofAuditRow`   — onglet "GSC_Perfs" de la spreadsheet Superprof (15 colonnes)
+- `ContentWriterRow`    — modèle théorique (20 colonnes A-T, feuille "Articles Ressources") — JAMAIS câblé,
+                          ne correspond à aucun onglet réel. Conservé pour référence uniquement.
+- `RefreshAuditRow`     — modèle SRW legacy (28 colonnes A-AB, feuille "Refreshs_Audit") — hérité d'un
+                          fork multi-blogs antérieur. Ne correspond à aucun onglet réel Enseigna/Superprof.
+                          Ne pas recréer cet onglet : voir mémoire feedback_refresh_pipeline_gotchas.
 """
 
 from dataclasses import dataclass, field
@@ -173,6 +175,73 @@ class ContentWriterRow:
             error_message=row[18] if len(row) > 18 else "",
             refresh_date=row[19] if len(row) > 19 else "",
             row_index=row_index,
+        )
+
+
+@dataclass
+class EnseignaAvisRow:
+    """
+    Modèle aligné sur les onglets réels "Avis" et "Versus" de la spreadsheet Enseigna.
+
+    Les deux onglets partagent le même schéma 14 colonnes A-N, régénéré par
+    `scripts/audit/enseigna_refresh_list.py` (colonnes A-J, snapshot GSC) — les colonnes
+    K-N (suggested_action, publish_date, refresh_date) sont pilotées séparément
+    (remplissage manuel / autre outil) et NE DOIVENT PAS être écrasées par un refresh GSC.
+
+    Structure réelle observée (2026-07-08) :
+      A: url
+      B: top_keyword
+      C: priority            — HIGH | MEDIUM | LOW
+      D: suggested_action    — ex: PARTIAL_REFRESH, TITLE_OPTIMIZATION, FULL_REFRESH
+      E: impressions_30d
+      F: clicks_30d
+      G: impressions_3m
+      H: clicks_3m
+      I: nb_kw
+      J: ctr
+      K: avg_position
+      L: snapshot_date
+      M: publish_date
+      N: refresh_date        — mis à jour par le pipeline de refresh après génération
+    """
+
+    url: str = ""                       # A
+    top_keyword: str = ""               # B
+    priority: str = ""                  # C
+    suggested_action: str = ""          # D
+    impressions_30d: int = 0            # E
+    clicks_30d: int = 0                 # F
+    impressions_3m: int = 0             # G
+    clicks_3m: int = 0                  # H
+    nb_kw: int = 0                      # I
+    ctr: float = 0.0                    # J
+    avg_position: float = 0.0           # K
+    snapshot_date: str = ""             # L
+    publish_date: str = ""              # M
+    refresh_date: str = ""              # N
+
+    row_index: int = 0                  # non-sheet — ligne dans le spreadsheet (1-indexed)
+    tab_name: str = "Avis"              # non-sheet — "Avis" ou "Versus", pour savoir où réécrire
+
+    @staticmethod
+    def from_list(row: list, row_index: int = 0, tab_name: str = "Avis") -> "EnseignaAvisRow":
+        return EnseignaAvisRow(
+            url=row[0] if len(row) > 0 else "",
+            top_keyword=row[1] if len(row) > 1 else "",
+            priority=row[2] if len(row) > 2 else "",
+            suggested_action=row[3] if len(row) > 3 else "",
+            impressions_30d=_safe_int(row[4]) if len(row) > 4 else 0,
+            clicks_30d=_safe_int(row[5]) if len(row) > 5 else 0,
+            impressions_3m=_safe_int(row[6]) if len(row) > 6 else 0,
+            clicks_3m=_safe_int(row[7]) if len(row) > 7 else 0,
+            nb_kw=_safe_int(row[8]) if len(row) > 8 else 0,
+            ctr=_safe_float(row[9]) if len(row) > 9 else 0.0,
+            avg_position=_safe_float(row[10]) if len(row) > 10 else 0.0,
+            snapshot_date=row[11] if len(row) > 11 else "",
+            publish_date=row[12] if len(row) > 12 else "",
+            refresh_date=row[13] if len(row) > 13 else "",
+            row_index=row_index,
+            tab_name=tab_name,
         )
 
 

@@ -51,6 +51,7 @@ from .decision_models import (
 # Sheets Models
 from .sheets_models import (
     ContentWriterRow,
+    EnseignaAvisRow,
     URLTask,
     AuditResultRow,
     RefreshResultRow,
@@ -128,6 +129,7 @@ __all__ = [
     "StrategyConfig",
     # Sheets Models
     "ContentWriterRow",
+    "EnseignaAvisRow",
     "URLTask",
     "AuditResultRow",
     "RefreshResultRow",

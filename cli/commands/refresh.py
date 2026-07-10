@@ -173,6 +173,12 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
             click.echo(f"  Strategy:     {generation_info['metadata']['strategy']}")
             click.echo(f"  Assets avant: {generation_info['metadata'].get('assets_before', {})}")
             click.echo(f"  Temps total:  {result.execution_time_seconds:.1f}s")
+
+            # QC sémantique YTG : le HTML n'est pas encore généré à ce stade
+            # (génération LLM déléguée hors process). On lance le QC seulement si
+            # un HTML généré existe déjà (cas d'un re-run après génération),
+            # sinon on rappelle la commande à lancer après génération.
+            _maybe_run_ytg_qc(blog, url)
         else:
             click.echo(f"\n⚠ Erreur composition prompt: {generation_info.get('error', 'unknown')}")
 
@@ -184,3 +190,56 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
             click.echo(f"\n❌ ERREUR: {str(e)[:200]}", err=True)
             click.echo("(Utilisez --debug pour le traceback complet)")
         raise click.Abort()
+
+
+def _maybe_run_ytg_qc(blog_id: str, url: str) -> None:
+    """
+    Lance le QC sémantique YTG sur l'article si un HTML généré existe déjà.
+
+    Dans le flux `cw refresh`, la génération LLM est déléguée hors process : à la
+    fin de la commande, le HTML n'existe généralement pas encore. On ne peut donc
+    analyser que si un `_refreshed.html` correspondant est déjà présent (re-run).
+    Sinon on rappelle la commande à lancer après la génération.
+    """
+    from scripts.audit.ytg_qc import (
+        YTGQualityCheck,
+        discover_generated_html,
+        url_to_context_slug,
+        VERDICT_OPTIMAL,
+        VERDICT_A_CORRIGER,
+        VERDICT_BLOQUE,
+    )
+
+    slug = url.strip("/").split("/")[-1]
+    files = discover_generated_html(blog_id, slug_filter=slug)
+    if not files:
+        click.echo("\n[YTG QC] HTML pas encore généré — lancer APRÈS génération :")
+        click.echo(f"         cw ytg qc --blog {blog_id} --slug {slug}")
+        return
+
+    # Charger le bloc ytg de la config blog
+    import json
+    cfg_path = Path.cwd() / "_shared" / "config" / "blogs" / f"{blog_id}.json"
+    ytg_cfg = {}
+    if cfg_path.exists():
+        try:
+            ytg_cfg = json.loads(cfg_path.read_text(encoding="utf-8")).get("ytg", {}) or {}
+        except Exception:
+            ytg_cfg = {}
+    if ytg_cfg.get("enabled") is False:
+        return
+
+    click.echo("\n[YTG QC] HTML généré détecté — analyse sémantique…")
+    try:
+        engine = YTGQualityCheck()
+        html = files[0].read_text(encoding="utf-8")
+        res = engine.check_html(blog_id, url=url, html=html, ytg_config=ytg_cfg)
+        res.html_path = str(files[0])
+        engine.persist(res)
+        click.echo(f"[YTG QC] Verdict: {res.verdict} — {res.message}")
+        if res.verdict == VERDICT_A_CORRIGER and res.under_optimized_terms:
+            click.echo(f"[YTG QC] À enrichir : {', '.join(res.under_optimized_terms[:8])}")
+        if ytg_cfg.get("gate") and res.verdict in (VERDICT_A_CORRIGER, VERDICT_BLOQUE):
+            click.echo("[YTG QC] ⚠ GATE actif : article à revoir avant push WP.")
+    except Exception as e:
+        click.echo(f"[YTG QC] Non-bloquant, erreur ignorée: {str(e)[:120]}")

@@ -213,31 +213,49 @@ def batch_prefetch(spreadsheet_id, blog, lang, country, create_missing):
     click.echo(f"      {len(all_guides)} guides téléchargés, index prêt")
     click.echo()
 
-    # ÉTAPE 2 : Lire le spreadsheet pour récupérer les main_keywords (col D)
-    click.echo("[2/3] Lecture du spreadsheet (col D = main_keyword)...")
+    # ÉTAPE 2 : Lire les onglets RÉELS du blog pour récupérer les main_keywords.
+    # ⚠️ L'ancien onglet "Refreshs_Audit" n'existe plus. On utilise le layout réel
+    # par blog (défini dans keyword_resolver._SHEET_LAYOUT) : Enseigna → Avis/Versus/
+    # "A ajouter" ; Superprof → "New Growing List".
+    from scripts.audit.keyword_resolver import _SHEET_LAYOUT, _norm_url
+
+    click.echo("[2/3] Lecture des onglets réels du blog...")
+    if not blog:
+        click.echo("[ERREUR] --blog est requis (onglets réels différents par blog).", err=True)
+        sys.exit(1)
+    layout = _SHEET_LAYOUT.get(blog)
+    if not layout:
+        click.echo(f"[ERREUR] Aucun layout d'onglet connu pour le blog '{blog}'.", err=True)
+        sys.exit(1)
+
     sheets = SheetsClient(spreadsheet_id=spreadsheet_id)
     sheet_rows = []
-    try:
-        data = sheets._read_sheet(sheets.SHEET_REFRESHS_AUDIT)
+    seen_urls = set()
+    for tab, url_idx, kw_idx in layout["tabs"]:
+        try:
+            data = sheets._read_sheet(tab)
+        except Exception as e:
+            click.echo(f"  [WARN] onglet '{tab}' illisible: {e}")
+            continue
+        if not data:
+            continue
         for i, row in enumerate(data[1:], start=2):  # skip header
-            if len(row) < 4:
+            if len(row) <= url_idx:
                 continue
-            row_blog = row[0] if len(row) > 0 else ""
-            row_url = row[2] if len(row) > 2 else ""   # col C
-            row_kw = row[3] if len(row) > 3 else ""    # col D
+            row_url = row[url_idx].strip() if row[url_idx] else ""
+            row_kw = row[kw_idx].strip() if len(row) > kw_idx and row[kw_idx] else ""
             if not row_kw or not row_url:
                 continue
-            if blog and row_blog != blog:
+            u = _norm_url(row_url)
+            if u in seen_urls:
                 continue
+            seen_urls.add(u)
             sheet_rows.append({
-                "blog_id": row_blog,
+                "blog_id": blog,
                 "url": row_url,
                 "main_keyword": row_kw,
                 "row_idx": i,
             })
-    except Exception as e:
-        click.echo(f"[ERREUR] Lecture spreadsheet: {e}", err=True)
-        sys.exit(1)
 
     click.echo(f"      {len(sheet_rows)} URLs avec main_keyword")
     click.echo()
@@ -455,3 +473,158 @@ def analyze(guide_id, html_file):
     except YTGAPIError as e:
         click.echo(f"[ERREUR API] {e}", err=True)
         sys.exit(1)
+
+
+# ---------------------------------------------------------------------------
+# QC sémantique multi-blog (systématique avant intégration WP)
+# ---------------------------------------------------------------------------
+
+def _load_blog_ytg_config(blog_id: str) -> dict:
+    """Lit le bloc `ytg` de _shared/config/blogs/{blog_id}.json (défaut si absent)."""
+    from pathlib import Path
+
+    base = Path(__file__).resolve().parent.parent.parent
+    cfg_path = base / "_shared" / "config" / "blogs" / f"{blog_id}.json"
+    if not cfg_path.exists():
+        click.echo(f"[ERREUR] Config blog introuvable: {cfg_path}", err=True)
+        sys.exit(1)
+    with open(cfg_path, encoding="utf-8") as f:
+        return json.load(f).get("ytg", {}) or {}
+
+
+def _infer_url_from_html_path(blog_id: str, path) -> str:
+    """Reconstitue une URL plausible depuis le nom de fichier (pour résoudre le KW)."""
+    from pathlib import Path
+
+    slug = Path(path).stem.replace("_refreshed", "").replace("_", "-")
+    domain_map = {
+        "enseigna": "https://enseigna.fr/{slug}/",
+        "superprof-ressources": "https://www.superprof.fr/ressources/{slug}/",
+    }
+    tpl = domain_map.get(blog_id, "https://example.com/{slug}/")
+    return tpl.format(slug=slug)
+
+
+@ytg.command(name='qc')
+@click.option('--blog', 'blog_id', required=True, help='Blog ID (enseigna, superprof-ressources, ...)')
+@click.option('--slug', default='', help='Filtrer sur un slug d\'article précis')
+@click.option('--fix', is_flag=True, default=False,
+              help='Signaler les articles A_CORRIGER pour correction ciblée (corrector)')
+@click.option('--json-out', 'json_out', is_flag=True, default=False,
+              help='Écrire le rapport récap dans _shared/outputs/{blog}/ytg_qc_report.json')
+def qc(blog_id, slug, fix, json_out):
+    """
+    QC sémantique YTG sur les HTML générés d'un blog, AVANT intégration WP.
+
+    Pour chaque article :
+      1. Résout le mot-clé principal (Notion / Sheet / GSC / slug).
+      2. Résout ou crée le guide YTG.
+      3. Analyse le HTML → SOSEO/DSEO vs cibles TOP3.
+      4. Rend un verdict : OPTIMAL / A_CORRIGER / BLOQUE / SKIP.
+    """
+    from scripts.audit.ytg_qc import (
+        YTGQualityCheck,
+        discover_generated_html,
+        VERDICT_OPTIMAL,
+        VERDICT_A_CORRIGER,
+        VERDICT_BLOQUE,
+        VERDICT_SKIP,
+    )
+    from scripts.audit.ytg_corrector import RateLimiter
+
+    ytg_cfg = _load_blog_ytg_config(blog_id)
+    if ytg_cfg.get("enabled") is False:
+        click.echo(f"[YTG QC] Désactivé pour '{blog_id}' (ytg.enabled=false). Rien à faire.")
+        return
+
+    analyzer = YTGAnalyzer()
+    if not analyzer.is_configured:
+        click.echo("[ERREUR] YTG_API_KEY manquant.", err=True)
+        sys.exit(1)
+
+    files = discover_generated_html(blog_id, slug_filter=slug)
+    if not files:
+        click.echo(f"[YTG QC] Aucun HTML généré trouvé pour '{blog_id}'"
+                   + (f" (slug '{slug}')" if slug else "") + ".")
+        return
+
+    click.echo(f"\n[YTG QC] {blog_id} — {len(files)} article(s) à analyser\n")
+
+    qc_engine = YTGQualityCheck(analyzer=analyzer, rate_limiter=RateLimiter())
+    counts = {VERDICT_OPTIMAL: 0, VERDICT_A_CORRIGER: 0, VERDICT_BLOQUE: 0, VERDICT_SKIP: 0}
+    report = []
+    to_fix = []
+
+    for path in files:
+        html = path.read_text(encoding="utf-8")
+        url = _infer_url_from_html_path(blog_id, path)
+        res = qc_engine.check_html(blog_id, url=url, html=html, ytg_config=ytg_cfg)
+        res.html_path = str(path)
+        qc_engine.persist(res)
+
+        counts[res.verdict] = counts.get(res.verdict, 0) + 1
+        report.append(res.to_dict())
+
+        icon = {
+            VERDICT_OPTIMAL: "[OK]   ",
+            VERDICT_A_CORRIGER: "[FIX]  ",
+            VERDICT_BLOQUE: "[BLOCK]",
+            VERDICT_SKIP: "[SKIP] ",
+        }.get(res.verdict, "[?]    ")
+        click.echo(f"{icon} {path.stem[:50]:<50} {res.verdict}  {res.message}")
+        if res.verdict == VERDICT_A_CORRIGER and res.under_optimized_terms:
+            click.echo(f"         à enrichir: {', '.join(res.under_optimized_terms[:8])}")
+        if res.verdict == VERDICT_A_CORRIGER and res.over_optimized_terms:
+            click.echo(f"         à réduire : {', '.join(res.over_optimized_terms[:8])}")
+        if res.verdict == VERDICT_A_CORRIGER:
+            to_fix.append(res)
+
+    click.echo()
+    click.echo("[YTG QC] Résumé :")
+    click.echo(f"  OPTIMAL    : {counts[VERDICT_OPTIMAL]}")
+    click.echo(f"  A_CORRIGER : {counts[VERDICT_A_CORRIGER]}")
+    click.echo(f"  BLOQUE     : {counts[VERDICT_BLOQUE]}")
+    click.echo(f"  SKIP       : {counts[VERDICT_SKIP]}")
+    if ytg_cfg.get("gate"):
+        click.echo(f"  [GATE actif] {counts[VERDICT_A_CORRIGER] + counts[VERDICT_BLOQUE]} article(s) "
+                   "à revoir avant push WP.")
+
+    if json_out:
+        out = (Path(__file__).resolve().parent.parent.parent
+               / "_shared" / "outputs" / blog_id / "ytg_qc_report.json")
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        click.echo(f"\n[YTG QC] Rapport écrit: {out}")
+
+    if fix and to_fix:
+        from scripts.audit.ytg_autocorrect import YTGAutoCorrector
+
+        click.echo(f"\n[YTG QC] --fix : préparation de {len(to_fix)} correction(s)…")
+        autocorrector = YTGAutoCorrector(
+            blog_id, analyzer=analyzer, rate_limiter=RateLimiter()
+        )
+        items = [
+            {
+                "url": r.url,
+                "html_path": r.html_path,
+                "guide_id": r.guide_id,
+                "targets": {"top3_soseo": r.target_soseo or 0, "top3_dseo": r.target_dseo or 0},
+                "current_scores": {"soseo": r.our_soseo or 0, "dseo": r.our_dseo or 0},
+            }
+            for r in to_fix if r.guide_id and r.html_path
+        ]
+        tasks = autocorrector.prepare(items)
+        if not tasks:
+            click.echo("[YTG QC] Aucune tâche de correction préparée (analyse par terme KO).")
+            return
+
+        manifest = (Path(__file__).resolve().parent.parent.parent
+                    / "_shared" / "outputs" / blog_id / "ytg_fix_manifest.json")
+        click.echo(f"[YTG QC] {len(tasks)} tâche(s) de correction prête(s).")
+        click.echo(f"[YTG QC] Manifest : {manifest}")
+        click.echo(
+            "[YTG QC] La correction est appliquée par les sub-agents Claude Code "
+            "(plan Max) : chaque sub-agent lit son prompt, réécrit le HTML et écrit "
+            "le `_corrected.html` sur disque. La re-validation (assets + SOSEO/DSEO) "
+            "est ensuite automatique via YTGAutoCorrector.revalidate()."
+        )

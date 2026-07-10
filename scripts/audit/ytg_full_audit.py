@@ -80,6 +80,9 @@ def main():
     print(f"Guide index: {len(guide_index)} entries", flush=True)
 
     # Keyword mapping from spreadsheet
+    # ⚠️ OBSOLÈTE : onglet "Refreshs_Audit" + ancien spreadsheet ID. Script legacy —
+    # préférer `cw ytg qc --blog enseigna` (scripts/audit/ytg_qc.py) qui lit les
+    # onglets réels ("Avis"/"Versus") via KeywordResolver.
     sc = SheetsClient("1F99FtN8fWQlQm0ZTJphBRz_c64iDs2DvohyHyM2Tk1M")
     rows = sc._sheets_service.spreadsheets().values().get(
         spreadsheetId=sc.spreadsheet_id, range="Refreshs_Audit!A:D"

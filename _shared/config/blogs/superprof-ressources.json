@@ -10,6 +10,14 @@
   "subject_category": "education_general",
   "language": "fr",
 
+  "ytg": {
+    "enabled": true,
+    "gate": false,
+    "group_id": 82174,
+    "lang": "fr",
+    "keyword_sources": ["sheet", "gsc", "slug"]
+  },
+
   "tone_profile": {
     "style": "natural_informal",
     "formality": "informal",

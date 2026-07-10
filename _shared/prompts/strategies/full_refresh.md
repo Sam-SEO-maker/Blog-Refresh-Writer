@@ -103,7 +103,7 @@ favorise la dépense calorique, même plusieurs heures après l'entraînement
 ### 2. Structure Optimisée
 
 **Format attendu** :
-- **Introduction AVANT le premier H2** (1 paragraphe `<p>`, 80-150 mots) : accroche concrète (chiffre, question, constat terrain) + mot-clé principal en `<strong>` + promesse de l'article. Ce paragraphe est le PREMIER élément HTML généré, il précède tout `<h2>`.
+- **Introduction AVANT le premier H2** (1 paragraphe `<p>`, 80-150 mots) : accroche concrète (chiffre, question, constat terrain) + mot-clé principal en `<strong>` + promesse de l'article. Ce paragraphe est le PREMIER élément HTML généré, il précède tout `<h2>`. **Réécrire l'accroche à partir de zéro** : ne PAS paraphraser l'introduction de l'original (même angle, même scène, même anecdote reformulée). Changer d'angle d'entrée. Si l'intro générée pourrait s'obtenir en passant l'intro originale dans un reformulateur, elle est à refaire.
 - **Tableau récapitulatif après l'introduction** : immédiatement après le paragraphe d'introduction, insérer un `<table>` synthétique (3-5 lignes) résumant les points clés de l'article. En-tête `<thead>` avec fond coloré (`background-color: #1565c0; color: white`), lignes alternées (`background-color: #f5f5f5`). Ce tableau donne une vue d'ensemble avant la lecture détaillée.
 - **CTA Superprof (si présent)** : le bloc CTA vert (`background-color: #4caf50`) se place à la **fin de la première section H2**, jamais en fin d'article ni dans l'introduction.
 - Minimum 3 sections H2 thématiques
