@@ -1,5 +1,14 @@
 {
     "mcpServers": {
+        "gsc-remote": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "supergateway",
+                "--sse",
+                "http://mcp.superprof.cloud:3001/sse"
+            ]
+        },
         "dataforseo-remote": {
             "command": "npx",
             "args": [
@@ -9,5 +18,8 @@
                 "http://mcp.superprof.cloud:3000/mcp"
             ]
         }
+    },
+    "preferences": {
+        "sidebarMode": "chat"
     }
 }
