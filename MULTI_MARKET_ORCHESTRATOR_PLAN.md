@@ -1,0 +1,491 @@
+# Orchestrateur Multi-Tenant — Plan d'architecture
+
+**Statut** : proposition, non implémentée
+**Objectif** : auditer le workflow pour le rendre scalable à un **nombre quelconque de tenants de tout type** (refaire from scratch ou refactoriser ?)
+
+> **Périmètre — pas seulement Superprof.** Ce plan a été rédigé autour du cas Superprof (les blogs pays sont le volume dominant, ~91 en juillet 2026), mais la cible est **tout client** : blogs Superprof pays, `enseigna`, `apuntes`, `resources.com`, futurs clients. Là où le texte dit « marché » / « pays », lire « tenant » (client quelconque). Le code est déjà plat et générique (registre `sites.json` sans hiérarchie « Superprof »), l'architecture ne doit jamais être taillée pour un nombre fixe de blogs Superprof.
+
+---
+
+## Contexte
+
+Ce que fait le workflow.
+
+- **CLI Click** (`content_writer.py` + `cli/commands/*.py`) exposant des commandes typées : `python content_writer.py refresh <url> --blog X`, `cw workflow run`, `cw batch keyword-discovery/audit-gsc/decision/refresh` (+ 5 autres sous-commandes batch), `cw audit editorial/serp` (+ `ahrefs-state`/`enseigna-refresh-list`/`gsc-state`), etc. (voir `README_CLI.md`, à la racine du projet).
+  ⚠️ Vérifié directement dans le code (2026-07-08) : `cw audit cannibalization` et `cw cocon identify/validate` **n'existent pas** dans le CLI actuel, bien qu'ils soient documentés dans `README_CLI.md` — le README est désynchronisé du code sur ces deux points. Le seul groupe apparenté à cocon est `linking` (`preview`/`run`), un stub minimal qui renvoie vers `LinkInjector` en usage manuel, pas une commande de validation de cocon.
+- **`RefreshOrchestrator`** (`scripts/agent/orchestrator.py`, 2700+ lignes) qui enchaîne déjà les 7 étapes GSC → audit → décision → contexte de génération → sync Sheets, avec cache (`DocumentCache`), lazy init des clients GSC/SERP/WP, et intégrations DataForSEO/GSC/Notion/YTG déjà câblées.
+
+  **Les 7 étapes du workflow de refresh** (l'ossature commune à tous les tenants, qui migre vers la skill partagée du plan de simplification) :
+
+  1. **Identification de l'URL** — récupération de l'URL à traiter et de son tenant depuis le Google Sheet de pilotage (`SheetsClient` / `WorkflowTracker`), avec les signaux de priorisation déjà calculés (CTR, impressions, position, âge, statut). Détermine *quoi* rafraîchir et pour quel tenant. En amont : ingestion du HTML existant via `ContentExtractor` (sélecteurs site → WP REST → heuristiques) et snapshot pour comparaison avant/après.
+  2. **Diagnostic GSC** — `GSCAnalyzer` interroge Search Console (3/6/12 mois) : CTR, impressions, position, clics, tendances, KW principal vs variants, SERP features. Produit un score de dégradation qui alimente la décision. Passe désormais par le MCP `gsc-remote` pour les accès ad hoc.
+  3. **Diagnostic DataForSEO (TOP 3)** — `SERPAnalyzer` analyse les 3 concurrents en tête (word count, asset count, structure H2/H3, signaux E-E-A-T, format dominant) et `HTMLAnalyzer` parse l'article actuel. → *gap analysis* actuel vs TOP 3. Enrichissement sémantique optionnel non-bloquant via `YTGAnalyzer` (YourTextGuru).
+  4. **Analyse SERP & intention** — `IntentDetector` établit l'intention dominante (informationnel / transactionnel / navigationnel), le format cible (guide / listicle / review / FAQ) et les SERP features (PAA, featured snippet). C'est aussi ici que joue la quality gate bloquante `EditorialAuditor` (score < 4/10 = refresh refusé) et l'anti-cannibalisation (`CannibalizationChecker` / `NotionClient`).
+  5. **Décision de stratégie** — `DecisionEngine` évalue les règles déclaratives de `decision_rules.json` contre les données d'audit et retourne une stratégie ; `StrategySelector` la combine avec les prompts matière et l'override tenant. Data-driven, pas d'intuition. *(La refonte réduit les fichiers de rédaction à 2 — `full_refresh` + `eeat_rewrite` — sans toucher à cette granularité de décision.)*
+  6. **Application du refresh** — `Ghostwriter` compose le prompt final via `PromptComposer` (strategy + site) et prépare le contexte de réécriture ; `DiffEngine` cible les changements (ex : mise à jour d'années) ; `TitleOptimizer` gère le cas TITLE_OPTIMIZATION seul. La génération produit le HTML + metadata, puis `AssetManager` **valide et restaure les assets** pour garantir la Règle d'Or (`assets_after ≥ assets_before`). Sortie mise en forme par `gutenberg_formatter.py`.
+  7. **Mise à jour du Sheet** — `WorkflowTracker` inscrit les colonnes post-refresh (`status`, `strategy_applied`, `word_count_before/after`, `assets_before/after`, `tokens_used`, `refresh_date`…) et `action_formatter.py` génère les colonnes « To Do » / « Recommended Actions ». Validations finales : slug unique, cocons PARENT/CHILD, sources E-E-A-T, ton du tenant. Publication WP réelle (`push_to_wp.py`) reste une étape séparée à fort blast radius (`--publish`).
+
+  > La décision (étape 5) est un pilier conservé intact ; la refonte ne simplifie que le *nombre de fichiers de rédaction* de l'étape 6, pas la logique des 7 étapes.
+- **Moteur de décision data-driven** : `decision_rules.json` (règles déclaratives, pas de logique câblée en dur) + `DecisionEngine`/`StrategySelector`.
+- **Prompt Composer 4 niveaux** déjà codé (`_shared/core/prompt_composer.py`) : Category → Strategy → Site → Template, avec override `Site > Strategy > Category`, piloté par `prompts_dispatch.json` (mapping blog→subject, blog→category, content_type_mapping, eeat_levels).
+- **`SitesRegistry`** (`_shared/core/sites_registry.py`) : déjà un registre multi-tenant JSON (`sites.json`) conçu pour accueillir N sites — get/add/remove/deactivate. Actuellement 2 entrées (enseigna, superprof-ressources FR), mais l'abstraction pour en ajouter un 3e existe déjà.
+- **MCP DataForSEO** déjà connecté (`.mcp.json`), plus GSC/Ahrefs/Notion via connecteurs claude.ai, WordPress REST API et YourTextGuru via clients Python (`scripts/scraping/wordpress_api_client.py`, `scripts/audit/ytg_analyzer.py`).
+
+**Le vrai problème** : Claude Code (l'agent, dans les sessions interactives) n'invoque pas ce CLI existant. À chaque session il retape la logique métier en texte libre en français, relit des fichiers `.md` volumineux (`superprof-ressources.md` = 982 lignes, `CLAUDE.md` = 700+ lignes) même quand la tâche ne les nécessite pas, et perd le contexte multi-marchés d'une session à l'autre. Résultat : tokens gaspillés, lenteur, pas de scalabilité vers 65 pays.
+
+**Conclusion architecturale** : ne pas construire un nouveau repo/CLI parallèle (ce serait dupliquer 2700 lignes d'orchestrateur, un decision engine, un prompt composer et des clients API déjà testés). Le levier est de **construire l'interface manquante entre Claude Code et le CLI existant**, plus une structure de config qui généralise proprement `sites.json` à N pays × 2 structures (`/blog`, `/ressources`) sans toucher au moteur.
+
+---
+
+## Cartographie de l'architecture actuelle
+
+Cette section documente le repo tel qu'il existe aujourd'hui, pour qu'un lecteur sans accès au code puisse suivre le reste du plan.
+
+### Point d'entrée
+
+Tout passe par un seul CLI Click : `python content_writer.py <groupe> <commande> [options]` (alias `cw` dans la doc). Le fichier racine `content_writer.py` ne fait qu'enregistrer les groupes de commandes définis dans `cli/commands/*.py` :
+
+| Groupe | Fichier | Rôle |
+|---|---|---|
+| `refresh` | `cli/commands/refresh.py` | Refresh d'une URL unique : scraping → audit éditorial → audit GSC/SERP → décision de stratégie → composition du prompt de génération. S'arrête à "contexte prêt", ne rédige pas lui-même. |
+| `workflow` | `cli/commands/workflow.py` | Même pipeline que `refresh` mais avec mise à jour du Google Sheet de pilotage à chaque étape (statuts, scores). |
+| `audit` | `cli/commands/audit.py` | Audits ponctuels : `editorial` (quality gate), `serp` (PAA, mots-clés secondaires), `ahrefs-state`, `enseigna-refresh-list`, `gsc-state`. Pas de sous-commande `cannibalization` malgré la mention dans `README_CLI.md` — vérifié absente du code. |
+| `batch` | `cli/commands/batch.py` | Traitement en masse depuis Google Sheets : `keyword-discovery`, `keyword-refresh`, `audit-gsc`, `audit-serp`, `decision`, `refresh`, `workflow-auto`, `benchmark`, `extract-tables` (9 sous-commandes). C'est la commande utilisée pour traiter des dizaines d'URLs en une passe. |
+| `linking` | `cli/commands/linking.py` | Stub minimal (`preview`/`run`) qui renvoie vers `LinkInjector` en usage manuel avec mapping CSV — pas de gestion automatisée des cocons sémantiques. `cw cocon identify/validate`, documentés dans `README_CLI.md`, n'existent pas dans le code. |
+| `ytg` | `cli/commands/ytg.py` | Interactions avec YourTextGuru : `create-guide`, `check-guide`, `list-guides`, `batch-prefetch`, `analyze` (5 sous-commandes). |
+| `notion_cmd` (`notion`) | `cli/commands/notion_cmd.py` | Intégration Notion : `sync` (résumé des commandes par blog/statut), `check-title` (anti-cannibalisation par titre), `list-sujets`, `create-sujet` (4 sous-commandes). |
+| `report` | `cli/commands/report.py` | Génération de rapports GSC mensuels/tendances. |
+| `statuts` | `cli/commands/statuts.py` | Mise à jour manuelle du statut d'une ligne dans le Sheet. |
+| `ngl_status` | `cli/commands/ngl_status.py` | Statut du pipeline "New Growing List" (Superprof Ressources). |
+| `indexing` | `cli/commands/indexing.py` | Requêtes d'indexation Google (Search Console). |
+| `debug` | `cli/commands/debug.py` | Commandes de diagnostic (ex: extraction de structures HTML). |
+
+### Le cœur du moteur : `scripts/agent/orchestrator.py` (`RefreshOrchestrator`)
+
+C'est la classe qui orchestre les 7 étapes du workflow (Ingest → Editorial Audit → Audit GSC/SERP → Decision → Writing/contexte → Linking → Sync Sheets). Chaque commande CLI ci-dessus instancie cet orchestrateur et appelle une de ses méthodes (`process_url`, `batch_editorial_audit`, `batch_keyword_discovery`, etc.). Il gère aussi, en interne et de façon paresseuse (lazy init), les clients vers GSC, DataForSEO/SERP, WordPress REST API, YourTextGuru et Notion — un collaborateur n'a jamais à instancier ces clients lui-même.
+
+Modules internes que l'orchestrateur assemble (tous sous `scripts/`) :
+
+- **`audit/`** — `AuditEngine` (orchestre l'audit complet), `GSCAnalyzer` (performance Search Console), `SERPAnalyzer` (analyse concurrentielle DataForSEO), `HTMLAnalyzer` (parsing structure/assets), `EditorialAuditor` (quality gate bloquant : score < 4/10 = refresh refusé), `CannibalizationChecker`, `IntentDetector`, `SemanticChecker` (anti-suroptimisation post-génération), `YTGAnalyzer` (guides sémantiques YourTextGuru).
+- **`decision/`** — `DecisionEngine` : évalue les règles déclaratives de `_shared/config/decision_rules.json` contre les données d'audit et retourne une stratégie. `StrategySelector` : combine cette décision avec les prompts par matière et les overrides par blog pour produire une config de stratégie prête à l'emploi.
+- **`ghostwriter/`** — `Ghostwriter` : prépare le contexte de réécriture (assets, guidelines, diff) et compose le prompt final via `PromptComposer` ; ne génère pas de texte lui-même, prépare uniquement l'input pour un LLM externe. `DiffEngine` calcule les changements ciblés (ex: mise à jour d'années). `TitleOptimizer` gère la stratégie TITLE_OPTIMIZATION seule.
+- **`assets/`** — `AssetManager` : extrait, préserve et restaure les assets (images, tableaux, vidéos, liens internes) pour garantir la Règle d'Or (`assets_after ≥ assets_before`).
+- **`sheets/`** — `SheetsClient` (API Google Sheets directe, pas MCP) et `WorkflowTracker` (avancement du workflow ligne par ligne dans le Sheet de pilotage).
+- **`cache/`** — `DocumentCache` : cache singleton qui charge une seule fois par process les guidelines SEO et configs de blog, pour éviter de relire les fichiers à chaque appel interne.
+- **`scraping/`** — `ContentExtractor` (extraction multi-niveaux : sélecteurs spécifiques au site → WordPress → heuristiques → nettoyage) et `WordPressAPIClient` (lecture directe via REST API WP quand disponible, avec fallback scraping HTTP sinon).
+- **`notion/`** — `NotionClient` : anti-cannibalisation par titre (vérifie qu'un article similaire n'est pas déjà en commande) et découverte de sujets.
+- **`cta/`** — `SuperprofRotator` : rotation des call-to-action Superprof.
+- **`utils/`** — `OutputManager` (chemins de sortie centralisés : `_shared/outputs/{site}/html|json|editorial_audits/`), `gutenberg_formatter.py` (conversion HTML → blocs Gutenberg WordPress), `action_formatter.py` (génère les colonnes "To Do"/"Recommended Actions" du Sheet), plus divers scripts ponctuels de QC (`sp_qc_check.py`, `lint_gutenberg.py`, etc.).
+- **`indexing/`**, **`sitemap/`**, **`seo/`** (client Ahrefs), **`reports/`** — modules support pour l'indexation Google, la découverte de sitemap et les rapports GSC périodiques.
+
+### Configuration et prompts (`_shared/`)
+
+- **`_shared/core/`** — la couche d'abstraction réutilisable : `sites_registry.py` (`SitesRegistry`, lit/écrit `sites.json`), `prompt_composer.py` (`PromptComposer`, compose le prompt final en 4 niveaux), `constants.py`, `models/` (dataclasses partagées : `SiteConfig`, `AuditReport`, `RefreshWorkflowResult`, etc.), `utils/` (timing, mise à jour d'années dans le texte).
+- **`_shared/config/`** :
+  - `sites.json` — registre central des sites/marchés (id, domaine, propriété GSC, sheet_id, ton éditorial, blacklist concurrents, etc.). Aujourd'hui 2 entrées : `enseigna` et `superprof-ressources`.
+  - `blogs/{id}.json` — config technique par blog (ex: `wp_api_config` pour la connexion WordPress REST).
+  - `decision_rules.json` — règles déclaratives du moteur de décision (conditions GSC/SERP → action à prendre).
+  - `prompts_dispatch.json` — mapping blog→subject, blog→category, mapping content_type→template, niveaux E-E-A-T.
+  - `editorial_rules.json`, `year_update_config.json`, `superprof_landings.json`, `linking_maps/` — configs annexes.
+- **`_shared/prompts/`** :
+  - `categories/{group}/{subject}.md` — Niveau 1 : stats, experts, PAA, vocabulaire par thématique (ex: `education/education_reviews.md`).
+  - `strategies/{strategy}.md` — Niveau 2 : instructions de réécriture par stratégie (`full_refresh.md`, `title_optimization.md`, `semantic_reorientation.md`, `format_adaptation.md`, `eeat_rewrite.md`).
+  - `sites/{site_id}.md` — Niveau 3 : règles spécifiques au site (blacklist, ton, format). Pour superprof-ressources, éclaté en plusieurs guides (`superprof-ressources/guide-1/2/3-*.md`) référencés depuis `sites.json`.
+  - `templates/{content_type}_template.md` — Niveau 4 (optionnel) : structure imposée par type de contenu, plus `callouts.md` (templates HTML des encadrés/CTA, chargé systématiquement).
+  - `refresh_article.md` — template de référence historique du processus de refresh (antérieur au moteur actuel, gardé comme documentation du processus).
+- **`_shared/docs/`** — documentation de référence : `SEO_GUIDELINES.md`, `STYLE_GUIDE.md`, `EEAT_GUIDE.md` / `EEAT_2026_GUIDELINES.md`, `GEO_2026_GUIDELINES.md`, `COCONS_GUIDE.md`, `OUTPUT_ARCHITECTURE.md`, `CONTENT_REFRESH_GUIDE.md`.
+- **`README_CLI.md`** (racine du projet) — référence complète des commandes CLI, à côté de `content_writer.py`.
+- **`_shared/outputs/{site_id}/`** — sorties permanentes : `html/` (articles rafraîchis), `json/` (métadonnées), `editorial_audits/` (rapports d'audit qualité).
+- **`_shared/temp/{site_id}/`** — cache temporaire du HTML scrapé, pour comparaison avant/après.
+- **`_shared/context/`** — snapshots d'articles utilisés pour analyse/contexte ponctuel (pas partie du pipeline automatisé).
+- **`_shared/cache/`** — caches applicatifs (`sitemap_cache.json`, état Ahrefs).
+
+### Autres dossiers racine
+
+- **`tests/`** — suite pytest couvrant asset manager, decision engine, ghostwriter, gutenberg formatter, cannibalisation, etc.
+- **`scripts/setup/`** — génération de tokens OAuth GSC pour l'onboarding d'un nouveau service account.
+- **`workflows/`** — scripts d'analyse ponctuels (ex: découverte de sitemap).
+- **`.mcp.json`** — déclare le serveur MCP DataForSEO (`dataforseo-remote`, via `supergateway`) ; les autres intégrations (GSC, Ahrefs, Notion) passent par des connecteurs claude.ai déjà configurés côté IDE, pas par ce fichier.
+- **`.claude/settings.json`** — permissions Claude Code : liste blanche de commandes Bash, WebFetch domains, outils MCP autorisés sans prompt.
+- **`CLAUDE.md`** — actuellement le document de règles éditoriales complet (workflow 7 étapes, règles E-E-A-T, formats HTML, cocons) lu intégralement par Claude Code à chaque session ; c'est ce fichier que ce plan propose de réduire à un simple index (section 2a).
+
+---
+
+## 0. Arrêter de rescanner l'architecture à chaque session
+
+Constat direct : construire ce plan a nécessité de relire `content_writer.py`, l'orchestrateur (2700 lignes), le prompt composer, `sites.json`, `decision_rules.json`, etc. — alors que cette cartographie ne change presque jamais d'une session à l'autre. C'est le symptôme concret du problème : ni `CLAUDE.md` ni la mémoire persistante actuelle ne contiennent de **carte d'architecture** (quels fichiers existent, quelles commandes CLI sont disponibles, quel est le point d'entrée unique). La mémoire actuelle ne stocke que des règles éditoriales et des pièges ponctuels, jamais la structure du repo elle-même.
+
+**Action** : écrire une mémoire persistante (`project_architecture_map`, dans le système de mémoire Claude Code) qui liste une fois pour toutes :
+- Le point d'entrée unique (`python content_writer.py <group> <command>`) et la liste des groupes de commandes déjà disponibles (`refresh`, `workflow`, `audit`, `batch`, `linking`, `ytg`, `notion`, `report`, `statuts`, `ngl_status`, `indexing`, `debug`).
+- Ce qui définit un site/marché dans le layout cible : le dossier tenant `tenants/{tenant}/` (`prompts/site.md`, `config/blog.json`, `config/landings.csv`, `linking_maps/`) + son entrée dans l'index global `sites.json` ; et où vit le decision engine (`decision_rules.json`) / dispatch prompt (`prompts_dispatch.json`). *(Avant le regroupement Étape F, ces fichiers sont encore éclatés en `_shared/config/blogs/{id}.json` + `_shared/prompts/sites/{id}.md` + `_shared/config/linking_maps/{id}.*` — la mémoire ne doit être écrite qu'une fois la migration `tenants/{tenant}/` faite.)*
+- Un renvoi explicite : "avant de relire le code, consulter cette mémoire — ne re-explorer que si un fichier référencé n'existe plus".
+
+Cette mémoire doit être écrite **à la fin de ce chantier** (une fois les slash commands et le subagent en place), pour qu'elle documente l'état cible, pas l'état actuel en friche.
+
+---
+
+## 1. Interface de commandes : Slash Commands Claude Code qui wrappent `cw`
+
+Créer des commandes Claude Code custom dans `.claude/commands/` (chargées uniquement à l'invocation, donc zéro coût de contexte tant qu'elles ne sont pas utilisées). Chaque commande est un fichier `.md` avec frontmatter qui documente les arguments attendus et appelle directement `cw` via Bash — pas de texte libre.
+
+```
+.claude/commands/
+├── refresh.md              # /refresh <url> --market=fr --blog=enseigna
+├── batch.md                # /batch <step> --market=es --type=ressources
+├── audit.md                # /audit <editorial|serp|cannibalization> <url> --market=X
+├── decide.md               # /decide <url> --market=X   (expose la décision sans écrire)
+└── market-status.md        # /market-status --market=X  (health check config/API)
+```
+
+Exemple de commande (`refresh.md`) :
+
+```markdown
+---
+description: Refresh une URL via le CLI cw (aucune relecture de CLAUDE.md nécessaire)
+argument-hint: <url> --market=<code> [--strategy=FULL_REFRESH]
+---
+Exécute directement, sans reformuler la tâche en langage naturel :
+
+    python content_writer.py refresh $ARGUMENTS
+
+Le marché détermine automatiquement --blog, la config sites.json,
+et le jeu de fichiers _shared/prompts/sites/{market}/ à charger.
+Affiche le résultat brut de la commande, n'improvise pas de logique.
+```
+
+Effet concret : l'utilisateur (blog US, ES, FI, FR, BR, peu importe) tape `/refresh <url> --market=br-blog` au lieu d'un paragraphe en français. Claude Code n'a plus besoin de "comprendre" la stratégie — il exécute une commande déterministe et rapporte le résultat structuré déjà produit par l'orchestrateur (JSON/stdout).
+
+### Éliminer les confirmations Y/N à chaque micro-étape
+
+Problème constaté : aujourd'hui, une commande comme `cw refresh` s'exécute déjà en un seul process Python non-interactif (elle n'attend aucun Y/N en interne) — mais **la session Claude Code, elle**, redemande une confirmation de permission à chaque `Bash`/`Edit` séparé si ces actions ne sont pas pré-autorisées. Le ressenti "validation manuelle à chaque micro-étape" vient de là, pas du CLI Python lui-même. Trois corrections :
+
+1. **Pré-autoriser les slash commands dans `.claude/settings.json`** : ajouter des règles `allow` couvrant explicitement `Bash(python content_writer.py refresh:*)`, `Bash(python content_writer.py batch:*)`, `Bash(python content_writer.py audit:*)`, etc. (le pattern `Bash(python content_writer.py:*)` existe déjà — vérifier qu'il couvre bien tous les sous-groupes, sinon l'étendre). Une fois fait, `/refresh <url> --market=X` doit s'exécuter de bout en bout sans aucune invite.
+2. **Une commande = un seul appel Bash**, pas une séquence de plusieurs appels nécessitant chacun sa propre validation. Les slash commands doivent invoquer `cw` une fois avec tous les flags nécessaires (`--publish`, `--strategy`, etc.) plutôt que d'enchaîner plusieurs commandes séparées.
+3. Le seul Y/N qui doit subsister est la confirmation finale humaine avant publication WordPress réelle (`--publish`), qui reste un acte à fort blast radius (site public).
+
+**Argument `--market` unique** (au lieu de `--blog` + langue implicite) : un identifiant marché du type `fr-enseigna`, `es-apuntes`, `br-blog` qui résout en une seule clé vers l'entrée `sites.json` correspondante — un collaborateur n'a qu'un seul paramètre à connaître.
+
+---
+
+## 2. Gestion du contexte et économie de tokens
+
+Deux leviers distincts, à ne pas confondre.
+
+### a) Contexte agent Claude Code (le vrai poste de coût)
+
+- **Ne plus laisser `CLAUDE.md` documenter les règles éditoriales en détail** — il doit devenir un index de commandes ("pour refresh : `/refresh`, pour audit : `/audit`, jamais de texte libre") pointant vers les fichiers `.md` de règles, sans les inliner.
+- Les fichiers `.md` de règles (SEO, GEO, tone par site) restent chargés **uniquement par le moteur Python** (`PromptComposer`), pas par Claude Code lui-même. Claude Code n'a jamais besoin de lire `superprof-ressources.md` (982 lignes) en contexte : c'est `RefreshOrchestrator`/`PromptComposer` qui compose le prompt final et l'écrit dans `generation_prompt.txt`.
+- **Génération = agents Claude Code, pas API facturée à la clé.** L'abonnement Max Plan 20x d'Anthropic couvre l'usage de Claude Code (y compris ses subagents via le SDK), pas des appels séparés à l'API Claude classique. Concrètement : la commande `/refresh` doit lancer `cw refresh` pour préparer `generation_prompt.txt` (audit + décision + composition prompt, aucun LLM impliqué à ce stade), puis **déléguer la rédaction à un subagent Claude Code** (via l'`Agent` tool, `subagent_type` dédié type `content-generator`) qui lit ce fichier déjà composé et produit le HTML + JSON de sortie. Ce subagent tourne sous l'abonnement Max, pas en pay-per-token API. Le CLI Python ne doit donc jamais appeler l'API Anthropic lui-même pour la génération — son rôle s'arrête à préparer un prompt propre et minimal ; c'est la couche Claude Code (agent/subagent) qui l'exécute et consomme le quota d'abonnement.
+- Ce découplage évite aussi le vrai problème de fond : aujourd'hui c'est la session interactive principale qui lit `generation_prompt.txt` et rédige dans son propre contexte (donc pollue la conversation avec tout le corps d'article généré). En passant par un subagent dédié, seul le résumé/résultat final remonte dans la conversation principale — économie de tokens supplémentaire.
+
+### b) Cache applicatif (déjà existant, à généraliser)
+
+- `DocumentCache` (`scripts/cache/doc_cache.py`) et `_shared/cache/sitemap_cache.json` existent déjà pour éviter de relire les configs blog à chaque appel — bon pattern à répliquer pour le cache multi-marché.
+- Ajouter un **cache de guide marché résolu** : au premier appel `--market=X`, résoudre une fois `sites.json` + fichiers de règles associés vers un objet marché immuable, réutilisé pour tous les appels suivants dans le même run batch (pertinent surtout pour `cw batch`, qui traite déjà des dizaines d'URLs par run).
+
+### c) Accès GSC — pas de couche SQLite, le MCP `gsc-remote` couvre déjà le besoin
+
+Le repo dispose désormais de `.mcp.json` avec un serveur **`gsc-remote`** (`http://mcp.superprof.cloud:3001/sse`, en plus de `dataforseo-remote`). C'est la bonne réponse au problème « relire GSC à chaque étape » : Claude Code peut interroger GSC directement via les tools MCP (`get_performance_overview`, `get_search_analytics`, `check_indexing_issues`, `compare_search_periods`, etc.) sans repasser par un scraping/relecture de fichiers, et sans dupliquer cet état dans une base locale. **Décision** : abandonner toute piste de cache SQLite local pour les données GSC — le MCP est la source vivante, interrogée à la demande, pas un état à synchroniser. Le Google Sheets (`SheetsClient`, `WorkflowTracker`) reste l'interface humaine de pilotage/suivi de statut, un sujet distinct qui n'a pas besoin d'accélération pour l'instant.
+
+---
+
+## 3. Flux end-to-end : ce qui change, ce qui ne change pas
+
+Le flux GSC/DataForSEO → décision → composition prompt → génération → sync existe déjà dans `RefreshOrchestrator.process_url()`. Ce qui manque :
+
+1. **Étape publication automatique WP** : `WordPressAPIClient` existe (lecture) et `scripts/utils/push_to_wp.py` existe pour superprof-ressources — mais il n'est pas branché dans `process_url()` comme étape finale automatique. **Action** : ajouter un flag `--publish` optionnel sur `cw refresh` qui, après validation asset count et QC, appelle `push_to_wp.py` pour le marché concerné (mapping API WP par marché dans `_shared/config/blogs/{market}.json`, pattern déjà utilisé pour `wp_api_config`).
+2. **YourTextGuru** : déjà intégré comme enrichissement optionnel non-bloquant (`YTGAnalyzer`, step 2.5) — rien à faire, juste s'assurer que chaque nouveau marché a ses credentials YTG dans `.env`.
+3. **Un seul point d'entrée batch par marché** : `cw batch workflow-auto --blog X` existe déjà — il faut juste que `--blog` accepte un identifiant marché et résolve vers la bonne config, guides, credentials.
+
+---
+
+## 4. Structure config pour généraliser à N marchés × 2 structures (`/blog`, `/ressources`)
+
+Ne pas créer un nouveau repo — monorepo unique privé, moteur central + **dossiers tenants regroupés** `tenants/{tenant}/`. Un `{tenant}` est **n'importe quel client** (blog Superprof pays, `enseigna`, `apuntes`, `resources.com`, futur client), pas seulement un marché Superprof. Le dispatch étant déjà id-keyé (`RefreshOrchestrator._normalize_blog_id()`, `doc_cache.get_blog_config(blog_id)`, `PromptComposer.compose(site_id=...)`, `link_mapping_loader.load_csv(site_id)`) sur un **registre plat**, le regroupement est mécanique : il ne déplace que des racines de chemins, sans toucher à la logique ni introduire de hiérarchie « client ».
+
+```
+tenants/
+├── {tenant}/                       # tout le client au même endroit, self-service
+│   ├── prompts/site.md             # ← ex _shared/prompts/sites/{id}.md
+│   ├── config/tenant.json          # ← ex _shared/config/blogs/{id}.json (wp_api_config, tone…)
+│   ├── config/landings.csv         # ← ex superprof_landings.json (dé-hardcodé)
+│   ├── linking_maps/               # ← ex _shared/config/linking_maps/{id}.*
+│   └── outputs/                    # ← ex _shared/outputs/{id}/
+└── …                               # nouveau tenant (tout type) = 1 dossier
+
+_shared/config/
+└── sites.json                      # index global MINCE — 1 entrée/tenant, types hétérogènes
+                                    #   ("structure_type": "blog"|"ressources"|…, "language": …)
+```
+
+Un nouveau tenant (quel que soit le client) = **1 dossier `tenants/{tenant}/` à créer** (site.md + config + entrée dans l'index `sites.json`) + credentials `.env` — aucune ligne de code Python à toucher.
+
+> **Réconciliation avec `BRIEF_SIMPLIFICATION_PLAN.md` (Étape F)** : les deux plans convergent désormais sur le **layout regroupé `tenants/{tenant}/`** et le monorepo privé + `CODEOWNERS`. L'ancienne recommandation « garder l'éclatement en 4 arbres plats parallèles » créait la friction « toucher 4 dossiers » pour un responsable pays ; on la remplace par le regroupement. Prérequis à acter au passage : dé-hardcoder `superprof_landings.json` (`superprof_rotator.py:22`, `build_superprof_landings.py:28`) et `push_to_wp.py:22` (`BLOG_CFG` figé superprof-only), et purger les dossiers fantômes `categories/`/`templates/`/`prompts/formats/` résolus par le composer mais absents du disque.
+
+**Ce qui reste à concevoir (pas à coder maintenant, juste cadrer)** :
+- Convention de nommage `{tenant}` : un slug libre, non contraint à un schéma Superprof. Pour les blogs Superprof pays, `{lang}-{country}-{structure}` (ex: `es-es-blog`, `pt-br-ressources`) évite les collisions et permet un même pays avec 2 structures ; pour les autres clients, un slug parlant suffit (`enseigna`, `apuntes`, `resources-com`). Aucun tenant n'est privilégié dans l'index.
+- Un `--market` catalogue (`cw market list`) pour qu'un collaborateur découvre les IDs valides sans lire de JSON.
+
+---
+
+## Hors scope de ce plan
+
+- Pas de nouveau repo, pas de duplication d'orchestrateur.
+- Pas de migration SQLite complète du Sheet (seulement un cache lecture optionnel, à ne construire que si la latence devient un problème mesuré).
+- Pas d'onboarding d'un pays réel maintenant — le point 4 ne fait que vérifier/documenter que l'architecture actuelle supporte déjà l'ajout sans réécriture, pas créer les fichiers d'un marché précis.
+
+---
+
+## Prochaines étapes concrètes (ordre d'implémentation)
+
+1. Vérifier/étendre les règles `allow` de `.claude/settings.json` pour que chaque sous-commande `cw` tourne sans prompt de confirmation (section 1).
+2. Créer `.claude/commands/{refresh,batch,audit,decide,market-status}.md` qui wrappent `cw` en un seul appel Bash chacun (aucune modif Python).
+3. Créer un subagent dédié à la génération (ex: `.claude/agents/content-generator.md`) dont l'unique rôle est : lire `generation_prompt.txt` composé par le CLI, produire le HTML/JSON de sortie, respecter la Règle d'Or (assets_before ≥ assets_after) — pas de logique métier dans le subagent, juste exécution du prompt déjà composé. Le brancher pour qu'il tourne sous l'abonnement Max (Agent tool), jamais via un appel API direct facturé séparément.
+4. Réduire `CLAUDE.md` à un index de commandes + pointeurs vers les guides (ne plus inliner les règles détaillées qui sont déjà dans `_shared/docs/*.md` et `_shared/prompts/sites/*.md`).
+5. Documenter/vérifier que `--market` peut déjà transiter comme `--blog` dans le CLI actuel (sinon ajouter un alias `--market` = `--blog` dans `cli/commands/*.py`, changement minime).
+6. Brancher `push_to_wp.py` comme étape optionnelle `--publish` dans `cw refresh` / `cw workflow run`.
+7. S'assurer que les appels GSC dans l'orchestrateur (et dans les slash commands `/audit`, `/market-status`) passent par le MCP `gsc-remote` plutôt que par un scraping/relecture de fichier local, pour tout accès ad hoc initié depuis Claude Code.
+8. Écrire la mémoire `project_architecture_map` (section 0) une fois les étapes 1-7 stabilisées.
+
+---
+
+## Vérification
+
+- Lancer `cw refresh <url_test> --blog enseigna` en CLI pur (sans Claude Code) pour confirmer que le moteur fonctionne indépendamment de l'agent — preuve que l'interface est bien découplée, et que le CLI ne fait aucun appel API Anthropic lui-même.
+- Créer une commande `/refresh` de test, l'invoquer dans une session Claude Code fraîche, et vérifier dans les logs/transcript qu'aucun fichier `_shared/prompts/sites/*.md` volumineux n'a été lu par la session principale (seul `generation_prompt.txt` composé doit être lu, et seulement par le subagent de génération — pas par l'agent principal).
+- Vérifier que la génération passe bien par le subagent (Agent tool / abonnement Max) et non par un appel API à la clé — inspecter qu'aucune clé API Anthropic n'est configurée/utilisée dans le chemin `cw refresh` → génération.
+- Comparer le nombre de tokens consommés par un `/refresh` via slash command vs. l'ancien flux texte libre, sur la même URL.
+
+---
+---
+
+# Volet 2 — Refonte CLAUDE.md vers Agent Skills natifs (allègement du contexte)
+
+**Statut** : proposition, non implémentée (discussion du 10/07)
+**Complémentaire au Volet 1** : le Volet 1 construit l'interface `/commande` autour du CLI `cw` ;
+ce volet traite la deuxième source de gaspillage de tokens — `CLAUDE.md` lui-même, chargé
+intégralement à chaque session alors que la majorité de son contenu ne sert que ponctuellement.
+Les deux volets partagent le même objectif (industrialiser, économiser les tokens, éliminer le
+texte libre) et doivent être lus ensemble.
+
+> **Validation externe (call ingénieur IA).** Trois recommandations du call sont déjà portées
+> par ces deux volets : (1) **« créer des skills »** = Volet 2 (`.claude/skills/`) ; (2) **« liste de
+> commandes déterministes qui exécutent les skills »** = Volet 1 (slash commands `.claude/commands/`
+> qui wrappent `cw`, cf. `/refresh` « commande déterministe ») ; (3) **« IA.md, lis le fichier / éviter
+> que la conversation soit remplie de contexte »** = le même diagnostic, mais résolu **mieux** par le
+> natif que par un unique `IA.md` qu'on demande de lire : le *progressive disclosure* des skills ne
+> laisse que les `description` en contexte (~200 tokens) et charge le corps à la demande, là où un gros
+> fichier lu en entier recharge tout à chaque fois. On garde l'approche skills. Le point « config pays
+> dans Notion » est traité dans le `BRIEF_SIMPLIFICATION_PLAN.md` (Étape E), et « séparer le nettoyage
+> de la refonte » y est acté en Étape 0.
+
+## Contexte
+
+Le projet Content Writer souffre d'un **CLAUDE.md monolithique de 668 lignes** chargé
+intégralement à chaque session. ~60 % de ce fichier sont des **procédures spécifiques**
+(Workflow 7 étapes, Formats & Métadonnées, Checklist Spreadsheet, Template refresh, détail
+des 6 stratégies) qui ne servent que ponctuellement mais coûtent des tokens en permanence.
+L'objectif : migrer ces workflows vers le **système natif de skills** (`.claude/skills/`)
+pour bénéficier du *progressive disclosure* (seul le `description` d'un skill reste en
+contexte, ~200 tokens ; le corps se charge à la demande), et réduire CLAUDE.md aux seules
+règles universelles.
+
+Le déclencheur était un prompt d'orchestration proposé par l'utilisateur. Après vérification
+des faits, **ce prompt reposait sur 3 hypothèses fausses** qui invalidaient son approche telle
+quelle. Ce volet corrige la trajectoire.
+
+## Évaluation du prompt initial de l'utilisateur
+
+### Ce qui était FAUX dans le prompt (à ne pas suivre)
+
+1. **`.claudeignore` ≠ économie de tokens.** Vérifié : `.claudeignore` exclut les fichiers
+   des recherches (Glob/Grep) — il n'existe PAS de "scan automatique" qui brûlerait le
+   contexte. Un fichier non lu = 0 token. Donc « les dossiers ne brûleront pas mon contexte »
+   est un malentendu. `.claudeignore` reste utile, mais pour **accélérer/cibler les
+   recherches**, pas pour le budget tokens. Bonus : c'est un signal *bypassable*, pas une
+   barrière (pour ça → `permissions.deny` dans `settings.json`).
+
+2. **Mettre les skills dans `_shared/prompts/` = réinventer (mal) le natif.** Des `.md`
+   dans un dossier custom restent des fichiers passifs que Claude doit être *invité* à lire
+   (coût + friction). Le système natif `.claude/skills/<nom>/SKILL.md` fait automatiquement
+   ce que le prompt tentait de forcer : index auto (les `description`), chargement à la demande,
+   invocation `/nom`. **Pire encore** : mettre les skills dans un dossier *ignoré* les
+   rendrait inutilisables.
+
+3. **La commande de suivi n'est pas `/stats`.** Vérifié : c'est **`/context`** (décomposition
+   de la fenêtre : system prompt, MCP tools, CLAUDE.md/MEMORY.md, skills, messages, etc.) et
+   **`/usage`** (coût $ / attribution). `/mcp` montre le coût par serveur MCP.
+
+### Ce qui était JUSTE (à garder)
+
+- Le **diagnostic de fond** : CLAUDE.md trop lourd → skills. 100 % valide, et cohérent avec
+  le Volet 1 (section « Gestion du contexte et économie de tokens »).
+- **Réponses concises, formats structurés, rapports compacts.**
+- **Séparer `_local/` (machine) et archives du reste** — bonne hygiène (et là `.claudeignore`
+  a du sens, pour cibler les recherches).
+
+### Découverte non anticipée par le prompt
+
+L'architecture **« 4 niveaux » (Category + Strategy + Site + Template) décrite dans CLAUDE.md
+n'existe pas réellement** : `_shared/prompts/categories/` et `.../templates/` sont vides/absents
+dans les faits (le Volet 1 ci-dessus documente le composer tel que codé, mais la réalité des
+fichiers sur disque est plus proche de 2 niveaux effectifs). Le réel est à ~2 niveaux
+(`strategies/` = 5 fichiers, `sites/` = 15 fichiers, templates Enseigna imbriqués en `.html`
+sous `sites/enseigna/`). La refonte doit **réaligner la doc sur le réel**, pas propager une
+architecture fantôme. **À trancher avant implémentation** : soit documenter les 2 niveaux réels,
+soit peupler `categories/`/`templates/` si l'intention est de les remplir plus tard.
+
+### Verdict
+
+On ne suit PAS la structure du prompt initial (`_shared/prompts/` comme couche d'orchestration
+manuelle). On adopte l'approche **« migrer l'existant vers skills natifs »** : garder l'arbo
+`_shared/` actuelle, extraire les workflows en `.claude/skills/`, alléger CLAUDE.md, et
+ajouter un `.claudeignore` pour la *pertinence des recherches* (pas le budget tokens).
+
+## Approche retenue
+
+### A. Alléger CLAUDE.md (668 → cible ~200 lignes)
+
+Garder **uniquement l'universel toujours-en-contexte** :
+- Rôle & Mission, Règle d'Or (préservation assets), Architecture Multi-Tenant + règle
+  d'override, Règles Éditoriales (anti-patterns, callouts interdits), E-E-A-T (framework),
+  Composition des prompts (réalignée sur le réel), les 3 Piliers.
+- CLAUDE.md devient aussi l'**index des skills** (une ligne par skill : quand l'invoquer) —
+  le même rôle d'index que le Volet 1 lui assignait déjà pour les slash commands `/refresh`,
+  `/audit`, etc. Les deux index (commandes + skills) doivent cohabiter dans le même CLAUDE.md
+  allégé, pas dans deux fichiers séparés.
+
+Déplacer vers des skills (sections spécifiques) :
+- Workflow 7 étapes (l.171-290), Formats & Métadonnées (l.435-537), Checklist Spreadsheet
+  (l.538-566), Template Article Refresh (l.567-641), détail des 6 stratégies.
+
+### B. Créer les skills natifs sous `.claude/skills/`
+
+Découpage recommandé (ordre de valeur), un dossier par skill avec `SKILL.md` :
+
+1. **`refresh-article`** — Workflow 7 étapes complet (le cœur). Ressources annexes :
+   les 5 `strategies/*.md` référencés à la demande. Ce skill est le pendant naturel de la
+   slash command `/refresh` du Volet 1 : la commande invoque `cw refresh` (déterministe,
+   CLI), le skill documente pour l'agent *comment interpréter* le résultat et préparer la
+   génération quand une intervention plus riche que le simple wrapper CLI est nécessaire.
+2. **`qc-sp-ressources`** — Checklist QC Superprof (défauts récurrents : count-up numérique,
+   emoji FAQ, pas de H3 isolé, tableau→CSV…). Le plus autonome → **skill témoin à faire en 1er**.
+3. **`generate-enseigna-avis`** — Génération article avis (ACF JSON, verdict rapide en fin,
+   pas de déclaration d'indépendance). Ressource : `sites/enseigna/acf-fields-template.md`.
+4. **`sp-ressources-gutenberg`** — Format Gutenberg maison (5 blocs obligatoires, AdvGB,
+   infobox). Ressource : `superprof-ressources-reference.md`.
+5. **`format-wordpress`** — Section Formats & Métadonnées (HTML clean, double output Gutenberg,
+   règles accents/tiret/ancres). Référençable par les autres skills.
+
+**Frontmatter type** (avec le flag clé découvert) :
+```yaml
+---
+name: refresh-article
+description: Refresh SEO d'un article existant (workflow 7 étapes) pour enseigna ou
+  superprof-ressources à partir de signaux GSC/DataForSEO. À invoquer via /refresh-article.
+disable-model-invocation: true   # workflow lourd → déclenché par l'utilisateur, pas auto
+---
+```
+Le `disable-model-invocation: true` est recommandé pour les **workflows lourds** (refresh,
+génération) qu'on veut déclencher soi-même — la description reste en index mais Claude ne
+charge jamais le corps à tort. Le laisser à `false` (défaut) pour les skills utilement
+auto-déclenchés (ex. `qc-sp-ressources` peut se déclencher quand on parle QC).
+
+Taille cible d'un SKILL.md : même ordre de grandeur que CLAUDE.md (~200 lignes), le détail
+lourd part en fichiers annexes lus à la demande.
+
+**Articulation avec le subagent de génération du Volet 1** : le subagent `content-generator`
+(section « Prochaines étapes concrètes », point 3 du Volet 1) et les skills `refresh-article`
+/ `generate-enseigna-avis` / `sp-ressources-gutenberg` ne sont pas redondants — le subagent est
+le *contexte d'exécution* (tourne sous l'abonnement Max, isole les tokens de génération de la
+session principale), les skills sont la *documentation procédurale* que ce subagent doit charger
+pour savoir comment rédiger. Le subagent doit lire le SKILL.md pertinent, pas l'inverse.
+
+### C. Ajouter un `.claudeignore` (pertinence des recherches, PAS budget tokens)
+
+Exclure les ~94 Mo / ~1700 fichiers de **données générées** des recherches Glob/Grep :
+```
+_shared/context/     # 17 Mo, 778 fichiers (scrapes/audits)
+_shared/outputs/     # 5,7 Mo, 739 fichiers (articles générés)
+_shared/temp/        # 1,5 Mo, 101 fichiers
+_local/              # 70 Mo (données machine)
+Images/
+__pycache__/
+.venv/
+_shared/prompts/_archive/
+```
+Cadrer le message : ceci **accélère et cible** les recherches ; ça ne « sauve » pas de tokens
+en soi (les fichiers non lus n'en consommaient déjà pas).
+
+### D. Réaligner la doc sur l'architecture réelle
+
+Corriger la section « Composition des prompts » de CLAUDE.md : décrire les 2 niveaux effectifs
+(strategy + site, templates Enseigna en `.html`), retirer les niveaux `categories/` et
+`templates/` fantômes — ou les créer si l'intention est de les remplir plus tard (décision
+à confirmer au moment de l'implémentation).
+
+## Fichiers concernés
+
+- `CLAUDE.md` — allègement + transformation en index de skills **et** de slash commands
+  (fusion avec l'index du Volet 1) + réalignement doc.
+- `.claude/skills/<nom>/SKILL.md` (nouveaux, ~5 dossiers) — voir découpage B.
+- `.claude/commands/{refresh,batch,audit,decide,market-status}.md` (nouveaux, voir Volet 1).
+- `.claudeignore` (nouveau, racine) — voir C.
+- Ressources déjà existantes à référencer (pas à dupliquer) :
+  `_shared/prompts/strategies/*.md`, `_shared/prompts/sites/enseigna/acf-fields-template.md`,
+  `_shared/prompts/sites/superprof-ressources-reference.md`,
+  `_shared/prompts/sites/superprof-ressources/guide-*.md`.
+- Source de vérité pour QC : mémoires `feedback_sp_ressources_qc_checklist`,
+  `feedback_faq_question_emoji`, `feedback_advgb_block_format`, etc.
+
+## Vérification (end-to-end)
+
+1. **Avant** : lancer `/context` et noter les tokens de la ligne « Memory files » (CLAUDE.md).
+2. Créer d'abord le **skill témoin `qc-sp-ressources`**, relancer une session, vérifier :
+   - `/context` montre le skill (name+description seulement) dans la catégorie Skills ;
+   - `/qc-sp-ressources` charge bien le corps à la demande.
+3. Alléger CLAUDE.md, relancer `/context` : la ligne Memory files doit chuter nettement
+   (cible ~200 lignes vs 668).
+4. Exécuter un vrai QC via `/qc-sp-ressources` sur un article de `_shared/outputs/` et
+   confirmer que le résultat est identique à l'ancien comportement (aucune règle perdue).
+5. Vérifier qu'une recherche Grep ne fouille plus `_shared/context/` ni `_local/`
+   (`.claudeignore` actif).
+
+## Séquencement proposé (Volet 2, à enchaîner après ou en parallèle du Volet 1)
+
+1. Skill témoin `qc-sp-ressources` (preuve de concept, risque minimal).
+2. Validation `/context` + exécution réelle.
+3. Extraction des 4 autres skills.
+4. Allègement CLAUDE.md + réalignement doc + fusion de l'index skills/commandes.
+5. Ajout `.claudeignore`.
+
+---
+
+## Séquencement global recommandé (les DEUX fichiers de plan)
+
+Cette section est **le point d'entrée unique pour exécuter la refonte**. Elle intègre les étapes
+du `BRIEF_SIMPLIFICATION_PLAN.md` (Étape 0, A→F) **et** les deux volets de ce fichier. Règles
+d'or à respecter par l'agent qui l'exécute :
+
+- **Une phase à la fois**, avec **arrêt et vérification** après chacune (chaque plan a sa section
+  *Vérification*). Ne pas enchaîner « tout d'un coup ».
+- **`CLAUDE.md` n'est réécrit qu'UNE seule fois** (phase 5). Les phases antérieures ne font que
+  produire les skills/commandes qu'il indexera — sinon on le réécrit deux fois.
+- **Nettoyage ≠ refonte** : la phase 0 est en **PR séparées**, sans changement de comportement.
+
+| Phase | Contenu | Source | Point d'arrêt / vérif |
+|---|---|---|---|
+| **0. Nettoyage** | Purge code mort (dossiers fantômes `categories/`/`templates/`/`formats/`), archivage des 3 stratégies, `.claudeignore`, isolation `_local/`. **PR séparées, aucun changement de comportement.** | Brief **Étape 0** | Grep ne fouille plus les données générées ; tests toujours verts. |
+| **1. Skills** | Skill témoin `qc-sp-ressources` → validation `/context` → 4 autres skills. Crée aussi la skill de refresh (`edito-refresh`) + `references/{full_refresh,eeat_rewrite,seo_geo_eeat}.md`. | Volet 2 (1-3) + Brief **A** | `/qc-sp-ressources` charge à la demande ; QC identique à l'ancien. |
+| **2. Réduction stratégies + bug** | `strategy_prompts` → 2 fichiers ; **corriger le bug fallback** `ghostwriter.py:594` ; simplifier `PromptComposer` à 2 niveaux. | Brief **B + D** | Forcer TITLE_OPTIMIZATION → le ghostwriter ne compose plus full_refresh. |
+| **3. Slash commands + subagent** | Permissions `.claude/settings.json`, `.claude/commands/` (wrappers `cw`), subagent `content-generator` référençant les skills de la phase 1. | Volet 1 (1-3) | `/refresh` de bout en bout sans invite ; génération via subagent (abonnement Max). |
+| **4. Monorepo `tenants/{tenant}/`** | `git mv` des 4 arbres `{id}` → `tenants/{id}/` ; racines de chemins (composer, doc_cache, link loader, output dir) ; **dé-hardcode superprof-only** (`superprof_rotator`, `push_to_wp`, `build_superprof_landings`) ; `sites.json` → index mince ; `CODEOWNERS`. | Brief **F** + §4 | Refresh enseigna OK depuis `tenants/enseigna/` ; tenant factice non-Superprof chargé sans modif code. |
+| **5. Fusion `CLAUDE.md` (UNE fois)** | Allègement unique → index des skills **et** slash commands + réalignement doc. | Brief **C** + Volet 2 (4) | Ligne « Memory files » de `/context` chute nettement (~150-200 l. vs 668). |
+| **6. Multi-tenant runtime + Notion** | Alias `--market`, `--publish`, accès GSC via MCP `gsc-remote` ; **config pays Notion → sync `sites.json`** (unidirectionnel, pas de lecture Notion au runtime) ; recensement blogs Superprof pays ; mémoire `project_architecture_map`. | Volet 1 (5-8) + Volet 2 (5) + Brief **E** | `markets.json`/`sites.json` cohérent avec la page publique ; le moteur ne lit pas Notion au run. |
+
+> **Ordre des dépendances clés** : phase 0 (base propre) → phases 1-2 (skills + stratégies, sans
+> toucher `CLAUDE.md`) → phase 3 (commandes qui s'appuient sur les skills) → phase 4 (déplacement
+> physique des tenants) → phase 5 (**seule** réécriture de `CLAUDE.md`, qui indexe tout ce qui
+> précède) → phase 6 (branchements runtime + Notion). La phase 4 (monorepo) et la phase 5
+> (`CLAUDE.md`) peuvent être inversées si l'on préfère figer la doc avant le `git mv`, mais **jamais**
+> réécrire `CLAUDE.md` avant que skills + commandes existent.
