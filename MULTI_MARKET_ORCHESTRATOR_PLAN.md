@@ -390,20 +390,22 @@ ajouter un `.claudeignore` pour la *pertinence des recherches* (pas le budget to
 
 ## Approche retenue
 
-### A. Alléger CLAUDE.md (668 → cible ~200 lignes)
+### A. Alléger CLAUDE.md (668 → cible ~150 lignes)
 
-Garder **uniquement l'universel toujours-en-contexte** :
-- Rôle & Mission, Règle d'Or (préservation assets), Architecture Multi-Tenant + règle
-  d'override, Règles Éditoriales (anti-patterns, callouts interdits), E-E-A-T (framework),
-  Composition des prompts (réalignée sur le réel), les 3 Piliers.
-- CLAUDE.md devient aussi l'**index des skills** (une ligne par skill : quand l'invoquer) —
-  le même rôle d'index que le Volet 1 lui assignait déjà pour les slash commands `/refresh`,
-  `/audit`, etc. Les deux index (commandes + skills) doivent cohabiter dans le même CLAUDE.md
-  allégé, pas dans deux fichiers séparés.
+**Critère de tri (pas « est-ce important ? » — tout l'est).** Le bon test est : *est-ce nécessaire à **chaque** session pour que l'agent s'oriente, ou seulement quand il exécute une tâche précise ?* Ce qui n'est utile que ponctuellement descend en skill (chargé à la demande), même si c'est une règle importante. Principe : **`CLAUDE.md` = ce qu'il faut pour s'orienter** (qui je suis, quels tenants, quelles skills existent, quels invariants absolus) ; **les skills = ce qu'il faut pour exécuter une tâche donnée** (notamment tout le « comment rédiger »).
 
-Déplacer vers des skills (sections spécifiques) :
-- Workflow 7 étapes (l.171-290), Formats & Métadonnées (l.435-537), Checklist Spreadsheet
-  (l.538-566), Template Article Refresh (l.567-641), détail des 6 stratégies.
+**Reste dans CLAUDE.md** (universel, toujours en contexte) :
+- **Rôle & Mission** (condensé), **Architecture Multi-Tenant + règle d'override** (l'agent doit savoir en permanence qu'il y a N tenants et comment ils se résolvent), **Composition des prompts** en **pointeur** (savoir *que* le prompt = strategy + site, pas le détail), les **3 Piliers**.
+- **Règle d'Or** en **une ligne** seulement (invariant de sécurité « jamais réduire les assets ») — le détail (JSON de validation avant/après, exemples) descend dans la skill `refresh`.
+- CLAUDE.md devient aussi l'**index des skills** (une ligne par skill : quand l'invoquer) — même rôle d'index que le Volet 1 lui assignait pour les slash commands `/refresh`, `/audit`, etc. Les deux index (commandes + skills) cohabitent dans le même CLAUDE.md allégé, pas dans deux fichiers séparés.
+
+**Descend vers les skills** (« comment rédiger » — utile seulement quand une skill de rédaction est active, donc du coût de contexte gaspillé à chaque session s'il reste dans CLAUDE.md) :
+- **Règles Éditoriales** (anti-patterns, callouts interdits) → skills de rédaction (`format-wordpress`, `generate-enseigna-avis`, `sp-ressources-gutenberg`).
+- **E-E-A-T (framework)** → skills de rédaction / génération (cadre de rédaction, pas d'orientation).
+- **Détail de la Règle d'Or** → skill `refresh`.
+- Workflow 7 étapes, Formats & Métadonnées, Checklist Spreadsheet, Template Article Refresh, détail des 6 stratégies → skills correspondantes (déjà prévu).
+
+> Effet : CLAUDE.md ne porte plus que l'**orientation** + les **index**. Toute connaissance procédurale ou de rédaction est en skill, chargée à la demande. Cible ~150 lignes (vs 668), et le contexte permanent chute d'autant.
 
 ### B. Créer les skills natifs sous `.claude/skills/` — un TOOLKIT, pas un monolithe
 
