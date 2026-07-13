@@ -189,9 +189,9 @@ Deux leviers distincts, à ne pas confondre.
 - `DocumentCache` (`scripts/cache/doc_cache.py`) et `_shared/cache/sitemap_cache.json` existent déjà pour éviter de relire les configs blog à chaque appel — bon pattern à répliquer pour le cache multi-marché.
 - Ajouter un **cache de guide marché résolu** : au premier appel `--market=X`, résoudre une fois `sites.json` + fichiers de règles associés vers un objet marché immuable, réutilisé pour tous les appels suivants dans le même run batch (pertinent surtout pour `cw batch`, qui traite déjà des dizaines d'URLs par run).
 
-### c) Accès GSC — pas de couche SQLite, le MCP `gsc-remote` couvre déjà le besoin
+### c) Accès GSC via le MCP `gsc-remote`
 
-Le repo dispose désormais de `.mcp.json` avec un serveur **`gsc-remote`** (`http://mcp.superprof.cloud:3001/sse`, en plus de `dataforseo-remote`). C'est la bonne réponse au problème « relire GSC à chaque étape » : Claude Code peut interroger GSC directement via les tools MCP (`get_performance_overview`, `get_search_analytics`, `check_indexing_issues`, `compare_search_periods`, etc.) sans repasser par un scraping/relecture de fichiers, et sans dupliquer cet état dans une base locale. **Décision** : abandonner toute piste de cache SQLite local pour les données GSC — le MCP est la source vivante, interrogée à la demande, pas un état à synchroniser. Le Google Sheets (`SheetsClient`, `WorkflowTracker`) reste l'interface humaine de pilotage/suivi de statut, un sujet distinct qui n'a pas besoin d'accélération pour l'instant.
+Le repo dispose désormais de `.mcp.json` avec un serveur **`gsc-remote`** (`http://mcp.superprof.cloud:3001/sse`, en plus de `dataforseo-remote`). C'est la bonne réponse au problème « relire GSC à chaque étape » : Claude Code **récupère la data GSC directement via les tools MCP `gsc-remote`** (`get_performance_overview`, `get_search_analytics`, `check_indexing_issues`, `compare_search_periods`, etc.), sans scraping ni relecture de fichiers, et sans dupliquer cet état localement. **Décision** : la donnée GSC se récupère à la demande via le MCP `gsc-remote` — c'est la source vivante, interrogée quand on en a besoin, pas un état à synchroniser ou à stocker en local. Le Google Sheets (`SheetsClient`, `WorkflowTracker`) reste l'interface humaine de pilotage/suivi de statut, un sujet distinct qui n'a pas besoin d'accélération pour l'instant.
 
 ---
 
@@ -277,7 +277,7 @@ Aujourd'hui : **compte de service partagé unique** (`GOOGLE_SA_PATH`) pour GSC 
 ## Hors scope de ce plan
 
 - Pas de nouveau repo, pas de duplication d'orchestrateur.
-- Pas de migration SQLite complète du Sheet (seulement un cache lecture optionnel, à ne construire que si la latence devient un problème mesuré).
+- Pas de base de données locale en remplacement de l'accès GSC : la data GSC se récupère à la demande via le MCP `gsc-remote` (§2c). Le Google Sheet reste l'interface de pilotage humaine.
 - Pas d'onboarding d'un pays réel maintenant — le point 4 documente le layout cible et les fichiers à créer par tenant, pas la création d'un marché précis. ⚠️ **Correction** : contrairement à ce qui était supposé, l'architecture actuelle ne supporte **pas encore** l'ajout d'un tenant sans réécriture — les deux verrous de §4bis (onglet/colonnes hardcodés, auth service-account partagée) imposent aujourd'hui une édition du code Python. Les lever fait partie de la refonte (pas hors scope) ; c'est leur résolution qui rendra vraie la promesse « zéro code ».
 
 ---
