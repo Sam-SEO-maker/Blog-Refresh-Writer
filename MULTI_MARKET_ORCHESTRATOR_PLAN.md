@@ -187,6 +187,22 @@ Deux leviers distincts, à ne pas confondre.
 
 Le repo dispose désormais de `.mcp.json` avec un serveur **`gsc-remote`** (`http://mcp.superprof.cloud:3001/sse`, en plus de `dataforseo-remote`). C'est la bonne réponse au problème « relire GSC à chaque étape » : Claude Code peut interroger GSC directement via les tools MCP (`get_performance_overview`, `get_search_analytics`, `check_indexing_issues`, `compare_search_periods`, etc.) sans repasser par un scraping/relecture de fichiers, et sans dupliquer cet état dans une base locale. **Décision** : abandonner toute piste de cache SQLite local pour les données GSC — le MCP est la source vivante, interrogée à la demande, pas un état à synchroniser. Le Google Sheets (`SheetsClient`, `WorkflowTracker`) reste l'interface humaine de pilotage/suivi de statut, un sujet distinct qui n'a pas besoin d'accélération pour l'instant.
 
+**Pourquoi le MCP plutôt que l'API Google directe.** L'accès historique via service account Python (`GSCAnalyzer`, `google.oauth2.service_account` + `build('searchconsole','v1')`) fait porter au repo les credentials, les quotas Search Console et la gestion d'erreurs/blocages — un canal fragile et à distribuer. Le MCP `gsc-remote` déporte tout ça sur le serveur `superprof.cloud` : un seul canal, pas de clé sensible à diffuser, et c'est ce qui rend possible le mode `oauth_user` par tenant (§4bis-B). Cible de migration : `GSCAnalyzer` devient un adaptateur fin qui appelle le MCP en interne en conservant son contrat (`analyze()`, `fetch_top_keyword_12m()`, etc.) pour ne pas casser ses appelants. Bascule progressive (PoC comparatif MCP vs API sur une URL → nouvelles features direct sur MCP → bascule méthode par méthode avec non-régression → suppression du service account en dernier), jamais en big-bang sur le cœur du pipeline de décision.
+
+**Premier cas d'usage : détection automatique de candidats au refresh.** Croiser deux signaux déjà disponibles pour produire une liste triée d'URLs à rafraîchir, sans intervention manuelle :
+
+```
+compare_search_periods(dimensions="page")   →  URLs en perte de trafic, delta par page (MCP gsc-remote)
+SitemapAnalyzer.find_stale_content()        →  URLs stale (days_since_update réel, parsing lastmod XML)
+Jointure locale par URL normalisée          →  score = f(ampleur perte trafic, ancienneté)
+                                             →  liste de candidats refresh, triée
+```
+
+- **Module** : `scripts/audit/refresh_candidates.py` ; **commande** : `cw audit refresh-candidates --blog X --months 3 --stale-threshold-days 180` (cohérente avec les sous-commandes de `cli/commands/audit.py`) ; exposable aussi en skill `/candidats-refresh` (backlog A, wrappe le MCP).
+- Le `lastmod` par URL vient **uniquement** du parsing XML (`SitemapAnalyzer.find_stale_content()`, cf. `_shared/docs/SITEMAP_DISCOVERY.md`) : le MCP GSC n'expose que le statut de soumission du sitemap, pas l'ancienneté par article — ne pas chercher à remplacer `SitemapAnalyzer`.
+- Exclure les URLs non-indexées (`check_indexing_issues` / `inspect_url_enhanced`) avant de les proposer.
+- Point de friction à traiter tôt : normalisation d'URL entre sitemap (trailing slash, paramètres) et dimension `page` du MCP (`sc-domain:` vs URL-prefix, cf. `_shared/config/sites.json`). Score volontairement simple en v1 (perte trafic normalisée + ancienneté normalisée), pas de scoring complexe.
+
 ---
 
 ## 3. Flux end-to-end : ce qui change, ce qui ne change pas
@@ -461,6 +477,33 @@ Corriger la section « Composition des prompts » de CLAUDE.md : décrire les 2 
 
 ---
 
+## Volet doc : consolider `_shared/docs/` (sous-chantier de la phase 5)
+
+**Constat vérifié en session.** Les 12 `.md` de `_shared/docs/` ne sont **pas** un problème de contexte : ils ne sont jamais chargés automatiquement. Deux canaux les consomment à la demande — `CLAUDE.md` (renvois « voir détails dans… », pour l'humain et l'agent) et `scripts/cache/doc_cache.py` (chargement runtime par l'orchestrateur). Le seul poids permanent réel est `CLAUDE.md` lui-même (668 lignes, injecté à chaque session) — traité en phase 5. Le vrai défaut de `_shared/docs/` n'est pas le volume, c'est l'**incohérence** : doublons, orphelins, docs d'implémentation pourris.
+
+**Point critique — contradiction E-E-A-T câblée.** Deux fichiers quasi-identiques coexistent et sont chargés par **deux entry points différents** : `doc_cache.py:108` charge `EEAT_2026_GUIDELINES.md` (runtime, ce que voit l'orchestrateur), tandis que `CLAUDE.md` renvoie vers `EEAT_GUIDE.md` (ce que je lis en session). Or `EEAT_GUIDE.md` se déclare lui-même « Version 3.0 — fusion EEAT_GUIDE + EEAT_2026_GUIDELINES » : la fusion a été faite mais l'ancien fichier n'a jamais été supprimé ni le runtime repointé. Résultat : le workflow charge une version pendant que la doc en montre une autre. **Action** : faire de `EEAT_GUIDE.md` l'unique doc E-E-A-T (superset : exemples ❌/✅ + piliers + YMYL + scoring), repointer `doc_cache.py:108` dessus, supprimer `EEAT_2026_GUIDELINES.md`. Vérifier au passage que `EEAT_GUIDE.md` couvre bien les tenants voulus (l'ancien 2026 listait 6 blogs, le nouveau se limite à 2 — réaligner sur les 2 tenants réels de `sites.json`).
+
+**Verdicts par fichier** (audit sous-agent, croisé au code) :
+
+| Fichier | Verdict | Raison |
+|---|---|---|
+| `EEAT_GUIDE.md` | **GARDER (canonique E-E-A-T)** | Superset déclaré ; en faire l'unique doc, repointer `doc_cache.py`. |
+| `EEAT_2026_GUIDELINES.md` | **SUPPRIMER** (après repointage runtime) | Doublon quasi-total absorbé par `EEAT_GUIDE.md`. |
+| `STYLE_GUIDE.md` | **GARDER** | Doc le plus référencé (CLAUDE.md + prompts `full_refresh`/`semantic_reorientation`), anti-patterns uniques. |
+| `SEO_GUIDELINES.md` | **GARDER (hub)** | Pivot câblé runtime ; nettoyer sa duplication GEO interne et ses deux sections « 9 ». |
+| `GEO_2026_GUIDELINES.md` | **GARDER** | Traitement GEO approfondi, complémentaire de SEO_GUIDELINES (pas un doublon). |
+| `COCONS_GUIDE.md` | **GARDER** | Guide maillage durable, chargé par CLAUDE.md. |
+| `CONTENT_REFRESH_GUIDE.md` | **GARDER** | Guide stratégique câblé runtime ; rafraîchir stats datées (76.4%…). |
+| `OUTPUT_ARCHITECTURE.md` | **VÉRIFIER FRAÎCHEUR** | `output_manager.py` existe mais le doc parle de 6 sites vs `VALID_SITE_IDS` réel (à recompter). |
+| `PARENT_H2_WHITELIST_GUIDE.md` | **VÉRIFIER FRAÎCHEUR** | Code décrit existe, mais test cité manquant + doc orphelin ; garder si feature active. |
+| `SITEMAP_DISCOVERY.md` | **RÉÉCRIRE ou SUPPRIMER** | Point d'entrée `sitemap_discovery.py`/`main.py` absents (exemples CLI non exécutables) + contenu corrompu (domaines placeholder, 6 blogs tous « enseigna »). |
+| `YEAR_UPDATE_IMPLEMENTATION.md` | **ARCHIVER** | Log de livraison à n° de ligne périssables, orphelin ; sortir des guides actifs (→ `_shared/docs/archive/` ou git). |
+| `ADD_COLUMNS_GUIDE.md` | **SUPPRIMER** | Procédure one-shot déjà appliquée ; script `add_sheet_columns.py` inexistant ; path Windows en dur ; orphelin. |
+
+**Principe de tri** : distinguer les **guides conceptuels durables** (règles édito/SEO — restent des docs) des **docs d'implémentation** (décrivent du code, pourrissent avec les n° de ligne et les noms de fichiers — à archiver ou convertir). Ne supprimer un doc câblé (`doc_cache.py`) qu'après avoir repointé ou retiré le chargement correspondant, jamais l'inverse.
+
+---
+
 ## Séquencement global recommandé (les DEUX fichiers de plan)
 
 Cette section est **le point d'entrée unique pour exécuter la refonte**. Elle intègre les étapes
@@ -479,8 +522,9 @@ d'or à respecter par l'agent qui l'exécute :
 | **1. Skills** | Skill témoin `qc-sp-ressources` → validation `/context` → 4 autres skills. Crée aussi la skill de refresh (`edito-refresh`) + `references/{full_refresh,eeat_rewrite,seo_geo_eeat}.md`. | Volet 2 (1-3) + Brief **A** | `/qc-sp-ressources` charge à la demande ; QC identique à l'ancien. |
 | **2. Réduction stratégies + bug** | `strategy_prompts` → 2 fichiers ; **corriger le bug fallback** `ghostwriter.py:594` ; simplifier `PromptComposer` à 2 niveaux. | Brief **B + D** | Forcer TITLE_OPTIMIZATION → le ghostwriter ne compose plus full_refresh. |
 | **3. Slash commands + subagent** | Permissions `.claude/settings.json`, `.claude/commands/` (wrappers `cw`), subagent `content-generator` référençant les skills de la phase 1. | Volet 1 (1-3) | `/refresh` de bout en bout sans invite ; génération via subagent (abonnement Max). |
-| **4. Monorepo `tenants/{tenant}/`** | `git mv` des 4 arbres `{id}` → `tenants/{id}/` ; racines de chemins (composer, doc_cache, link loader, output dir) ; **dé-hardcode superprof-only** (`superprof_rotator`, `push_to_wp`, `build_superprof_landings`) ; `sites.json` → index mince ; `CODEOWNERS`. | Brief **F** + §4 | Refresh enseigna OK depuis `tenants/enseigna/` ; tenant factice non-Superprof chargé sans modif code. |
-| **5. Fusion `CLAUDE.md` (UNE fois)** | Allègement unique → index des skills **et** slash commands + réalignement doc. | Brief **C** + Volet 2 (4) | Ligne « Memory files » de `/context` chute nettement (~150-200 l. vs 668). |
+| **3bis. Bout-en-bout (génération → outputs → QC → maillage)** | Brancher la chaîne complète : subagent générateur lit `generation_prompt.txt` → écrit via `save_refreshed_html()` → auto `YTGQualityCheck.check_html()` → boucle correction (`A_CORRIGER` re-corrige, `BLOQUE` stop+alerte) → **maillage** (`SuperprofRotator` pour tenant Superprof / `EnseignaAvisLinker` pour avis Enseigna) ; refondre le tail `process_url`. **Rédaction sous abonnement Max, jamais API payante.** | §3 « Bout-en-bout » | Un `/refresh <url>` va de l'URL au contenu écrit dans `_shared/outputs/{tenant}/` + verdict YTG + liens injectés, sans reprise manuelle. |
+| **4. Monorepo `tenants/{tenant}/`** | `git mv` des 4 arbres `{id}` → `tenants/{id}/` ; racines de chemins (composer, doc_cache, link loader, output dir) ; **dé-hardcode superprof-only** (`superprof_rotator`, `push_to_wp`, `build_superprof_landings`) ; **externaliser onglet/colonnes/sheet_id Sheet par tenant** (§4bis-A, virer `NGL_SHEET` & littéraux) ; **`auth_mode` service_account\|oauth_user** en rebranchant le flow Chrome existant (§4bis-B) ; `sites.json` → index mince ; `CODEOWNERS`. | Brief **F** + §4/§4bis | Refresh enseigna OK depuis `tenants/enseigna/` ; tenant factice non-Superprof chargé **sans modif code** (onglet/sheet en config) ; un collègue s'authentifie via Chrome (OAuth) sur SA propre sheet + GSC. |
+| **5. Fusion `CLAUDE.md` (UNE fois) + consolidation `_shared/docs/`** | Allègement unique → index des skills **et** slash commands + réalignement doc. **Consolider `_shared/docs/`** (voir *Volet doc*) : fusion E-E-A-T sur `EEAT_GUIDE.md` + repointage `doc_cache.py:108` ; suppression `ADD_COLUMNS_GUIDE.md` ; archivage `YEAR_UPDATE_IMPLEMENTATION.md` ; décision `SITEMAP_DISCOVERY.md` ; vérif fraîcheur `OUTPUT_ARCHITECTURE`/`PARENT_H2_WHITELIST`. | Brief **C** + Volet 2 (4) + *Volet doc* | Ligne « Memory files » de `/context` chute nettement (~150-200 l. vs 668) ; un **seul** doc E-E-A-T, chargé par le même nom via CLAUDE.md **et** `doc_cache.py`. |
 | **6. Multi-tenant runtime + Notion** | Alias `--market`, `--publish`, accès GSC via MCP `gsc-remote` ; **config pays Notion → sync `sites.json`** (unidirectionnel, pas de lecture Notion au runtime) ; recensement blogs Superprof pays ; mémoire `project_architecture_map`. | Volet 1 (5-8) + Volet 2 (5) + Brief **E** | `markets.json`/`sites.json` cohérent avec la page publique ; le moteur ne lit pas Notion au run. |
 
 > **Ordre des dépendances clés** : phase 0 (base propre) → phases 1-2 (skills + stratégies, sans
