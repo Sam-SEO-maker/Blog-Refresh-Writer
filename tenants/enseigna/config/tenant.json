@@ -138,5 +138,6 @@
     ],
     "timeout": 30,
     "requires_playwright": false
-  }
+  },
+  "generation_skill": "generate-enseigna-avis"
 }
