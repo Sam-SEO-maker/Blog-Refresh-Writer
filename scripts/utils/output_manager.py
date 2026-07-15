@@ -91,7 +91,11 @@ class OutputManager:
             base_path: Project root (defaults to auto-detect)
         """
         self.base_path = base_path or Path(__file__).parent.parent.parent
-        self.outputs_root = self.base_path / "_shared" / "outputs"
+        # Racines résolues via le point unique TenantPaths (Phase 4.0) : un futur
+        # déplacement vers tenants/{id}/ ne changera que TenantPaths, pas ici.
+        from _shared.core.tenant_paths import TenantPaths
+        self._tenant_paths = TenantPaths(base_path=self.base_path)
+        self.outputs_root = self._tenant_paths.outputs_root()
         self.temp_root = self.base_path / "_shared" / "temp"
 
         # Ensure base directories exist
