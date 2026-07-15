@@ -371,3 +371,37 @@ class TestGhostwriterDiffPrompt:
 
         assert "NE PAS SUPPRIMER" in prompt or "préserver" in prompt.lower()
         assert "Superprof" in prompt
+
+
+class TestLanguageDirective:
+    """Instruction de langue multi-marché (Phase 6d)."""
+
+    def test_known_language_emits_directive(self):
+        from scripts.ghostwriter.ghostwriter import language_directive
+        block = language_directive("et")
+        text = " ".join(block)
+        assert "LANGUE DE RÉDACTION" in text
+        assert "estonien" in text
+
+    def test_french_and_portuguese(self):
+        from scripts.ghostwriter.ghostwriter import language_directive
+        assert "français" in " ".join(language_directive("fr"))
+        assert "portugais" in " ".join(language_directive("pt"))
+
+    def test_empty_or_unknown_language_no_directive(self):
+        from scripts.ghostwriter.ghostwriter import language_directive
+        assert language_directive("") == []
+        assert language_directive("xx") == []
+
+    def test_all_catalog_languages_have_names(self):
+        """Toute langue du catalogue Superprof doit produire une directive."""
+        import json
+        from pathlib import Path
+        from scripts.ghostwriter.ghostwriter import language_directive
+        cat_path = Path(__file__).parent.parent / "_shared" / "config" / "superprof_blogs_catalog.json"
+        if not cat_path.exists():
+            pytest.skip("catalogue absent")
+        cat = json.loads(cat_path.read_text(encoding="utf-8"))
+        langs = {e["language"] for e in cat["blogs"] + cat["ressources_sites"] if e["language"]}
+        for lang in langs:
+            assert language_directive(lang), f"langue '{lang}' sans directive"

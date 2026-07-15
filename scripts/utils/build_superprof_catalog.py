@@ -42,17 +42,61 @@ RESSOURCES_SITES = {
     "https://www.superprof.com.br/recursos/": ("pt-br-ressources", "BR", "pt", "/recursos/"),
 }
 
-# Mapping TLD → (country, language) pour les blogs éditoriaux.
-# Basé sur les domaines Superprof réels ; élargir si besoin.
+# Mapping exhaustif TLD Superprof → (country ISO-2, langue de contenu du marché).
+# Couvre les 89 domaines réels (cf. list_properties). La langue = langue
+# PRINCIPALE de rédaction du marché Superprof (pas la seule langue officielle).
+# Les marchés multilingues gérés par sous-domaine (nl.superprof.be, de.superprof.ch)
+# sont traités par _SUBDOMAIN_META ci-dessous.
 _TLD_META = {
-    "fr": ("FR", "fr"), "es": ("ES", "es"), "de": ("DE", "de"), "co.uk": ("UK", "en"),
-    "com": ("US", "en"), "com.br": ("BR", "pt"), "it": ("IT", "it"), "ca": ("CA", "en"),
-    "mx": ("MX", "es"), "com.ar": ("AR", "es"), "cl": ("CL", "es"), "co": ("CO", "es"),
-    "pe": ("PE", "es"), "be": ("BE", "fr"), "ch": ("CH", "de"), "at": ("AT", "de"),
-    "pt": ("PT", "pt"), "nl": ("NL", "nl"), "pl": ("PL", "pl"), "se": ("SE", "sv"),
+    # Europe
+    "fr": ("FR", "fr"), "es": ("ES", "es"), "de": ("DE", "de"), "it": ("IT", "it"),
+    "co.uk": ("GB", "en"), "ie": ("IE", "en"), "pt": ("PT", "pt"), "nl": ("NL", "nl"),
+    "be": ("BE", "fr"), "ch": ("CH", "de"), "at": ("AT", "de"), "lu": ("LU", "fr"),
+    "pl": ("PL", "pl"), "se": ("SE", "sv"), "no": ("NO", "no"), "dk": ("DK", "da"),
+    "fi": ("FI", "fi"), "is": ("IS", "is"), "cz": ("CZ", "cs"), "sk": ("SK", "sk"),
+    "hu": ("HU", "hu"), "gr": ("GR", "el"), "ee": ("EE", "et"), "lv": ("LV", "lv"),
+    "lt": ("LT", "lt"), "si": ("SI", "sl"), "hr": ("HR", "hr"), "bg": ("BG", "bg"),
+    "rs": ("RS", "sr"), "ba": ("BA", "bs"), "al": ("AL", "sq"), "md": ("MD", "ro"),
+    "com.cy": ("CY", "el"), "com.mt": ("MT", "en"), "com.ro": ("RO", "ro"),
+    "com.ua": ("UA", "uk"),
+    # Amériques (LATAM hispanophone = es ; BR = pt ; US/CA-en)
+    "com": ("US", "en"), "ca": ("CA", "en"), "mx": ("MX", "es"), "com.br": ("BR", "pt"),
+    "com.ar": ("AR", "es"), "cl": ("CL", "es"), "co": ("CO", "es"), "pe": ("PE", "es"),
+    "uy": ("UY", "es"), "com.bo": ("BO", "es"), "com.py": ("PY", "es"), "cr": ("CR", "es"),
+    "com.do": ("DO", "es"), "com.ec": ("EC", "es"), "com.gt": ("GT", "es"),
+    "com.ni": ("NI", "es"), "com.pa": ("PA", "es"), "com.pr": ("PR", "es"),
+    "com.sv": ("SV", "es"), "hn": ("HN", "es"), "bz": ("BZ", "en"),
+    # Afrique
+    "ma": ("MA", "fr"), "cm": ("CM", "fr"), "com.sn": ("SN", "fr"), "com.tn": ("TN", "fr"),
+    "co.za": ("ZA", "en"), "ng": ("NG", "en"), "co.ke": ("KE", "en"), "co.tz": ("TZ", "en"),
+    "co.mz": ("MZ", "pt"), "co.bw": ("BW", "en"), "rw": ("RW", "en"), "ls": ("LS", "en"),
+    "mu": ("MU", "fr"), "com.gh": ("GH", "en"), "com.na": ("NA", "en"),
+    # Moyen-Orient / Asie / Océanie
+    "ae": ("AE", "en"), "qa": ("QA", "en"), "com.om": ("OM", "en"), "co.il": ("IL", "he"),
+    "com.tr": ("TR", "tr"), "in": ("IN", "en"), "co.in": ("IN", "en"), "pk": ("PK", "en"),
+    "co.id": ("ID", "id"), "com.my": ("MY", "en"), "sg": ("SG", "en"), "com.ph": ("PH", "en"),
+    "vn": ("VN", "vi"), "co.kr": ("KR", "ko"), "jp": ("JP", "ja"), "hk": ("HK", "zh"),
+    "com.tw": ("TW", "zh"), "com.au": ("AU", "en"), "co.nz": ("NZ", "en"),
+}
+
+# Marchés servis par SOUS-DOMAINE ou domaine spécial (langue portée par le
+# préfixe / le domaine, pas le TLD superprof.{tld} standard).
+_SUBDOMAIN_META = {
+    "nl.superprof.be": ("BE", "nl"),   # Belgique néerlandophone
+    "de.superprof.ch": ("CH", "de"),   # Suisse germanophone
+    "super-prof.me": ("ME", "sr"),     # Monténégro (domaine à trait d'union)
+    "super-prof.nl": ("NL", "nl"),     # Pays-Bas (domaine à trait d'union)
 }
 
 _DOMAIN_RE = re.compile(r"https?://(?:www\.)?superprof\.([a-z.]+?)/")
+_SUBDOMAIN_RE = re.compile(r"https?://([a-z]+\.superprof\.[a-z.]+?)/")
+
+
+def _host_of(url: str) -> str:
+    """Host « <sub>.superprof.<tld> » sans www (pour la détection sous-domaine)."""
+    m = re.search(r"https?://([a-z.-]+)/", url.lower())
+    host = m.group(1) if m else ""
+    return host[4:] if host.startswith("www.") else host
 
 
 def _tld_of(url: str) -> str:
@@ -60,15 +104,16 @@ def _tld_of(url: str) -> str:
     return m.group(1) if m else ""
 
 
-def _country_lang(tld: str) -> tuple[str, str]:
-    return _TLD_META.get(tld, (tld.upper(), ""))
+def resolve_meta(url: str) -> tuple[str, str]:
+    """(country ISO-2, langue) pour une URL de blog. Gère les sous-domaines.
 
-
-def _slug_tld(tld: str) -> str:
-    """`co.uk` → `uk`, `com.br` → `br`, `com` → `us` (pour l'id blog)."""
-    if tld == "com":
-        return "us"
-    return tld.split(".")[-1]
+    Inconnu → (tld.upper(), "") pour rester visible et corrigeable (aucun crash).
+    """
+    host = _host_of(url)
+    if host in _SUBDOMAIN_META:
+        return _SUBDOMAIN_META[host]
+    tld = _tld_of(url)
+    return _TLD_META.get(tld, (tld.upper().replace(".", "-"), ""))
 
 
 def parse_properties(text: str) -> list[str]:
@@ -105,15 +150,27 @@ def build_catalog(urls: list[str]) -> dict:
 
         # Blogs éditoriaux : /blog/ uniquement.
         if u.endswith("/blog/"):
-            tld = _tld_of(u)
-            if not tld:
+            if not _host_of(u):
                 continue
-            country, lang = _country_lang(tld)
+            country, lang = resolve_meta(u)
+            # id conventionnel : {lang}-{country}-blog (country ISO-2 en minuscules).
+            country_slug = country.lower() if len(country) <= 3 else country.lower().replace("-", "")
             blogs.append({
-                "tenant_id": f"{lang or 'xx'}-{_slug_tld(tld)}-blog",
+                "tenant_id": f"{lang or 'xx'}-{country_slug}-blog",
                 "type": "blog", "country": country, "language": lang,
                 "gsc_property": u, "url_base": "/blog/", "onboardable": True,
             })
+
+    # Dédup par tenant_id : plusieurs propriétés GSC peuvent viser le même marché
+    # (ex. www.superprof.ch/blog/ et de.superprof.ch/blog/ → de-ch-blog). On garde
+    # la 1re rencontrée (ordre stable) et on liste les doublons dans le rapport.
+    dedup, dup_ids = {}, []
+    for b in blogs:
+        if b["tenant_id"] in dedup:
+            dup_ids.append(f"{b['tenant_id']} ({b['gsc_property']})")
+            continue
+        dedup[b["tenant_id"]] = b
+    blogs = list(dedup.values())
 
     ressources.sort(key=lambda x: x["tenant_id"])
     blogs.sort(key=lambda x: x["tenant_id"])
@@ -125,7 +182,8 @@ def build_catalog(urls: list[str]) -> dict:
         ),
         "ressources_sites": ressources,
         "blogs": blogs,
-        "counts": {"ressources": len(ressources), "blogs": len(blogs)},
+        "counts": {"ressources": len(ressources), "blogs": len(blogs),
+                   "blog_duplicates_dropped": len(dup_ids)},
     }
 
 

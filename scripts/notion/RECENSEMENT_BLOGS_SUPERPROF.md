@@ -50,8 +50,29 @@ Le sync est **additif** : il préserve tous les champs existants et les clés
 top-level ; il n'écrase que ce que Notion fournit. `--dump-schema` affiche les
 propriétés réelles de la base pour caler `PROPERTY_MAP` au 1er run.
 
-## Marchés SANS site Ressources (hors périmètre)
+## Marchés SANS site Ressources (hors périmètre Ressources)
 
 Canada, Mexique, Italie, et tout LATAM hispanophone (AR/CL/CO/PE…) n'ont **pas**
-de site Ressources. Cibles naturelles de futurs tenants sur le modèle FR : les 5
-candidats ci-dessus (ES, DE, UK, US, BR).
+de site Ressources. Cibles naturelles de futurs tenants Ressources sur le modèle
+FR : les 5 candidats ci-dessus (ES, DE, UK, US, BR).
+
+## Blogs éditoriaux `/blog/` (90 marchés) — transposabilité multi-langue
+
+Le catalogue inclut aussi les **90 blogs `superprof.{tld}/blog/`** (le but est de
+refresher tous les marchés). Chaque entrée porte `country` (ISO-2) et `language`
+(langue de rédaction du marché), résolus par une table exhaustive TLD→pays→langue
+dans `build_superprof_catalog.py` (sous-domaines `nl.superprof.be`,
+`de.superprof.ch` et domaines à trait d'union `super-prof.me/.nl` gérés à part).
+
+**Le workflow est transposable sans « traduction » par le responsable pays** :
+- Le **pipeline** (GSC, SERP, décision, QC) est agnostique à la langue.
+- Les **guides éditoriaux** sont en **anglais** (méta-langue de travail des Market
+  Co-ordinators) — un responsable estonien/portugais les lit tel quel.
+- La **langue de sortie du contenu** est imposée EXPLICITEMENT par
+  `blog_config.language` → `language_directive()` injecte « Rédige en {langue} »
+  dans le prompt de génération. Un blog `et-ee-blog` produit donc en estonien,
+  `pt-br-blog` en portugais, sans dépendre de la langue de la source scrapée.
+- Le responsable pays adapte seulement **son `tenants/{id}/prompts/site.md`** et ses
+  guides pays — pas le workflow.
+
+Onboarder un blog : `cw tenant init <lang>-<country>-blog` (ex. `et-ee-blog`).

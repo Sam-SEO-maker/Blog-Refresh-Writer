@@ -17,6 +17,40 @@ from scripts.utils.output_manager import title_to_slug, dated_batch_folder_name
 from .diff_engine import DiffEngine
 
 
+# Codes langue (ISO 639-1) → nom lisible, pour l'instruction de rédaction
+# multi-marché du prompt de génération (cf. catalogue Superprof, Phase 6d).
+_LANGUAGE_NAMES = {
+    "fr": "français", "es": "espagnol", "en": "anglais", "de": "allemand",
+    "it": "italien", "pt": "portugais", "nl": "néerlandais", "pl": "polonais",
+    "sv": "suédois", "no": "norvégien", "da": "danois", "fi": "finnois",
+    "is": "islandais", "cs": "tchèque", "sk": "slovaque", "hu": "hongrois",
+    "el": "grec", "et": "estonien", "lv": "letton", "lt": "lituanien",
+    "sl": "slovène", "hr": "croate", "bg": "bulgare", "sr": "serbe",
+    "bs": "bosnien", "sq": "albanais", "ro": "roumain", "uk": "ukrainien",
+    "tr": "turc", "he": "hébreu", "id": "indonésien", "vi": "vietnamien",
+    "ko": "coréen", "ja": "japonais", "zh": "chinois",
+}
+
+
+def language_directive(lang_code: str) -> list[str]:
+    """Bloc de prompt imposant la langue de rédaction du marché (multi-tenant).
+
+    Retourne des lignes prêtes à étendre `prompt_parts`, ou [] si la langue est
+    absente/inconnue (le comportement historique implicite reste alors le repli).
+    """
+    lang_name = _LANGUAGE_NAMES.get(lang_code, "")
+    if not lang_name:
+        return []
+    return [
+        f"## LANGUE DE RÉDACTION : {lang_name}",
+        "",
+        f"Rédige INTÉGRALEMENT l'article en **{lang_name}** "
+        f"(titres, corps, FAQ, métadonnées). Conserve les noms propres et "
+        f"citations dans leur langue d'origine. N'ajoute aucune traduction.",
+        "",
+    ]
+
+
 class Ghostwriter:
     """
     Moteur de réécriture intelligent.
@@ -732,6 +766,13 @@ Retourne l'article complet réécrit en HTML:
             "# TÂCHE: Refresh SEO Article",
             "",
         ]
+
+        # Langue de sortie EXPLICITE (multi-marché). Rend le workflow transposable :
+        # le contenu est produit dans la langue du marché (blog_config.language),
+        # sans dépendre de la langue de la source scrapée. Voir catalogue Superprof.
+        prompt_parts.extend(
+            language_directive((audit_data.get("blog_config", {}) or {}).get("language", ""))
+        )
 
         # Données chiffrées de l'article (compteurs, année)
         prompt_parts.extend([
