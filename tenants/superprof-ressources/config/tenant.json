@@ -72,10 +72,14 @@
     "blog_url_marker": "/blog/"
   },
 
-  "sheets_config": {
+  "sheets": {
     "spreadsheet_id": "1Vutb06Fcm3awnANPbtLkI1EvhbE9d-TXrZRLTrmmLlQ",
+    "spreadsheet_env": "SPREADSHEET_ID_SUPERPROF",
     "spreadsheet_name": "Articles Ressources",
-    "main_sheet": "⬆️ Growing"
+    "tabs": [
+      { "name": "New Growing List", "col_url": 0, "col_keyword": 1 }
+    ],
+    "status_col": "F"
   },
 
   "scraping_config": {
