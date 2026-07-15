@@ -139,7 +139,8 @@ def _run_ytg_qc(base: Path, blog_id: str, url: str, saved: Path) -> str:
         YTGQualityCheck, VERDICT_A_CORRIGER, VERDICT_BLOQUE, VERDICT_SKIP,
     )
 
-    cfg_path = base / "_shared" / "config" / "blogs" / f"{blog_id}.json"
+    from _shared.core.tenant_paths import TenantPaths
+    cfg_path = TenantPaths(base_path=base).blog_config(blog_id)
     ytg_cfg = {}
     if cfg_path.exists():
         try:

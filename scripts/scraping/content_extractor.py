@@ -63,7 +63,11 @@ class ContentExtractor:
         Args:
             config_dir: Path to blog config directory (default: _shared/config/blogs/)
         """
-        self.config_dir = config_dir or Path(__file__).parent.parent.parent / "_shared" / "config" / "blogs"
+        if config_dir:
+            self.config_dir = config_dir
+        else:
+            from _shared.core.tenant_paths import TenantPaths
+            self.config_dir = TenantPaths().blog_configs_dir()
         self.blog_configs = self._load_blog_configs()
 
     def _load_blog_configs(self) -> Dict[str, dict]:

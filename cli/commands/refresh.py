@@ -219,7 +219,8 @@ def _maybe_run_ytg_qc(blog_id: str, url: str) -> None:
 
     # Charger le bloc ytg de la config blog
     import json
-    cfg_path = Path.cwd() / "_shared" / "config" / "blogs" / f"{blog_id}.json"
+    from _shared.core.tenant_paths import TenantPaths
+    cfg_path = TenantPaths(base_path=Path.cwd()).blog_config(blog_id)
     ytg_cfg = {}
     if cfg_path.exists():
         try:

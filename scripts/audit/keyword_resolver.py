@@ -318,7 +318,8 @@ class KeywordResolver:
 
         try:
             base = Path(__file__).resolve().parent.parent.parent
-            cfg_path = base / "_shared" / "config" / "blogs" / f"{blog_id}.json"
+            from _shared.core.tenant_paths import TenantPaths
+            cfg_path = TenantPaths(base_path=base).blog_config(blog_id)
             if not cfg_path.exists():
                 return ""
             with open(cfg_path) as f:

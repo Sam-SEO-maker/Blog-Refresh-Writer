@@ -81,6 +81,10 @@ class RefreshOrchestrator:
         """
         self.base_path = base_path or Path(__file__).parent.parent.parent
 
+        # Résolveur de chemins par tenant (point unique — Phase 4)
+        from _shared.core.tenant_paths import TenantPaths
+        self._tenant_paths = TenantPaths(base_path=self.base_path)
+
         # Initialiser le cache
         self.doc_cache = DocumentCache(self.base_path)
 
@@ -94,7 +98,7 @@ class RefreshOrchestrator:
         self.output_mgr = OutputManager(self.base_path)
 
         # Content extractor for HTML parsing (asset baseline extraction)
-        self.content_extractor = ContentExtractor(self.base_path / "_shared" / "config" / "blogs")
+        self.content_extractor = ContentExtractor(self._tenant_paths.blog_configs_dir())
 
         # Editorial auditor pour quality gate (étape 1.5)
         editorial_rules_path = self.base_path / "_shared" / "config" / "editorial_rules.json"
@@ -220,7 +224,7 @@ class RefreshOrchestrator:
         if blog_id in self._wp_api_clients:
             return self._wp_api_clients[blog_id]
 
-        config_path = self.base_path / "_shared" / "config" / "blogs" / f"{blog_id}.json"
+        config_path = self._tenant_paths.blog_config(blog_id)
         client = None
         try:
             with open(config_path, "r", encoding="utf-8") as f:
@@ -920,7 +924,7 @@ class RefreshOrchestrator:
     def _ytg_gate_enabled(self, blog_id: str) -> bool:
         """Lit ytg.gate depuis _shared/config/blogs/{blog_id}.json (défaut: False)."""
         try:
-            cfg_path = self.base_path / "_shared" / "config" / "blogs" / f"{blog_id}.json"
+            cfg_path = self._tenant_paths.blog_config(blog_id)
             if not cfg_path.exists():
                 return False
             with open(cfg_path, encoding="utf-8") as f:

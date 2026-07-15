@@ -484,7 +484,8 @@ def _load_blog_ytg_config(blog_id: str) -> dict:
     from pathlib import Path
 
     base = Path(__file__).resolve().parent.parent.parent
-    cfg_path = base / "_shared" / "config" / "blogs" / f"{blog_id}.json"
+    from _shared.core.tenant_paths import TenantPaths
+    cfg_path = TenantPaths(base_path=base).blog_config(blog_id)
     if not cfg_path.exists():
         click.echo(f"[ERREUR] Config blog introuvable: {cfg_path}", err=True)
         sys.exit(1)
