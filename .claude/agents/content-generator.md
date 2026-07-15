@@ -76,5 +76,18 @@ mémoires de feedback.
    `eeat_sources`.
 4. Valide les assets (après ≥ avant) ; si un asset manque, restaure-le.
 5. Pour superprof-ressources : passe qc-sp-ressources, corrige les écarts.
-6. Écris `Output HTML` et `Output JSON`.
-7. Renvoie un compte-rendu court (pas de HTML).
+6. Écris `Output HTML` (HTML brut) et `Output JSON`.
+7. Renvoie un compte-rendu court (pas de HTML), **incluant le chemin exact du
+   `Output HTML` écrit** : l'orchestrateur `/refresh` le passe à `cw finalize`
+   pour la chaîne déterministe post-génération (save gutenberg/CSV → validation
+   assets → QC YTG → maillage).
+
+> Répartition avec `cw finalize` (post-génération) :
+> - **Toi** : le contenu correct et complet, **y compris les blocs Gutenberg
+>   maison** quand la skill du tenant les exige (superprof-ressources : les 5
+>   blocs AdvGB obligatoires — le convertisseur mécanique de finalize ne les
+>   ajoute PAS, cf. skill sp-ressources-gutenberg). Écris ce contenu dans
+>   `Output HTML`.
+> - **finalize** (mécanique, déterministe) : sauvegarde du `.gutenberg.html` (wrap
+>   des blocs), extraction CSV des `<table>`, validation d'assets, QC YTG,
+>   maillage. Ne compte pas dessus pour créer des blocs éditoriaux.

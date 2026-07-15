@@ -1,7 +1,7 @@
 ---
 description: Refresh SEO complet d'une URL (fetch WP REST/scrape → GSC/SERP/PAA/intent → décision → recherche sources → génération via subagent).
 argument-hint: <url> --blog <enseigna|superprof-ressources> [--strategy X] [--keyword K]
-allowed-tools: Bash(python3 content_writer.py refresh:*), Task, Read, Write, WebSearch, WebFetch, Skill
+allowed-tools: Bash(python3 content_writer.py refresh:*), Bash(python3 content_writer.py finalize:*), Task, Read, Write, WebSearch, WebFetch, Skill
 ---
 
 Lance le refresh de l'URL fournie en séquençant la chaîne du workflow :
@@ -63,10 +63,35 @@ l'API payante) via l'outil Task. Lui transmettre :
 - les chemins `Output HTML` / `Output JSON`,
 - la `Strategy` et les `Assets avant` (Règle d'Or : assets après ≥ avant).
 
-Le subagent écrit directement le HTML + métadonnées dans les fichiers de sortie ;
-il **ne renvoie pas** de HTML dans le chat.
+Le subagent écrit directement le HTML brut + métadonnées dans les fichiers de
+sortie ; il **ne renvoie pas** de HTML dans le chat. Note le chemin du HTML brut
+écrit (`Output HTML`), il est requis à l'étape 4.
 
-## Étape 4 — Rapport
+## Étape 4 — Finalisation déterministe (`cw finalize`)
 
-Rapporter : stratégie appliquée, sources retenues, chemins de sortie, verdict
-assets (avant/après), et l'étape QC YTG / maillage restante (Phase 3bis).
+Une fois le HTML brut écrit, chaîner save → assets → QC YTG → maillage :
+
+```bash
+python3 content_writer.py finalize <url> --blog <id> --html-file <Output HTML>
+```
+
+Cette commande (déterministe) :
+
+- **sauvegarde** le HTML nu + `.gutenberg.html` + CSV des tableaux,
+- **valide les assets** (Règle d'Or ; restaure les manquants),
+- lance le **QC sémantique YTG** → verdict :
+  - `OPTIMAL` → poursuit le maillage,
+  - `A_CORRIGER` → renvoie les termes sous/sur-optimisés : **relancer le subagent
+    content-generator** pour recorriger le HTML (boucle, cap 2-3 itérations), puis
+    relancer `finalize`,
+  - `BLOQUE` → **arrêt + alerte humaine** (sur-optimisation grave, pas de maillage,
+    pas de re-génération auto),
+- applique le **maillage** (`EnseignaAvisLinker` pour enseigna ; pour superprof les
+  liens de landing sont injectés en amont par `SuperprofRotator`). Ajouter
+  `--apply-linking` pour écrire les liens (sinon dry-run).
+
+## Étape 5 — Rapport
+
+Rapporter : stratégie appliquée, sources retenues, chemins de sortie
+(`_shared/outputs/{tenant}/`), verdict YTG, verdict assets (avant/après), et
+liens ajoutés. Objectif : URL → contenu + verdict + liens, sans reprise manuelle.
