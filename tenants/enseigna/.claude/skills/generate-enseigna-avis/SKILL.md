@@ -16,26 +16,26 @@ vouvoiement, expert analytique. YMYL medium. Cette skill porte la **structure et
 les interdits** ; le fond (stats, experts, vocabulaire) vient du prompt site.
 
 > **Source de vérité (à référencer, pas dupliquer)** :
-> `_shared/prompts/sites/enseigna.md` (prompt principal),
-> `_shared/prompts/sites/enseigna/acf-fields-template.md` (template ACF),
-> `_shared/prompts/sites/enseigna/*.html` (blocs de référence : pros-cons,
+> `tenants/enseigna/prompts/site.md` (prompt principal),
+> `tenants/enseigna/prompts/blocks/acf-fields-template.md` (template ACF),
+> `tenants/enseigna/prompts/blocks/*.html` (blocs de référence : pros-cons,
 > references, blockquote…). Articles de référence publiés :
-> `_shared/outputs/enseigna/html/` (GoStudent, Complétude).
+> `tenants/enseigna/outputs/html/` (GoStudent, Complétude).
 
 ## Livrables (3 fichiers par article)
 
-1. `_shared/outputs/enseigna/html/{slug}_refreshed.gutenberg.html` — **corps**,
+1. `tenants/enseigna/outputs/html/{slug}_refreshed.gutenberg.html` — **corps**,
    liste plate de blocs Gutenberg. **PAS de `<h1>` dans le corps** (le H1 est un
    champ ACF sur Enseigna) : le corps commence par le paragraphe d'introduction.
    Pas de fiche technique dans le corps.
-2. `_shared/outputs/enseigna/acf/{slug}_acf.json` — **données structurées** ACF
+2. `tenants/enseigna/outputs/acf/{slug}_acf.json` — **données structurées** ACF
    (voir template). Champs clés : `h1` (style « Avis {Site} : mon test des cours
    de … sur {Site} »), `nom_du_site`, `note_globale_5` (= verdict /10 ÷ 2 ;
    **concurrent plafonné à 4/5**), `note_service_client`, `annee_creation`,
    `prix_mensuel_moyen`, avis positif/neutre/négatif (date + texte), etc.
    `note_globale_5` **doit** correspondre au verdict /10 du corps (cohérence rich
    snippet).
-3. `_shared/outputs/enseigna/csv/{slug-à-tirets}_tableau_{descriptif}.csv` — chaque
+3. `tenants/enseigna/outputs/csv/{slug-à-tirets}_tableau_{descriptif}.csv` — chaque
    `<table>` du corps exporté en CSV (dossier **`csv/`**, jamais `tables/`), **max
    3/article**. Aucun shortcode `[table id=X /]` dans le HTML : les rédacteurs
    importent le CSV dans TablePress puis insèrent en mode code. Réf.
@@ -86,12 +86,12 @@ Suivre les **articles de référence publiés**, PAS `review_template.md` :
 ## Exécution
 
 Générer via **subagent Claude Code** (abonnement Max), jamais l'API payante.
-Le subagent lit ce SKILL.md + `enseigna.md` + le HTML source + les données GSC,
+Le subagent lit ce SKILL.md + `site.md` + le HTML source + les données GSC,
 écrit directement les 3 fichiers, et ne renvoie pas de HTML dans le chat.
 
 ## Sources de vérité
 
 - Structure/interdits : mémoires liées ci-dessus.
-- Prompt & ACF : `_shared/prompts/sites/enseigna.md`,
-  `_shared/prompts/sites/enseigna/acf-fields-template.md`.
-- Référence visuelle : `_shared/outputs/enseigna/html/`.
+- Prompt & ACF : `tenants/enseigna/prompts/site.md`,
+  `tenants/enseigna/prompts/blocks/acf-fields-template.md`.
+- Référence visuelle : `tenants/enseigna/outputs/html/`.
