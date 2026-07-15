@@ -629,13 +629,20 @@ Retourne l'article complet réécrit en HTML:
         strategy = audit_data.get("decision", {}).get("strategy", "FULL_REFRESH")
         subject_category = audit_data.get("blog_config", {}).get("subject_category", "education_general")
 
+        # Sous-type d'article (avis/versus) déduit de l'URL — point unique.
+        # "versus" ajoute vs_concurrent.md au prompt et route la sortie html/versus/.
+        from _shared.core.article_type import classify_article_type
+        article_url = audit_data.get("url", "") or task_info.get("url_slug", "")
+        article_type = classify_article_type(article_url, blog_id=blog_id)
+
         # 3. Composer le prompt complet (CLAUDE.md + catégorie + stratégie + site)
         # Note: CLAUDE.md est déjà accessible à Claude Code via le système
         composed_prompt = self.prompt_composer.compose(
             strategy=strategy.lower(),
             subject=subject_category,
             site_id=blog_id,
-            content_type=audit_data.get("blog_config", {}).get("content_type")
+            content_type=audit_data.get("blog_config", {}).get("content_type"),
+            article_type=article_type
         )
 
         # 4. Préparer le contexte de réécriture
@@ -705,6 +712,7 @@ Retourne l'article complet réécrit en HTML:
                 "blog_id": blog_id,
                 "strategy": strategy,
                 "subject_category": subject_category,
+                "article_type": article_type,
                 "original_word_count": len(original_html.split()),
                 "assets_before": assets.get("counts") or {},
             },

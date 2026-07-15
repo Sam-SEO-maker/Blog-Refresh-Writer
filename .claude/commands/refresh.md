@@ -72,8 +72,15 @@ sortie ; il **ne renvoie pas** de HTML dans le chat. Note le chemin du HTML brut
 Une fois le HTML brut écrit, chaîner save → assets → QC YTG → maillage :
 
 ```bash
-python3 content_writer.py finalize <url> --blog <id> --html-file <Output HTML>
+python3 content_writer.py finalize <url> --blog <id> --html-file <Output HTML> [--type <avis|versus>]
 ```
+
+> **Type d'article (enseigna).** L'étape 6 du CLI `refresh` affiche une ligne
+> `Type: avis|versus` quand l'URL est classée (règle : slug `superprof-vs-*` →
+> versus ; slug contenant `avis` → avis ; sinon rien). Si un `Type:` est affiché,
+> **le reporter tel quel dans `--type`** : la sortie HTML est alors routée dans
+> `tenants/enseigna/outputs/html/{type}/` et le prompt versus (`vs_concurrent.md`)
+> est déjà injecté à la génération. Sans `Type:`, ne pas passer `--type`.
 
 Cette commande (déterministe) :
 

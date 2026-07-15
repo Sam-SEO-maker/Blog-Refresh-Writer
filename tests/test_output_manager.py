@@ -207,11 +207,15 @@ class TestOutputMethods:
         output_dir = output_mgr.get_site_output_dir("enseigna")
 
         assert output_dir.exists()
-        assert output_dir.name == "enseigna"
+        # Layout monorepo : tenants/{id}/outputs/ (le dossier feuille = "outputs",
+        # le tenant_id est le dossier parent).
+        assert output_dir.name == "outputs"
+        assert output_dir.parent.name == "enseigna"
         assert "enseigna" in str(output_dir)
 
-        # html/, json/, editorial_audits/ subdirectories should exist
-        for subdir in ["html", "json", "editorial_audits"]:
+        # html/, metadata/, editorial_audits/ subdirectories should exist
+        # (le dossier de métadonnées s'appelle "metadata", pas "json").
+        for subdir in ["html", "metadata", "editorial_audits"]:
             assert (output_dir / subdir).exists(), f"Missing {subdir}"
 
     def test_save_refreshed_html(self, output_mgr):
@@ -289,7 +293,7 @@ class TestOutputMethods:
 
         assert loaded == metadata
         assert saved_path.name == "test-article_metadata.json"
-        assert saved_path.parent.name == "json"
+        assert saved_path.parent.name == "metadata"
 
     def test_save_audit_report(self, output_mgr):
         """Test saving audit report"""
@@ -308,7 +312,7 @@ class TestOutputMethods:
 
         assert saved_path.exists()
         assert saved_path.name == "test-article_audit.json"
-        assert saved_path.parent.name == "json"
+        assert saved_path.parent.name == "metadata"
 
         with saved_path.open("r", encoding="utf-8") as f:
             loaded = json.load(f)
@@ -353,8 +357,8 @@ class TestValidationMethods:
         # Check paths are correct
         assert outputs["refreshed_html"].name == "test-article_refreshed.html"
         assert outputs["refreshed_html"].parent.name == "html"
-        assert outputs["metadata"].parent.name == "json"
-        assert outputs["audit"].parent.name == "json"
+        assert outputs["metadata"].parent.name == "metadata"
+        assert outputs["audit"].parent.name == "metadata"
         assert outputs["editorial_audit"].parent.name == "editorial_audits"
 
     def test_validate_outputs_exist_all_present(self, output_mgr):

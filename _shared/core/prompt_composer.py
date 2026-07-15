@@ -62,7 +62,8 @@ class PromptComposer:
         strategy: str,
         subject: Optional[str] = None,
         site_id: Optional[str] = None,
-        content_type: Optional[str] = None
+        content_type: Optional[str] = None,
+        article_type: Optional[str] = None
     ) -> str:
         """
         Compose le prompt final en combinant les 5 niveaux.
@@ -72,6 +73,9 @@ class PromptComposer:
             subject: Sujet optionnel (ex: "education_reviews", "music_lessons")
             site_id: ID du site (ex: "enseigna") pour prompts site-specific
             content_type: Type de contenu optionnel (ex: "review", "guide") pour template
+            article_type: sous-type d'article du tenant (ex. enseigna : "avis" |
+                "versus"). "versus" ajoute le prompt vs_concurrent.md (niveau 4bis).
+                Distinct de content_type (qui pilote le template, niveau 5).
 
         Returns:
             Prompt complet prêt à envoyer au LLM
@@ -100,8 +104,9 @@ class PromptComposer:
                 parts.append(f"# Site Override: {site_id}\n\n{site_override}")
 
             # Niveau 4bis: prompt de sous-type versus (comparatif A vs B).
-            # Complète site.md, ne le remplace pas. Déclenché par content_type.
-            if content_type == "versus":
+            # Complète site.md, ne le remplace pas. Déclenché par article_type
+            # (distinct de content_type, qui pilote le template niveau 5).
+            if article_type == "versus":
                 vs_prompt = self._load_vs_concurrent(site_id)
                 if vs_prompt:
                     parts.append(f"# Type versus: {site_id}\n\n{vs_prompt}")

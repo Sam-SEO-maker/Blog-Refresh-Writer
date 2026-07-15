@@ -85,11 +85,11 @@ def _slug(url: str) -> str:
 
 
 def _bucket(slug: str) -> str | None:
-    if slug.startswith("superprof-vs-"):
-        return "Versus"
-    if "avis" in slug:
-        return "Avis"
-    return None
+    # Règle partagée avec le routage /refresh (point unique : article_type).
+    # classify_article_type attend une URL ; le slug seul suffit à la règle.
+    from _shared.core.article_type import classify_article_type
+    t = classify_article_type("https://enseigna.fr/" + slug.strip("/") + "/")
+    return {"avis": "Avis", "versus": "Versus"}.get(t)
 
 
 def _priority(impressions: int, clicks: int) -> str:

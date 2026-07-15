@@ -173,6 +173,9 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
             click.echo(f"  Output HTML:  {generation_info['output_files']['html']}")
             click.echo(f"  Output JSON:  {generation_info['output_files']['metadata']}")
             click.echo(f"  Strategy:     {generation_info['metadata']['strategy']}")
+            _art = generation_info['metadata'].get('article_type')
+            if _art:
+                click.echo(f"  Type:         {_art}  (finalize --type {_art} → html/{_art}/)")
             click.echo(f"  Assets avant: {generation_info['metadata'].get('assets_before', {})}")
             click.echo(f"  Temps total:  {result.execution_time_seconds:.1f}s")
 
