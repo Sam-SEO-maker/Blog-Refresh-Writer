@@ -9,6 +9,7 @@ Usage:
 
 import os
 import click
+from cli.options import blog_option
 
 from scripts.reports.monday_report import MondayIndexationReport
 
@@ -25,7 +26,7 @@ def report():
     default=lambda: os.environ.get("SPREADSHEET_ID"),
     help="Google Sheet ID (default: env SPREADSHEET_ID)",
 )
-@click.option("--blog", default=None, help="Filtrer un seul blog (default: tous les 6)")
+@blog_option(help="Filtrer un seul blog / marché (default: tous les 6). Alias : --market.")
 @click.option("--delay", type=float, default=1.5, help="Delai entre appels GSC (default: 1.5s)")
 @click.option("--limit", type=int, default=None, help="Limiter URLs par blog (pour tests)")
 @click.option("--dry-run", is_flag=True, help="Simuler sans ecriture spreadsheet")

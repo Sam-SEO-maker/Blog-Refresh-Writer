@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 import click
+from cli.options import blog_option
 
 from scripts.notion import NotionClient
 
@@ -41,7 +42,7 @@ def notion():
 
 
 @notion.command(name='sync')
-@click.option('--blog', help='Filtrer par blog_id')
+@blog_option()
 @click.option('--db-id', help='ID de la base Notion Commandes (override sites.json)')
 def sync(blog, db_id):
     """
@@ -98,7 +99,7 @@ def sync(blog, db_id):
 
 
 @notion.command(name='check-title')
-@click.option('--blog', required=True, help='Blog ID (ex: moments-yoga)')
+@blog_option(required=True)
 @click.option('--title', required=True, help='Titre à vérifier')
 @click.option('--db-id', help='ID de la base Notion Commandes (override sites.json)')
 @click.option('--threshold', default=0.85, show_default=True,
@@ -138,7 +139,7 @@ def check_title(blog, title, db_id, threshold):
 
 
 @notion.command(name='list-sujets')
-@click.option('--blog', help='Filtrer par blog_id')
+@blog_option()
 @click.option('--db-id', required=True, help='ID de la base Notion Sujets')
 def list_sujets(blog, db_id):
     """
@@ -174,7 +175,7 @@ def list_sujets(blog, db_id):
 
 
 @notion.command(name='create-sujet')
-@click.option('--blog', required=True, help='Blog ID (ex: moments-yoga)')
+@blog_option(required=True)
 @click.option('--title', required=True, help='Titre du sujet')
 @click.option('--db-id', required=True, help='ID de la base Notion Sujets')
 @click.option('--category', default='', help='Catégorie thématique')
@@ -210,3 +211,33 @@ def create_sujet(blog, title, db_id, category, priority):
     else:
         click.echo("[ERREUR] Création échouée.", err=True)
         sys.exit(1)
+
+
+@notion.command(name='sync-sites')
+@click.option('--apply', 'do_apply', is_flag=True, default=False,
+              help='Écrit sites.json (sinon dry-run diff).')
+@click.option('--dump-schema', 'dump_schema', is_flag=True, default=False,
+              help='Affiche les propriétés réelles de la base Notion « config pays ».')
+def sync_sites(do_apply, dump_schema):
+    """Sync unidirectionnel : page Notion « config pays » → sites.json.
+
+    Notion (édité par les humains) est la source ; sites.json en est la projection
+    machine. Le moteur ne lit jamais Notion au runtime. Merge additif, dry-run par
+    défaut. Nécessite un NOTION_TOKEN valide dans .env.
+    """
+    from scripts.notion.sync_sites_from_notion import main as sync_main
+    argv = []
+    if do_apply:
+        argv.append('--apply')
+    if dump_schema:
+        argv.append('--dump-schema')
+    # Le module lit sys.argv via argparse ; on le pilote directement.
+    import sys as _sys
+    old = _sys.argv
+    _sys.argv = ['sync_sites_from_notion'] + argv
+    try:
+        code = sync_main()
+    finally:
+        _sys.argv = old
+    if code:
+        sys.exit(code)

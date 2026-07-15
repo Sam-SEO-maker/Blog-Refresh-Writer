@@ -17,17 +17,23 @@ import json
 from pathlib import Path
 
 import click
+from cli.options import blog_option
 
 
 @click.command()
 @click.argument("url")
-@click.option("--blog", "blog_id", required=True, help="Blog ID (enseigna, superprof-ressources, …)")
+@blog_option(required=True, dest="blog_id")
 @click.option("--html-file", "html_file", required=True,
               help="Chemin du HTML brut écrit par le subagent de génération.")
 @click.option("--title", default="", help="Titre article (col E) — sinon slug de l'URL.")
 @click.option("--apply-linking", is_flag=True, default=False,
               help="Applique le maillage (écrit les fichiers). Sinon dry-run.")
-def finalize(url, blog_id, html_file, title, apply_linking):
+@click.option("--publish", is_flag=True, default=False,
+              help="Publie sur WordPress (REST) après QC OK. Blast radius : "
+                   "confirmation humaine obligatoire. Refusé si verdict A_CORRIGER/BLOQUE.")
+@click.option("--yes", "assume_yes", is_flag=True, default=False,
+              help="Saute la confirmation interactive de publication (usage batch averti).")
+def finalize(url, blog_id, html_file, title, apply_linking, publish, assume_yes):
     """
     Chaîne post-génération : save → assets → QC YTG → maillage.
 
@@ -91,6 +97,12 @@ def finalize(url, blog_id, html_file, title, apply_linking):
     click.echo("\n[4/4] Maillage interne…")
     _run_linking(base, blog_id, url, apply_linking)
 
+    # -------------------------------------------------------------------
+    # 5. Publication WordPress (optionnelle, --publish) — fort blast radius
+    # -------------------------------------------------------------------
+    if publish:
+        _maybe_publish(base, blog_id, url, url_slug, saved, verdict, assume_yes)
+
     click.echo(f"\n{'='*70}")
     if verdict == "A_CORRIGER":
         click.echo("⚠ FINALIZE OK — verdict A_CORRIGER : le subagent doit recorriger "
@@ -98,6 +110,78 @@ def finalize(url, blog_id, html_file, title, apply_linking):
     else:
         click.echo("✅ FINALIZE OK — article prêt (contenu + verdict YTG + liens).")
     click.echo(f"{'='*70}")
+
+
+def _maybe_publish(base: Path, blog_id: str, url: str, url_slug: str, saved: Path,
+                   verdict: str, assume_yes: bool) -> None:
+    """Publie l'article sur WordPress via REST, uniquement si le QC est OK.
+
+    Garde-fous (fort blast radius, site public) :
+    - refus si verdict A_CORRIGER ou BLOQUE (BLOQUE n'atteint jamais ce point) ;
+    - confirmation humaine explicite avant le POST, sauf --yes.
+    """
+    from scripts.utils.push_to_wp import build_client, publish_article
+
+    click.echo("\n[5/5] Publication WordPress (REST)…")
+
+    if verdict == "A_CORRIGER":
+        click.echo("  ⛔ Publication refusée : verdict A_CORRIGER. "
+                   "Corriger puis relancer `finalize --publish`.")
+        return
+
+    # Contenu à pousser = .gutenberg.html adjacent au HTML nu sauvegardé.
+    gutenberg_path = saved.with_name(saved.stem + ".gutenberg.html")
+    if not gutenberg_path.exists():
+        click.echo(f"  ⛔ Publication impossible : {gutenberg_path.name} introuvable.")
+        return
+
+    # Metadata (title + meta_description) — save_metadata() nomme par url_slug,
+    # save_refreshed_html() par file_slug (issu du titre) : les deux peuvent
+    # différer. On tente les deux, puis un fallback glob si un seul candidat.
+    meta_dir = saved.parent.parent / "metadata"
+    file_slug = saved.stem[: -len("_refreshed")] if saved.stem.endswith("_refreshed") else saved.stem
+    metadata_path = None
+    for cand in (meta_dir / f"{url_slug}_metadata.json",
+                 meta_dir / f"{file_slug}_metadata.json"):
+        if cand.exists():
+            metadata_path = cand
+            break
+    if metadata_path is None and meta_dir.exists():
+        candidates = list(meta_dir.glob("*_metadata.json"))
+        if len(candidates) == 1:
+            metadata_path = candidates[0]
+    if metadata_path is None:
+        click.echo("  ⚠ metadata introuvable — "
+                   "publication du contenu sans mise à jour titre/SEOPress.")
+
+    # Construire le client (peut échouer si wp_api_config absent pour ce tenant).
+    try:
+        client = build_client(tenant=blog_id, base_path=base)
+    except (ValueError, FileNotFoundError, KeyError) as e:
+        click.echo(f"  ⛔ Client WP indisponible pour '{blog_id}' : {e}")
+        return
+
+    # Confirmation humaine — le seul Y/N qui doit subsister (blast radius).
+    click.echo(f"  Cible : {url}")
+    click.echo(f"  Tenant: {blog_id}  |  Verdict QC: {verdict}")
+    click.echo(f"  Contenu: {gutenberg_path.name}")
+    if not assume_yes:
+        if not click.confirm("  ⚠ PUBLIER sur le site public maintenant ?", default=False):
+            click.echo("  Publication annulée par l'utilisateur.")
+            return
+
+    res = publish_article(
+        client=client,
+        tenant=blog_id,
+        url=url,
+        gutenberg_path=gutenberg_path,
+        metadata_path=metadata_path,
+        base_path=base,
+    )
+    if res["ok"]:
+        click.echo(f"  ✅ Publié — post id={res.get('id')}")
+    else:
+        click.echo(f"  ❌ Échec publication : {res.get('error')}")
 
 
 def _validate_assets(base: Path, blog_id: str, url: str, html: str, saved: Path) -> str:

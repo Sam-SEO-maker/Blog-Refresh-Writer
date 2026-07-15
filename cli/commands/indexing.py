@@ -8,6 +8,7 @@ Usage:
 """
 
 import click
+from cli.options import blog_option
 from pathlib import Path
 
 from scripts.indexing import IndexingRequester
@@ -22,7 +23,7 @@ def indexing():
 
 
 @indexing.command()
-@click.option('--blog', required=True, help='Blog ID (enseigna, moments-yoga, etc.)')
+@blog_option(required=True)
 @click.option('--spreadsheet-id', required=True, help='Google Sheet ID')
 def request(blog, spreadsheet_id):
     """
@@ -83,7 +84,7 @@ def request(blog, spreadsheet_id):
 
 
 @indexing.command()
-@click.option('--blog', required=True, help='Blog ID')
+@blog_option(required=True)
 @click.option('--limit', type=int, default=100, help='Limite du nombre d\'URLs à scanner')
 def scan(blog, limit):
     """
@@ -103,7 +104,7 @@ def scan(blog, limit):
 
 
 @indexing.command(name='bulk-diagnostic')
-@click.option('--blog', required=True, help='Blog ID')
+@blog_option(required=True)
 @click.option('--spreadsheet-id', required=True, help='Google Sheet ID')
 def bulk_diagnostic(blog, spreadsheet_id):
     """

@@ -36,6 +36,33 @@ import os
 SERVICE_ACCOUNT_PATH = Path(os.environ.get("GOOGLE_SA_PATH", "~/.credentials/google/google-service-account.json")).expanduser()
 
 
+# --- Routage source GSC (Phase 6c, cf. GSC_MCP_POC_FINDINGS.md) -------------
+# Le MCP `gsc-remote` (serveur superprof.cloud) n'expose QUE des propriétés
+# `superprof.*` — enseigna.fr en est absent. On route donc PAR PROPRIÉTÉ :
+#   - propriété couverte par le MCP  → source "mcp"  (superprof.*)
+#   - sinon                          → source "service_account"  (enseigna, …)
+# Garantie dure : toute propriété non couverte tombe sur le SA (jamais le MCP).
+SOURCE_MCP = "mcp"
+SOURCE_SERVICE_ACCOUNT = "service_account"
+
+# Substrings de domaine couverts par le MCP gsc-remote (dérivé du list_properties
+# live 2026-07-15 : uniquement des variantes superprof). Élargir cette liste au
+# fur et à mesure que d'autres tenants sont ajoutés au serveur MCP.
+MCP_COVERED_DOMAIN_HINTS = ("superprof.", "super-prof.")
+
+
+def gsc_source_for_property(gsc_property: str) -> str:
+    """Retourne la source GSC à utiliser pour une propriété : MCP ou SA.
+
+    Décision purement basée sur le domaine (cf. contrainte enseigna). Toute
+    propriété non reconnue comme couverte par le MCP tombe sur le service account.
+    """
+    prop = (gsc_property or "").lower()
+    if any(hint in prop for hint in MCP_COVERED_DOMAIN_HINTS):
+        return SOURCE_MCP
+    return SOURCE_SERVICE_ACCOUNT
+
+
 class GSCAnalyzer:
     """
     Analyseur de performances Google Search Console.
@@ -55,9 +82,21 @@ class GSCAnalyzer:
         self.auth_mode = auth_mode
         self._gsc_service = None
 
+        # Routage source (Phase 6c) : MCP pour superprof.*, SA sinon (enseigna…).
+        # NB: aujourd'hui le FETCH passe encore par le SA dans tous les cas (le MCP
+        # n'est pas appelable depuis ce process Python — il l'est côté Claude Code).
+        # `data_source` fige la DÉCISION de routage, testable et prête pour la
+        # bascule méthode par méthode. Garantie : enseigna → toujours SA.
+        self.data_source = gsc_source_for_property(gsc_property)
+
         # Initialiser l'API directe si disponible
         if GOOGLE_API_AVAILABLE:
             self._init_direct_api()
+
+    @property
+    def uses_mcp(self) -> bool:
+        """True si cette propriété est routée vers le MCP gsc-remote (superprof.*)."""
+        return self.data_source == SOURCE_MCP
 
     def _init_direct_api(self):
         """Initialise la connexion directe a l'API GSC (auth selon auth_mode)."""
@@ -112,97 +151,162 @@ class GSCAnalyzer:
         )
 
     def _fetch_performance_direct(self, url: str) -> URLPerformance:
-        """Recupere les donnees de performance via API directe."""
-        today = datetime.now()
-        end_date = today.strftime("%Y-%m-%d")
-        start_date_30d = (today - timedelta(days=30)).strftime("%Y-%m-%d")
+        """Récupère les perfs 30j d'une URL.
 
-        # Periode precedente pour comparaison
+        Routage (Phase 6c) : la **période courante par requête** passe par le MCP
+        gsc-remote pour superprof.* (fallback SA sur erreur), par le SA pour
+        enseigna/tenants hors MCP. Le **calcul de tendances** (baseline période
+        N-1) reste sur le SA dans TOUS les cas — voir `_calculate_trends_direct` :
+        il repose sur un total *par page* de la période précédente, non couvert de
+        façon fiable par les tools MCP (compare_search_periods tronque au top-N et
+        risque de manquer les pages à faible trafic). On ne bascule donc PAS le
+        cœur de la détection de déclin tant que cette parité n'est pas validée à
+        l'échelle. Bascule méthode par méthode, jamais big-bang.
+        """
+        today = datetime.now()
         prev_end = (today - timedelta(days=31)).strftime("%Y-%m-%d")
         prev_start = (today - timedelta(days=61)).strftime("%Y-%m-%d")
 
+        # 1. Période courante par requête : MCP si superprof.*, sinon/fallback SA.
+        rows = self._fetch_current_period_rows(url)
+        if rows is None:
+            return URLPerformance(url=url, clicks_30d=0, impressions_30d=0,
+                                  ctr_30d=0, avg_position_30d=0)
+
+        keywords = []
+        total_clicks = 0
+        total_impressions = 0
+        position_sum = 0
+        for r in rows:
+            keywords.append(KeywordPerformance(
+                query=r["query"], clicks=r["clicks"], impressions=r["impressions"],
+                ctr=r["ctr"], position=r["position"],
+            ))
+            total_clicks += r["clicks"]
+            total_impressions += r["impressions"]
+            if r["impressions"] > 0:
+                position_sum += r["position"] * r["impressions"]
+
+        avg_position = position_sum / total_impressions if total_impressions > 0 else 0
+        ctr_30d = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0
+        main_keyword = max(keywords, key=lambda k: k.impressions).query if keywords else None
+
+        # 2. Tendances : SA uniquement (cœur décision, cf. docstring).
+        clicks_trend, impressions_trend, position_trend = self._calculate_trends_direct(
+            url, prev_start, prev_end, total_clicks, total_impressions, avg_position
+        )
+
+        return URLPerformance(
+            url=url,
+            clicks_30d=total_clicks,
+            impressions_30d=total_impressions,
+            ctr_30d=ctr_30d,
+            avg_position_30d=avg_position,
+            clicks_trend=clicks_trend,
+            impressions_trend=impressions_trend,
+            position_trend=position_trend,
+            keywords=keywords,
+            main_keyword=main_keyword,
+        )
+
+    def _fetch_current_period_rows(self, url: str) -> "Optional[list[dict]]":
+        """Lignes période courante 30j par requête {query,clicks,impressions,ctr,position}.
+
+        ⚠️ NON basculé vers le MCP (reste sur SA). Raison : `clicks_30d`/
+        `impressions_30d` sont des **sommes sur TOUTES les requêtes** de l'URL et
+        alimentent directement le moteur de décision + le calcul de tendance. Or le
+        tool MCP `get_search_by_page_query` **plafonne à ~20 requêtes** → sous-compte
+        les URLs à longue traîne (constaté : 2394 vs 2567 clics, tendance faussée).
+        Tant que le MCP ne pagine pas au-delà de 20, on ne bascule PAS cette somme.
+        La structure (helper isolé) est prête : dès que le row-limit MCP est levé,
+        router ici comme pour `fetch_top_keywords_12m`. Voir GSC_MCP_POC_FINDINGS.md.
+
+        (Le fallback SA reste la seule voie ici ; enseigna → SA de toute façon.)
+        """
+        return self._fetch_current_period_rows_via_sa(url)
+
+    def _fetch_current_period_rows_via_sa(self, url: str) -> "Optional[list[dict]]":
+        """Ancienne lecture SA période courante (conservée, fallback)."""
+        if not self._gsc_service:
+            return None
+        today = datetime.now()
+        end_date = today.strftime("%Y-%m-%d")
+        start_date_30d = (today - timedelta(days=30)).strftime("%Y-%m-%d")
+        request_body = {
+            "startDate": start_date_30d,
+            "endDate": end_date,
+            "dimensions": ["query"],
+            "dimensionFilterGroups": [{
+                "filters": [{"dimension": "page", "expression": url}]
+            }],
+            "rowLimit": 50,
+        }
         try:
-            # Requete API directe pour donnees 30 jours
-            request_body = {
-                "startDate": start_date_30d,
-                "endDate": end_date,
-                "dimensions": ["query"],
-                "dimensionFilterGroups": [{
-                    "filters": [{
-                        "dimension": "page",
-                        "expression": url
-                    }]
-                }],
-                "rowLimit": 50
-            }
-
             response = self._gsc_service.searchanalytics().query(
-                siteUrl=self.gsc_property,
-                body=request_body
+                siteUrl=self.gsc_property, body=request_body
             ).execute()
-
-            # Parser les resultats
-            keywords = []
-            total_clicks = 0
-            total_impressions = 0
-            position_sum = 0
-
-            for row in response.get("rows", []):
-                query = row["keys"][0]
-                clicks = row.get("clicks", 0)
-                impressions = row.get("impressions", 0)
-                ctr = row.get("ctr", 0) * 100  # Convertir en %
-                position = row.get("position", 0)
-
-                keywords.append(KeywordPerformance(
-                    query=query,
-                    clicks=clicks,
-                    impressions=impressions,
-                    ctr=ctr,
-                    position=position,
-                ))
-
-                total_clicks += clicks
-                total_impressions += impressions
-                if impressions > 0:
-                    position_sum += position * impressions
-
-            avg_position = position_sum / total_impressions if total_impressions > 0 else 0
-            ctr_30d = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0
-
-            # Identifier le mot-cle principal (plus d'impressions)
-            main_keyword = max(keywords, key=lambda k: k.impressions).query if keywords else None
-
-            # Calculer les tendances avec la periode precedente
-            clicks_trend, impressions_trend, position_trend = self._calculate_trends_direct(
-                url, prev_start, prev_end, total_clicks, total_impressions, avg_position
-            )
-
-            return URLPerformance(
-                url=url,
-                clicks_30d=total_clicks,
-                impressions_30d=total_impressions,
-                ctr_30d=ctr_30d,
-                avg_position_30d=avg_position,
-                clicks_trend=clicks_trend,
-                impressions_trend=impressions_trend,
-                position_trend=position_trend,
-                keywords=keywords,
-                main_keyword=main_keyword,
-            )
-
         except Exception as e:
             print(f"Erreur GSC API directe pour {url}: {e}")
-            return URLPerformance(
-                url=url,
-                clicks_30d=0,
-                impressions_30d=0,
-                ctr_30d=0,
-                avg_position_30d=0,
-            )
+            return []
+        # Valeurs brutes préservées (parité stricte avec l'ancien SA : pas
+        # d'arrondi de position, clicks/impressions tels quels).
+        return [
+            {
+                "query": r["keys"][0],
+                "clicks": r.get("clicks", 0),
+                "impressions": r.get("impressions", 0),
+                "ctr": r.get("ctr", 0) * 100,
+                "position": r.get("position", 0),
+            }
+            for r in response.get("rows", [])
+        ]
+
+    def fetch_main_keyword(self, url: str) -> "Optional[str]":
+        """Mot-clé principal 30j (max impressions) d'une URL — usage batch discovery.
+
+        Routage MCP/SA (superprof.* → MCP, fallback SA ; enseigna → SA). Sûr même
+        avec le plafond ~20 du MCP : le max-impressions est TOUJOURS en tête, donc
+        présent dans les 20 premières lignes. Parité vérifiée 5/5 URLs.
+        Contrairement aux SOMMES (clicks_30d/impressions_30d), non affecté par la
+        troncature — d'où une méthode dédiée plutôt que `_fetch_performance_direct`.
+        """
+        rows = self._fetch_current_period_rows_for_main_kw(url)
+        if not rows:
+            return None
+        return max(rows, key=lambda r: r["impressions"])["query"]
+
+    def _fetch_current_period_rows_for_main_kw(self, url: str) -> list[dict]:
+        """Lignes 30j par requête pour le main_keyword : MCP (fallback SA) / SA."""
+        if self.uses_mcp:
+            try:
+                from scripts.audit.gsc_mcp_client import GSCMCPClient
+                return GSCMCPClient().search_by_page_query(self.gsc_property, url, days=30)
+            except Exception as e:
+                print(f"[GSC] MCP main_kw indisponible ({str(e)[:80]}) — fallback service account.")
+        return self._fetch_current_period_rows_via_sa(url) or []
+
+    def _fetch_top_keywords_12m_via_mcp(self, url: str, limit: int) -> list[dict]:
+        """Lecture 12m par requête via le MCP gsc-remote. Lève GSCMCPError si KO."""
+        from scripts.audit.gsc_mcp_client import GSCMCPClient
+        client = GSCMCPClient()
+        rows = client.search_by_page_query(self.gsc_property, url, days=365)
+        keywords = [
+            {"query": r["query"], "clicks": r["clicks"], "impressions": r["impressions"]}
+            for r in rows
+        ]
+        keywords.sort(key=lambda k: (-k["clicks"], -k["impressions"]))
+        return keywords[:limit]
 
     def fetch_top_keyword_12m(self, url: str) -> "Optional[str]":
-        """Retourne le mot-clé cible sur 12 mois : max clicks, sinon max impressions."""
+        """Retourne le mot-clé cible sur 12 mois : max clicks, sinon max impressions.
+
+        Dérivé de `fetch_top_keywords_12m` (routage MCP/SA identique).
+        """
+        top = self.fetch_top_keywords_12m(url, limit=50)
+        return top[0]["query"] if top else None
+
+    def _fetch_top_keyword_12m_via_sa(self, url: str) -> "Optional[str]":
+        """Ancienne implémentation directe SA (conservée, fallback)."""
         if not self._gsc_service:
             return None
         today = datetime.now()
@@ -238,10 +342,22 @@ class GSCAnalyzer:
     def fetch_top_keywords_12m(self, url: str, limit: int = 20) -> list[dict]:
         """
         Retourne les N meilleures requêtes GSC sur 12 mois, triées clicks DESC puis
-        impressions DESC.
+        impressions DESC. Chaque élément : {"query", "clicks", "impressions"}.
 
-        Chaque élément : {"query": str, "clicks": int, "impressions": int}
+        Routage (Phase 6c) : MCP gsc-remote pour superprof.* (fallback SA sur
+        erreur MCP), service account pour enseigna et tout tenant hors MCP.
+        NB row-limit : le MCP plafonne à ~20 lignes. Pour limit>20 on retombe
+        sur le SA (qui pagine jusqu'à 50) afin de ne pas tronquer silencieusement.
         """
+        if self.uses_mcp and limit <= 20:
+            try:
+                return self._fetch_top_keywords_12m_via_mcp(url, limit)
+            except Exception as e:  # GSCMCPError ou réseau → fallback SA
+                print(f"[GSC] MCP indisponible ({str(e)[:80]}) — fallback service account.")
+        return self._fetch_top_keywords_12m_via_sa(url, limit)
+
+    def _fetch_top_keywords_12m_via_sa(self, url: str, limit: int = 20) -> list[dict]:
+        """Ancienne implémentation directe SA (conservée, fallback)."""
         if not self._gsc_service:
             return []
         today = datetime.now()
