@@ -88,6 +88,16 @@ _SUBDOMAIN_META = {
     "super-prof.nl": ("NL", "nl"),     # Pays-Bas (domaine à trait d'union)
 }
 
+# Overrides de langue VÉRIFIÉS sur le contenu réel du blog (WebFetch), quand la
+# langue de rédaction Superprof diffère de l'heuristique pays→langue. Clé = TLD.
+# Vérifié 2026-07-15 : le Golfe et le Maghreb publient en arabe, PAS en anglais/
+# français comme l'heuristique le supposait. (EAU .ae reste en ANGLAIS — vérifié.)
+_LANG_OVERRIDES = {
+    "qa": "ar",      # Qatar — blog en arabe (pas en)
+    "com.om": "ar",  # Oman — blog en arabe (pas en)
+    "com.tn": "ar",  # Tunisie — blog en arabe (pas fr)
+}
+
 _DOMAIN_RE = re.compile(r"https?://(?:www\.)?superprof\.([a-z.]+?)/")
 _SUBDOMAIN_RE = re.compile(r"https?://([a-z]+\.superprof\.[a-z.]+?)/")
 
@@ -113,7 +123,11 @@ def resolve_meta(url: str) -> tuple[str, str]:
     if host in _SUBDOMAIN_META:
         return _SUBDOMAIN_META[host]
     tld = _tld_of(url)
-    return _TLD_META.get(tld, (tld.upper().replace(".", "-"), ""))
+    country, lang = _TLD_META.get(tld, (tld.upper().replace(".", "-"), ""))
+    # Override langue vérifié sur contenu réel (prime sur l'heuristique pays).
+    if tld in _LANG_OVERRIDES:
+        lang = _LANG_OVERRIDES[tld]
+    return country, lang
 
 
 def parse_properties(text: str) -> list[str]:

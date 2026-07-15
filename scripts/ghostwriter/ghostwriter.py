@@ -28,7 +28,7 @@ _LANGUAGE_NAMES = {
     "sl": "slovène", "hr": "croate", "bg": "bulgare", "sr": "serbe",
     "bs": "bosnien", "sq": "albanais", "ro": "roumain", "uk": "ukrainien",
     "tr": "turc", "he": "hébreu", "id": "indonésien", "vi": "vietnamien",
-    "ko": "coréen", "ja": "japonais", "zh": "chinois",
+    "ko": "coréen", "ja": "japonais", "zh": "chinois", "ar": "arabe",
 }
 
 

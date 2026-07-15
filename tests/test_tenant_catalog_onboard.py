@@ -51,6 +51,22 @@ def test_catalog_blog_id_convention():
     assert by_prop["https://www.superprof.com.br/blog/"]["tenant_id"] == "pt-br-blog"
 
 
+def test_language_overrides_verified_on_real_content():
+    """Golfe/Maghreb : langue arabe vérifiée sur le contenu réel (pas l'heuristique).
+
+    EAU reste en anglais (vérifié). Cf. _LANG_OVERRIDES.
+    """
+    from scripts.utils.build_superprof_catalog import resolve_meta
+    assert resolve_meta("https://www.superprof.qa/blog/")[1] == "ar"
+    assert resolve_meta("https://www.superprof.com.om/blog/")[1] == "ar"
+    assert resolve_meta("https://www.superprof.com.tn/blog/")[1] == "ar"
+    # EAU NON overridé → reste anglais
+    assert resolve_meta("https://www.superprof.ae/blog/")[1] == "en"
+    # Maroc/Sénégal francophones confirmés
+    assert resolve_meta("https://www.superprof.ma/blog/")[1] == "fr"
+    assert resolve_meta("https://www.superprof.com.sn/blog/")[1] == "fr"
+
+
 # --- Onboarding -------------------------------------------------------------
 
 @pytest.fixture

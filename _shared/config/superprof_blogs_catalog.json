@@ -58,6 +58,33 @@
   ],
   "blogs": [
     {
+      "tenant_id": "ar-om-blog",
+      "type": "blog",
+      "country": "OM",
+      "language": "ar",
+      "gsc_property": "https://www.superprof.com.om/blog/",
+      "url_base": "/blog/",
+      "onboardable": true
+    },
+    {
+      "tenant_id": "ar-qa-blog",
+      "type": "blog",
+      "country": "QA",
+      "language": "ar",
+      "gsc_property": "https://www.superprof.qa/blog/",
+      "url_base": "/blog/",
+      "onboardable": true
+    },
+    {
+      "tenant_id": "ar-tn-blog",
+      "type": "blog",
+      "country": "TN",
+      "language": "ar",
+      "gsc_property": "https://www.superprof.com.tn/blog/",
+      "url_base": "/blog/",
+      "onboardable": true
+    },
+    {
       "tenant_id": "bg-bg-blog",
       "type": "blog",
       "country": "BG",
@@ -274,15 +301,6 @@
       "onboardable": true
     },
     {
-      "tenant_id": "en-om-blog",
-      "type": "blog",
-      "country": "OM",
-      "language": "en",
-      "gsc_property": "https://www.superprof.com.om/blog/",
-      "url_base": "/blog/",
-      "onboardable": true
-    },
-    {
       "tenant_id": "en-ph-blog",
       "type": "blog",
       "country": "PH",
@@ -297,15 +315,6 @@
       "country": "PK",
       "language": "en",
       "gsc_property": "https://www.superprof.pk/blog/",
-      "url_base": "/blog/",
-      "onboardable": true
-    },
-    {
-      "tenant_id": "en-qa-blog",
-      "type": "blog",
-      "country": "QA",
-      "language": "en",
-      "gsc_property": "https://www.superprof.qa/blog/",
       "url_base": "/blog/",
       "onboardable": true
     },
@@ -585,15 +594,6 @@
       "country": "SN",
       "language": "fr",
       "gsc_property": "https://www.superprof.com.sn/blog/",
-      "url_base": "/blog/",
-      "onboardable": true
-    },
-    {
-      "tenant_id": "fr-tn-blog",
-      "type": "blog",
-      "country": "TN",
-      "language": "fr",
-      "gsc_property": "https://www.superprof.com.tn/blog/",
       "url_base": "/blog/",
       "onboardable": true
     },
