@@ -146,7 +146,8 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
 
         # Compose generation prompt via ghostwriter
         click.echo("[6/6] Composition prompt de génération...")
-        output_dir = Path.cwd() / "_shared" / "outputs" / blog
+        from _shared.core.tenant_paths import TenantPaths
+        output_dir = TenantPaths(base_path=Path.cwd()).output_dir(blog)
         output_dir.mkdir(parents=True, exist_ok=True)
         (output_dir / "html").mkdir(parents=True, exist_ok=True)
         (output_dir / "json").mkdir(parents=True, exist_ok=True)
