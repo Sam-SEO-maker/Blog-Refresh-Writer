@@ -83,11 +83,10 @@ class OutputManager:
         # déplacement vers tenants/{id}/ ne changera que TenantPaths, pas ici.
         from _shared.core.tenant_paths import TenantPaths
         self._tenant_paths = TenantPaths(base_path=self.base_path)
-        self.outputs_root = self._tenant_paths.outputs_root()
         self.temp_root = self.base_path / "_shared" / "temp"
 
-        # Ensure base directories exist
-        self.outputs_root.mkdir(parents=True, exist_ok=True)
+        # Ensure base directories exist (outputs sont désormais par tenant)
+        self._tenant_paths.tenants_root.mkdir(parents=True, exist_ok=True)
         self.temp_root.mkdir(parents=True, exist_ok=True)
 
     def init_workspace(self, purge_temp: bool = True) -> Dict[str, int]:
@@ -128,8 +127,8 @@ class OutputManager:
 
         # Ensure outputs structure for all sites
         for site_id in self._known_tenant_ids():
-            # Create site output directory
-            site_dir = self.outputs_root / site_id
+            # Create site output directory (tenants/{id}/outputs/)
+            site_dir = self._tenant_paths.output_dir(site_id)
             if not site_dir.exists():
                 site_dir.mkdir(parents=True, exist_ok=True)
                 stats["output_dirs_created"] += 1
@@ -379,7 +378,10 @@ class OutputManager:
             logger.info(f"[ZIP] {zip_path.name}")
 
         from scripts.utils.acf_extractor import save_acf_if_literary
-        acf_path = save_acf_if_literary(site_id, file_slug, html_content, self.outputs_root)
+        acf_path = save_acf_if_literary(
+            site_id, file_slug, html_content,
+            tenant_output_dir=self._tenant_paths.output_dir(site_id),
+        )
         if acf_path:
             logger.info(f"[ACF] fiche de lecture détectée → {acf_path}")
 
@@ -575,12 +577,10 @@ class OutputManager:
                     stats["temp_cache"][temp_dir.name] = len(files)
                     stats["total_temp_size_mb"] += sum(f.stat().st_size for f in files) / (1024 * 1024)
 
-        # Output stats — itère les dossiers présents sur disque
-        if self.outputs_root.exists():
-            for output_dir in self.outputs_root.iterdir():
-                if output_dir.is_dir():
-                    files = [f for f in output_dir.rglob("*") if f.is_file()]
-                    stats["outputs"][output_dir.name] = len(files)
-                    stats["total_output_size_mb"] += sum(f.stat().st_size for f in files) / (1024 * 1024)
+        # Output stats — un dossier outputs/ par tenant (tenants/{id}/outputs/)
+        for tenant_id, output_dir in self._tenant_paths.output_dirs():
+            files = [f for f in output_dir.rglob("*") if f.is_file()]
+            stats["outputs"][tenant_id] = len(files)
+            stats["total_output_size_mb"] += sum(f.stat().st_size for f in files) / (1024 * 1024)
 
         return stats

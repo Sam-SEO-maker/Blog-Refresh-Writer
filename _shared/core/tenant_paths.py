@@ -1,22 +1,23 @@
 """
 Tenant Paths — point de résolution UNIQUE des chemins par tenant.
 
-Avant la refonte monorepo (Phase 4), les racines de chemins par tenant étaient
-construites à la main dans ~40 fichiers (prompts, config blog, linking maps,
-outputs). Ce module centralise ces 4 racines pour qu'un futur déplacement vers
-`tenants/{id}/` ne change qu'UN endroit (la constante `TENANTS_LAYOUT` + les
-méthodes ci-dessous), au lieu de 40 sites d'appel.
+Depuis la Phase 4.1, chaque tenant est regroupé sous `tenants/{id}/` :
 
-État actuel (Phase 4.0) : les chemins pointent ENCORE vers les emplacements
-historiques `_shared/…` — aucun changement de comportement. La bascule vers
-`tenants/{id}/` se fera en Phase 4.1 en modifiant ces méthodes seules.
+    tenants/{id}/
+    ├── prompts/site.md          (prompt override ; ex _shared/prompts/sites/{id}.md)
+    ├── prompts/…                (assets : blocks/, guides/, reference.md, vs_concurrent.md)
+    ├── config/tenant.json       (config runtime ; ex _shared/config/blogs/{id}.json)
+    ├── linking_maps/            (ex _shared/config/linking_maps/{id}.*)
+    └── outputs/                 (ex _shared/outputs/{id}/)
+
+Ce module est le SEUL endroit qui connaît ce layout : les ~40 sites d'appel
+passent par lui (Phase 4.0/4.0c), donc la bascule `_shared/…` → `tenants/{id}/`
+ne se fait qu'ici.
 
 Clés :
 - `tenant_id` = identifiant logique (`enseigna`, `superprof-ressources`) — la clé
-  UNIQUE des configs (`sites.json`, `blogs/{id}.json`, `sites/{id}.md`) ET du
-  dossier de sortie. Depuis la Phase 4.0b, les sorties sont indexées par
-  `tenant_id`, plus par domaine (le mapping domaine historique a été retiré : il
-  divergeait du contenu de prod, de push_to_wp et de ytg_qc).
+  UNIQUE des configs (`sites.json`) ET du dossier tenant. Les sorties sont
+  indexées par `tenant_id` (Phase 4.0b), plus par domaine.
 """
 
 from pathlib import Path
@@ -28,47 +29,66 @@ def _project_root() -> Path:
 
 
 class TenantPaths:
-    """Résout les 4 racines de chemins par tenant depuis un point unique."""
+    """Résout les chemins par tenant sous `tenants/{id}/` depuis un point unique."""
 
     def __init__(self, base_path: Optional[Path] = None):
         self.base_path = base_path or _project_root()
-        # Racines historiques (Phase 4.0). En 4.1 : self.tenants_root = base/"tenants".
-        self._prompts_sites = self.base_path / "_shared" / "prompts" / "sites"
-        self._config_blogs = self.base_path / "_shared" / "config" / "blogs"
-        self._linking_maps = self.base_path / "_shared" / "config" / "linking_maps"
-        self._outputs_root = self.base_path / "_shared" / "outputs"
+        self.tenants_root = self.base_path / "tenants"
+
+    def tenant_dir(self, tenant_id: str) -> Path:
+        """Racine du tenant : `tenants/{id}/`."""
+        return self.tenants_root / tenant_id
 
     # --- Prompt site override -------------------------------------------------
     def site_prompt(self, tenant_id: str) -> Path:
-        """`sites/{id}.md` — prompt override du tenant."""
-        return self._prompts_sites / f"{tenant_id}.md"
+        """`tenants/{id}/prompts/site.md` — prompt override du tenant."""
+        return self.tenant_dir(tenant_id) / "prompts" / "site.md"
 
-    def site_prompt_dir(self, tenant_id: str) -> Path:
-        """`sites/{id}/` — dossier d'assets prompt (templates HTML enseigna…)."""
-        return self._prompts_sites / tenant_id
+    def prompts_dir(self, tenant_id: str) -> Path:
+        """`tenants/{id}/prompts/` — dossier des assets prompt (blocks/, guides/…)."""
+        return self.tenant_dir(tenant_id) / "prompts"
 
-    # --- Config blog ----------------------------------------------------------
+    # --- Config tenant --------------------------------------------------------
     def blog_config(self, tenant_id: str) -> Path:
-        """`config/blogs/{id}.json` — config runtime du tenant."""
-        return self._config_blogs / f"{tenant_id}.json"
+        """`tenants/{id}/config/tenant.json` — config runtime du tenant."""
+        return self.tenant_dir(tenant_id) / "config" / "tenant.json"
 
-    def blog_configs_dir(self) -> Path:
-        """Dossier de découverte des configs blog (glob *.json)."""
-        return self._config_blogs
+    def blog_config_files(self) -> list[tuple[str, Path]]:
+        """Liste (tenant_id, chemin config) en parcourant `tenants/*/config/tenant.json`.
+
+        Remplace l'ancien glob plat `config/blogs/*.json` : le layout monorepo
+        éclate les configs par dossier tenant.
+        """
+        if not self.tenants_root.exists():
+            return []
+        out = []
+        for tenant_dir in sorted(self.tenants_root.iterdir()):
+            if not tenant_dir.is_dir():
+                continue
+            cfg = tenant_dir / "config" / "tenant.json"
+            if cfg.exists():
+                out.append((tenant_dir.name, cfg))
+        return out
 
     # --- Linking maps ---------------------------------------------------------
-    def linking_maps_dir(self) -> Path:
-        """`config/linking_maps/` — racine des cartes de maillage."""
-        return self._linking_maps
-
-    def linking_map(self, tenant_id: str, suffix: str = "csv") -> Path:
-        """`config/linking_maps/{id}.{suffix}`."""
-        return self._linking_maps / f"{tenant_id}.{suffix}"
+    def linking_maps_dir(self, tenant_id: str) -> Path:
+        """`tenants/{id}/linking_maps/` — cartes de maillage du tenant."""
+        return self.tenant_dir(tenant_id) / "linking_maps"
 
     # --- Outputs --------------------------------------------------------------
-    def outputs_root(self) -> Path:
-        return self._outputs_root
-
     def output_dir(self, tenant_id: str) -> Path:
-        """Dossier de sortie du tenant, indexé par `tenant_id` (Phase 4.0b)."""
-        return self._outputs_root / tenant_id
+        """`tenants/{id}/outputs/` — dossier de sortie du tenant."""
+        return self.tenant_dir(tenant_id) / "outputs"
+
+    def output_dirs(self) -> list[tuple[str, Path]]:
+        """Liste (tenant_id, dossier outputs) pour tous les tenants ayant un outputs/."""
+        if not self.tenants_root.exists():
+            return []
+        out = []
+        for tenant_dir in sorted(self.tenants_root.iterdir()):
+            if not tenant_dir.is_dir():
+                continue
+            odir = tenant_dir / "outputs"
+            if odir.exists():
+                out.append((tenant_dir.name, odir))
+        return out

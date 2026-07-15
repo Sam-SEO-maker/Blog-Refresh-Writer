@@ -55,8 +55,8 @@
   },
 
   "editorial_guides": [
-    "_shared/prompts/sites/superprof-ressources.md",
-    "_shared/prompts/sites/superprof-ressources-reference.md"
+    "tenants/superprof-ressources/prompts/site.md",
+    "tenants/superprof-ressources/prompts/reference.md"
   ],
 
   "brand_rules": {

@@ -38,11 +38,11 @@ def output_mgr(temp_base_path):
 class TestOutputManagerInit:
     """Test OutputManager initialization"""
 
-    def test_outputs_root_created(self, output_mgr, temp_base_path):
-        """Test that outputs root directory is created"""
-        expected = temp_base_path / "_shared" / "outputs"
-        assert output_mgr.outputs_root == expected
-        assert output_mgr.outputs_root.exists()
+    def test_tenants_root_created(self, output_mgr, temp_base_path):
+        """Les sorties sont par tenant (tenants/{id}/outputs/) : la racine tenants/ existe."""
+        expected = temp_base_path / "tenants"
+        assert output_mgr._tenant_paths.tenants_root == expected
+        assert expected.exists()
 
     def test_temp_root_created(self, output_mgr, temp_base_path):
         """Test that temp root directory is created"""
@@ -74,7 +74,7 @@ class TestInitWorkspace:
         known = output_mgr._known_tenant_ids()
         assert known  # le fixture fournit enseigna + superprof-ressources
         for site_id in known:
-            site_dir = output_mgr.outputs_root / site_id
+            site_dir = output_mgr._tenant_paths.output_dir(site_id)
             assert site_dir.exists(), f"Missing output dir for {site_id}"
 
     def test_init_workspace_creates_subdirectories(self, output_mgr):
@@ -83,7 +83,7 @@ class TestInitWorkspace:
 
         for site_id in output_mgr._known_tenant_ids():
             for subdir in ["html", "metadata", "editorial_audits"]:
-                sub_path = output_mgr.outputs_root / site_id / subdir
+                sub_path = output_mgr._tenant_paths.output_dir(site_id) / subdir
                 assert sub_path.exists(), f"Missing {subdir} for {site_id}"
 
     def test_init_workspace_purges_temp_cache(self, output_mgr):

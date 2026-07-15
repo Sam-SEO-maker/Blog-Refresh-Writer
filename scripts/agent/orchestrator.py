@@ -98,7 +98,7 @@ class RefreshOrchestrator:
         self.output_mgr = OutputManager(self.base_path)
 
         # Content extractor for HTML parsing (asset baseline extraction)
-        self.content_extractor = ContentExtractor(self._tenant_paths.blog_configs_dir())
+        self.content_extractor = ContentExtractor(base_path=self.base_path)
 
         # Editorial auditor pour quality gate (étape 1.5)
         editorial_rules_path = self.base_path / "_shared" / "config" / "editorial_rules.json"

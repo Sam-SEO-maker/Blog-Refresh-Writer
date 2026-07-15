@@ -167,8 +167,8 @@ class EnseignaAvisLinker:
         """Charge le binding URL -> Path depuis enseigna_file_urls.json."""
         from _shared.core.tenant_paths import TenantPaths
         cfg = (
-            TenantPaths(base_path=self.base_path).linking_maps_dir()
-            / "enseigna_file_urls.json"
+            TenantPaths(base_path=self.base_path).linking_maps_dir("enseigna")
+            / "file_urls.json"
         )
         mapping: dict[str, Path] = {}
         if not cfg.exists():
