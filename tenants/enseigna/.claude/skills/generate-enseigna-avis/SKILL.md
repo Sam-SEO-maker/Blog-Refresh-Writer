@@ -20,11 +20,25 @@ les interdits** ; le fond (stats, experts, vocabulaire) vient du prompt site.
 > `tenants/enseigna/prompts/blocks/acf-fields-template.md` (template ACF),
 > `tenants/enseigna/prompts/blocks/*.html` (blocs de référence : pros-cons,
 > references, blockquote…). Articles de référence publiés :
-> `tenants/enseigna/outputs/html/` (GoStudent, Complétude).
+> `tenants/enseigna/outputs/html/avis/` (GoStudent, Complétude).
 
-## Livrables (3 fichiers par article)
+## Deux types d'article (deux sous-dossiers de sortie)
 
-1. `tenants/enseigna/outputs/html/{slug}_refreshed.gutenberg.html` — **corps**,
+Le tenant enseigna produit **deux types** d'articles, chacun avec son prompt et son
+sous-dossier de sortie HTML :
+
+| Type | Prompt principal | Sortie HTML |
+|---|---|---|
+| **Avis** (review d'une plateforme) | `tenants/enseigna/prompts/site.md` | `tenants/enseigna/outputs/html/avis/` |
+| **Versus** (comparatif A vs B) | `tenants/enseigna/prompts/vs_concurrent.md` | `tenants/enseigna/outputs/html/versus/` |
+
+Cette skill couvre le type **avis**. Un article **versus** suit `vs_concurrent.md`
+et écrit dans `html/versus/`. Les dossiers **`acf/`, `csv/`, `metadata/` restent
+communs** aux deux types (clés par slug).
+
+## Livrables (3 fichiers par article — type *avis*)
+
+1. `tenants/enseigna/outputs/html/avis/{slug}_refreshed.gutenberg.html` — **corps**,
    liste plate de blocs Gutenberg. **PAS de `<h1>` dans le corps** (le H1 est un
    champ ACF sur Enseigna) : le corps commence par le paragraphe d'introduction.
    Pas de fiche technique dans le corps.
@@ -94,4 +108,4 @@ Le subagent lit ce SKILL.md + `site.md` + le HTML source + les données GSC,
 - Structure/interdits : mémoires liées ci-dessus.
 - Prompt & ACF : `tenants/enseigna/prompts/site.md`,
   `tenants/enseigna/prompts/blocks/acf-fields-template.md`.
-- Référence visuelle : `tenants/enseigna/outputs/html/`.
+- Référence visuelle : `tenants/enseigna/outputs/html/avis/`.
