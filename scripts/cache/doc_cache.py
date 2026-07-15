@@ -104,8 +104,8 @@ class DocumentCache:
         self._cache["geo_guidelines"] = self._load_file("_shared/docs/GEO_2026_GUIDELINES.md")
 
     def _load_eeat_guidelines(self):
-        """Charge EEAT_2026_GUIDELINES.md."""
-        self._cache["eeat_guidelines"] = self._load_file("_shared/docs/EEAT_2026_GUIDELINES.md")
+        """Charge EEAT_GUIDE.md (canonique v3.0, fusion des 2 anciens docs E-E-A-T)."""
+        self._cache["eeat_guidelines"] = self._load_file("_shared/docs/EEAT_GUIDE.md")
 
     def _load_refresh_guide(self):
         """Charge CONTENT_REFRESH_GUIDE.md."""
@@ -164,10 +164,10 @@ class DocumentCache:
 
     def get_eeat_guidelines(self) -> str:
         """
-        Retourne les guidelines E-E-A-T 2026.
+        Retourne les guidelines E-E-A-T.
 
         Returns:
-            Contenu de EEAT_2026_GUIDELINES.md
+            Contenu de EEAT_GUIDE.md (canonique)
         """
         return self._cache.get("eeat_guidelines", "")
 
@@ -287,27 +287,34 @@ class DocumentCache:
         """
         parts = []
 
-        # PRIORITY 1: CLAUDE.md - Guide opérationnel complet
+        # PRIORITY 1: CLAUDE.md — orientation (Règle d'Or + architecture).
+        # Depuis la refonte v4.0, CLAUDE.md est un index léger : le détail
+        # procédural (règles éditoriales, formats, cocons) vit dans _shared/docs/
+        # et est chargé ci-dessous (P2bis), plus dans les skills lues par le subagent.
         if include_claude:
             claude = self.get_claude_guide()
             if claude:
-                parts.append("# CLAUDE.md - Guide Opérationnel Multi-Tenant\n\n")
-                # Extraire sections clés pour réécriture
+                parts.append("# CLAUDE.md - Orientation\n\n")
                 parts.append(self._extract_key_sections(
                     claude,
-                    [
-                        "Règle d'Or",
-                        "Architecture Multi-Tenant",
-                        "Règles Éditoriales",
-                        "Standards E-E-A-T",
-                        "Cocons Sémantiques",
-                        "Formats & Métadonnées"
-                    ]
+                    ["Règle d'Or", "Architecture multi-tenant"]
                 ))
                 parts.append("\n\n---\n\n")
 
-        # PRIORITY 2: SEO Guidelines
+        # PRIORITY 2: SEO Guidelines (hub)
         parts.append(self.get_guidelines())
+
+        # PRIORITY 2bis: anti-patterns & cocons — désormais dans _shared/docs/
+        # (déplacés hors de CLAUDE.md par la refonte v4.0). Chargés en entier :
+        # ce sont des références compactes que le générateur doit voir complètes.
+        # (Les règles de FORMAT — tiret cadratin, ancres, ponctuation listes —
+        # vivent dans la skill format-wordpress, lue par le subagent générateur.)
+        style = self._load_file("_shared/docs/STYLE_GUIDE.md")
+        if style:
+            parts.append("\n\n---\n\n" + style)
+        cocons = self._load_file("_shared/docs/COCONS_GUIDE.md")
+        if cocons:
+            parts.append("\n\n---\n\n" + cocons)
 
         # PRIORITY 3: GEO Guidelines (résumé)
         if include_geo:

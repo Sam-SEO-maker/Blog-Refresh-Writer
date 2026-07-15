@@ -135,7 +135,6 @@
       "Bash(git clean -f:*)",
       "Bash(git clean -fd:*)",
       "Bash(git clean -fx:*)",
-      "Bash(gh pr merge:*)",
       "Bash(gh repo delete:*)",
       "Bash(chmod 777:*)",
       "Bash(curl * | sh:*)",
