@@ -9,6 +9,7 @@ Usage:
 
 import os
 import click
+from cli.options import blog_option
 import traceback
 from pathlib import Path
 
@@ -25,7 +26,7 @@ def debug():
 
 @debug.command()
 @click.argument('url')
-@click.option('--blog', required=True, help='Blog ID')
+@blog_option(required=True)
 @click.option('--spreadsheet-id', default=lambda: os.environ.get('SPREADSHEET_ID'), help='Google Sheet ID (auto depuis .env)')
 @click.option('--strategy',
               type=click.Choice([
@@ -111,7 +112,7 @@ def workflow(url, blog, spreadsheet_id, strategy):
 
 
 @debug.command()
-@click.option('--blog', help='Blog ID (optionnel, affiche config spécifique)')
+@blog_option()
 @click.option('--show-all', is_flag=True, help='Afficher tous les blogs')
 def config(blog, show_all):
     """

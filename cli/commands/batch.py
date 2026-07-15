@@ -11,6 +11,7 @@ Usage:
 """
 
 import click
+from cli.options import blog_option
 from pathlib import Path
 
 from scripts.agent import RefreshOrchestrator
@@ -24,7 +25,7 @@ def batch():
 
 @batch.command(name='keyword-discovery')
 @click.option('--spreadsheet-id', required=True, help='Google Sheet ID')
-@click.option('--blog', help='Filtrer par blog_id')
+@blog_option()
 def keyword_discovery(spreadsheet_id, blog):
     """
     STEP 0: Keyword Discovery.
@@ -67,7 +68,7 @@ def keyword_discovery(spreadsheet_id, blog):
 
 @batch.command(name='keyword-refresh')
 @click.option('--spreadsheet-id', required=True, help='Google Sheet ID')
-@click.option('--blog', help='Filtrer par blog_id')
+@blog_option()
 @click.option('--min-volume', default=10, type=int, show_default=True, help='Volume minimum accepté (keywords en-dessous seront re-cherchés)')
 def keyword_refresh(spreadsheet_id, blog, min_volume):
     """
@@ -117,7 +118,7 @@ def keyword_refresh(spreadsheet_id, blog, min_volume):
 
 @batch.command(name='audit-gsc')
 @click.option('--spreadsheet-id', required=True, help='Google Sheet ID')
-@click.option('--blog', help='Filtrer par blog_id')
+@blog_option()
 @click.option('--limit', type=int, help='Limite du nombre d\'URLs')
 def audit_gsc(spreadsheet_id, blog, limit):
     """
@@ -162,7 +163,7 @@ def audit_gsc(spreadsheet_id, blog, limit):
 
 @batch.command(name='audit-serp')
 @click.option('--spreadsheet-id', required=True, help='Google Sheet ID')
-@click.option('--blog', help='Filtrer par blog_id')
+@blog_option()
 def audit_serp(spreadsheet_id, blog):
     """
     Batch Audit SERP.
@@ -204,7 +205,7 @@ def audit_serp(spreadsheet_id, blog):
 
 @batch.command()
 @click.option('--spreadsheet-id', required=True, help='Google Sheet ID')
-@click.option('--blog', help='Filtrer par blog_id')
+@blog_option()
 def decision(spreadsheet_id, blog):
     """
     Batch Decision.
@@ -245,7 +246,7 @@ def decision(spreadsheet_id, blog):
 @click.option('--action', required=True,
               type=click.Choice(['PARTIAL_REFRESH', 'REFRESH_TITLES', 'FULL_REFRESH']),
               help='Type de refresh')
-@click.option('--blog', help='Filtrer par blog_id')
+@blog_option()
 @click.option('--limit', type=int, help='Limite du nombre d\'URLs à traiter')
 def refresh(spreadsheet_id, action, blog, limit):
     """
@@ -292,7 +293,7 @@ def refresh(spreadsheet_id, action, blog, limit):
 
 @batch.command(name='workflow-auto')
 @click.option('--spreadsheet-id', required=True, help='Google Sheet ID')
-@click.option('--blog', help='Filtrer par blog_id')
+@blog_option()
 @click.option('--auto-refresh/--no-auto-refresh', default=True,
               help='Auto-exécuter les refreshs (défaut: oui)')
 def workflow_auto(spreadsheet_id, blog, auto_refresh):
@@ -356,7 +357,7 @@ def workflow_auto(spreadsheet_id, blog, auto_refresh):
 
 
 @batch.command(name='benchmark')
-@click.option('--blog', required=True, help='Blog ID (ex: superprof-ressources)')
+@blog_option(required=True)
 @click.option('--source-sheet', default='GSC_Perfs',
               help="Nom de l'onglet contenant les URLs (défaut: GSC_Perfs)")
 @click.option('--rows', default='2:16',

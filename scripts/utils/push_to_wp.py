@@ -5,8 +5,11 @@ Pour chaque URL fournie :
 2. Sauvegarde la version live actuelle dans wp_backups/{id}_before.json (si absente)
 3. POST title + content (gutenberg) + meta SEOPress (titre + description), status=publish
 
-Usage:
-    python -m scripts.utils.push_to_wp <fichier_urls.txt>
+Deux usages :
+- CLI batch (rétro-compat) : `python -m scripts.utils.push_to_wp <fichier_urls.txt>`
+  (tenant historique `superprof-ressources`).
+- Programmatique, multi-tenant (Phase 6b, appelé par `cw finalize --publish`) :
+  `build_client(tenant)` + `publish_article(client, tenant, url, gutenberg_path, metadata_path)`.
 """
 from __future__ import annotations
 
@@ -14,6 +17,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -21,19 +25,21 @@ from scripts.scraping.wordpress_api_client import WordPressAPIClient
 
 from _shared.core.tenant_paths import TenantPaths
 
-_TENANT = "superprof-ressources"
-_TP = TenantPaths()
-BLOG_CFG = _TP.blog_config(_TENANT)
-OUT = _TP.output_dir(_TENANT)
-BACKUPS = OUT / "wp_backups"
+_DEFAULT_TENANT = "superprof-ressources"
 
 
 def _slug(url: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", url.lower()).strip("_")
 
 
-def build_client() -> WordPressAPIClient:
-    cfg = json.loads(BLOG_CFG.read_text())["wp_api_config"]
+def build_client(tenant: str = _DEFAULT_TENANT, base_path: Optional[Path] = None) -> WordPressAPIClient:
+    """Construit le client WP REST à partir du bloc `wp_api_config` du tenant."""
+    tp = TenantPaths(base_path=base_path) if base_path else TenantPaths()
+    cfg_path = tp.blog_config(tenant)
+    cfg_full = json.loads(cfg_path.read_text(encoding="utf-8"))
+    cfg = cfg_full.get("wp_api_config")
+    if not cfg:
+        raise ValueError(f"Tenant '{tenant}' n'a pas de bloc 'wp_api_config' — publication impossible.")
     return WordPressAPIClient(
         api_base_url=cfg["api_base_url"],
         user_env_var=cfg["user_env_var"],
@@ -42,44 +48,86 @@ def build_client() -> WordPressAPIClient:
     )
 
 
-def push_url(client: WordPressAPIClient, url: str) -> dict:
-    slug = _slug(url)
-    gut = OUT / "html" / f"{slug}_refreshed.gutenberg.html"
-    meta_p = OUT / "metadata" / f"{slug}_metadata.json"
-    if not gut.exists():
-        return {"url": url, "ok": False, "error": "no_gutenberg_file"}
-    if not meta_p.exists():
-        return {"url": url, "ok": False, "error": "no_metadata_file"}
+def publish_article(
+    client: WordPressAPIClient,
+    tenant: str,
+    url: str,
+    gutenberg_path: Path,
+    metadata_path: Optional[Path] = None,
+    base_path: Optional[Path] = None,
+    status: str = "publish",
+) -> dict:
+    """Publie un article déjà généré sur WP (paths explicites, multi-tenant).
 
-    content = gut.read_text(encoding="utf-8")
-    meta = json.loads(meta_p.read_text(encoding="utf-8"))
+    Args:
+        client: client WP REST du tenant.
+        tenant: id du tenant (pour localiser wp_backups/).
+        url: URL de l'article live (résolution du post par slug).
+        gutenberg_path: fichier `.gutenberg.html` à pousser (contenu).
+        metadata_path: JSON {title, meta_description} pour title + meta SEOPress.
+            Si absent/illisible, on pousse le contenu sans toucher au titre/meta.
+        status: statut WP cible (défaut `publish`).
+
+    Returns:
+        {"url", "id", "ok", "error"}
+    """
+    gutenberg_path = Path(gutenberg_path)
+    if not gutenberg_path.exists():
+        return {"url": url, "ok": False, "error": f"no_gutenberg_file:{gutenberg_path.name}"}
+
+    content = gutenberg_path.read_text(encoding="utf-8")
+
+    meta = {}
+    if metadata_path is not None:
+        metadata_path = Path(metadata_path)
+        if metadata_path.exists():
+            try:
+                meta = json.loads(metadata_path.read_text(encoding="utf-8"))
+            except Exception:
+                meta = {}
 
     post = client.get_post_by_url(url)
     if not post:
         return {"url": url, "ok": False, "error": "post_not_found"}
     pid = post["id"]
 
-    # Backup once
-    BACKUPS.mkdir(parents=True, exist_ok=True)
-    bkp = BACKUPS / f"{pid}_before.json"
+    # Backup once (par tenant)
+    tp = TenantPaths(base_path=base_path) if base_path else TenantPaths()
+    backups = tp.output_dir(tenant) / "wp_backups"
+    backups.mkdir(parents=True, exist_ok=True)
+    bkp = backups / f"{pid}_before.json"
     if not bkp.exists():
         bkp.write_text(json.dumps({
             "id": pid, "slug": post.get("slug"),
             "title": post.get("title"), "raw": post.get("raw"),
         }, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    wp_meta = {
-        "_seopress_titles_title": meta.get("title", ""),
-        "_seopress_titles_desc": meta.get("meta_description", ""),
-    }
+    wp_meta = {}
+    if meta.get("title"):
+        wp_meta["_seopress_titles_title"] = meta.get("title", "")
+    if meta.get("meta_description"):
+        wp_meta["_seopress_titles_desc"] = meta.get("meta_description", "")
+
     res = client.update_post(
         post_id=pid,
-        title=meta.get("title"),
+        title=meta.get("title") or None,
         content=content,
-        meta=wp_meta,
-        status="publish",
+        meta=wp_meta or None,
+        status=status,
     )
     return {"url": url, "id": pid, "ok": res["ok"], "error": res["error"]}
+
+
+def push_url(client: WordPressAPIClient, url: str, tenant: str = _DEFAULT_TENANT) -> dict:
+    """Chemin batch historique : résout gutenberg/metadata par slug d'URL dans le tenant."""
+    tp = TenantPaths()
+    out = tp.output_dir(tenant)
+    slug = _slug(url)
+    gut = out / "html" / f"{slug}_refreshed.gutenberg.html"
+    meta_p = out / "metadata" / f"{slug}_metadata.json"
+    if not meta_p.exists():
+        return {"url": url, "ok": False, "error": "no_metadata_file"}
+    return publish_article(client, tenant, url, gut, meta_p)
 
 
 def main() -> int:

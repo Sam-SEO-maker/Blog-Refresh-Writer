@@ -10,6 +10,7 @@ Usage:
 
 import os
 import click
+from cli.options import blog_option
 from pathlib import Path
 
 from scripts.agent import RefreshOrchestrator
@@ -25,7 +26,7 @@ def audit():
 
 @audit.command()
 @click.argument('url')
-@click.option('--blog', required=True, help='Blog ID')
+@blog_option(required=True)
 @click.option('--spreadsheet-id', default=lambda: os.environ.get('SPREADSHEET_ID'), help='Google Sheet ID (auto depuis .env)')
 def editorial(url, blog, spreadsheet_id):
     """

@@ -11,6 +11,7 @@ from pathlib import Path
 from dataclasses import dataclass
 
 from scripts.agent import RefreshOrchestrator
+from cli.options import blog_option
 
 
 @dataclass
@@ -30,7 +31,7 @@ class MinimalRow:
 
 @click.command()
 @click.argument('url')
-@click.option('--blog', required=True, help='Blog ID (enseigna, moments-yoga, etc.)')
+@blog_option(required=True)
 @click.option('--spreadsheet-id', default=lambda: os.environ.get('SPREADSHEET_ID'), help='Google Sheet ID (auto depuis .env)')
 @click.option('--strategy',
               type=click.Choice([

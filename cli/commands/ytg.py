@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional
 
 import click
+from cli.options import blog_option
 
 from scripts.audit.ytg_analyzer import YTGAnalyzer, YTGAPIError, YTGGuideTimeoutError
 
@@ -175,7 +176,7 @@ def list_guides(lang, status):
 
 @ytg.command(name='batch-prefetch')
 @click.option('--spreadsheet-id', required=True, help='Google Sheet ID')
-@click.option('--blog', help='Filtrer par blog_id')
+@blog_option()
 @click.option('--lang', default='fr', show_default=True, help='Langue des guides')
 @click.option('--country', default='fr', show_default=True, help='Pays des guides')
 @click.option('--create-missing', is_flag=True, default=False,
@@ -507,7 +508,7 @@ def _infer_url_from_html_path(blog_id: str, path) -> str:
 
 
 @ytg.command(name='qc')
-@click.option('--blog', 'blog_id', required=True, help='Blog ID (enseigna, superprof-ressources, ...)')
+@blog_option(required=True, dest='blog_id')
 @click.option('--slug', default='', help='Filtrer sur un slug d\'article précis')
 @click.option('--fix', is_flag=True, default=False,
               help='Signaler les articles A_CORRIGER pour correction ciblée (corrector)')

@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 import click
+from cli.options import blog_option
 
 from scripts.notion import NotionClient
 
@@ -41,7 +42,7 @@ def notion():
 
 
 @notion.command(name='sync')
-@click.option('--blog', help='Filtrer par blog_id')
+@blog_option()
 @click.option('--db-id', help='ID de la base Notion Commandes (override sites.json)')
 def sync(blog, db_id):
     """
@@ -98,7 +99,7 @@ def sync(blog, db_id):
 
 
 @notion.command(name='check-title')
-@click.option('--blog', required=True, help='Blog ID (ex: moments-yoga)')
+@blog_option(required=True)
 @click.option('--title', required=True, help='Titre à vérifier')
 @click.option('--db-id', help='ID de la base Notion Commandes (override sites.json)')
 @click.option('--threshold', default=0.85, show_default=True,
@@ -138,7 +139,7 @@ def check_title(blog, title, db_id, threshold):
 
 
 @notion.command(name='list-sujets')
-@click.option('--blog', help='Filtrer par blog_id')
+@blog_option()
 @click.option('--db-id', required=True, help='ID de la base Notion Sujets')
 def list_sujets(blog, db_id):
     """
@@ -174,7 +175,7 @@ def list_sujets(blog, db_id):
 
 
 @notion.command(name='create-sujet')
-@click.option('--blog', required=True, help='Blog ID (ex: moments-yoga)')
+@blog_option(required=True)
 @click.option('--title', required=True, help='Titre du sujet')
 @click.option('--db-id', required=True, help='ID de la base Notion Sujets')
 @click.option('--category', default='', help='Catégorie thématique')

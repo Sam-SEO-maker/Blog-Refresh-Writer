@@ -1108,13 +1108,15 @@ class RefreshOrchestrator:
                     logger.info(f"[STEP 0] DataForSEO: '{keyword}' (vol={vol}, pos={pos}) for {row.blogpost_url[:60]}")
 
                 # === SOURCE 2: GSC top keyword par impressions ===
-                # Use lightweight _fetch_performance_direct instead of full analyze()
+                # fetch_main_keyword : lecture ciblée (routage MCP/SA, Phase 6c),
+                # plus légère que _fetch_performance_direct (pas de calcul de
+                # tendances inutile ici) et sûre malgré le plafond ~20 du MCP.
                 if not keyword:
                     try:
                         gsc_analyzer = self._get_gsc_analyzer(row.blog_id)
-                        perf = gsc_analyzer._fetch_performance_direct(row.blogpost_url)
-                        if perf and perf.main_keyword:
-                            keyword = perf.main_keyword
+                        main_kw = gsc_analyzer.fetch_main_keyword(row.blogpost_url)
+                        if main_kw:
+                            keyword = main_kw
                             source = "gsc"
                             logger.info(f"[STEP 0] GSC: '{keyword}' for {row.blogpost_url[:60]}")
                     except Exception as gsc_err:
