@@ -65,7 +65,9 @@ Maillage → Sync.
 | `/decide --blog <id>` | Moteur de décision data-driven (Sheet) |
 | `/market-status --site <id>` | État des lieux SEO GSC d'un tenant |
 
-CLI réel (les commandes wrappent) : `python3 content_writer.py <groupe> <cmd>` — voir `README_CLI.md`.
+CLI réel (les commandes wrappent) : `python3 content_writer.py <groupe> <cmd>`.
+Liste des groupes/commandes à jour : `python3 content_writer.py --help` (et
+`… <groupe> --help`), auto-générée par Click — source de vérité.
 
 ## Index — Skills (`.claude/skills/`)
 
