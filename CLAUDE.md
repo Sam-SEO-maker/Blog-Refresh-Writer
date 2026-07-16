@@ -93,7 +93,10 @@ lit `generation_prompt.txt`, écrit les fichiers, ne renvoie pas de HTML dans le
 - **Formats & métadonnées, template refresh** → skill `format-wordpress`,
   `_shared/prompts/refresh_article.md`.
 - **Règles site-spécifiques** → `tenants/{id}/prompts/site.md`.
-- **Stratégies de rédaction** (2 : full_refresh, eeat_rewrite) → `_shared/prompts/strategies/`.
+- **Stratégies de rédaction** → `_shared/prompts/strategies/` (câblées via
+  `prompts_dispatch.json` : full_refresh, semantic_reorientation, format_adaptation,
+  title_optimization). Ne portent que le *delta* de la stratégie ; les règles
+  éditoriales transverses vivent dans la skill `edito-refresh`.
 
 ## 3 Piliers
 

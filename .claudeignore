@@ -14,9 +14,6 @@ _shared/cache/
 _local/
 Images/
 
-# Archives (contenu retiré du flux actif)
-_shared/prompts/_archive/
-
 # Environnements et caches Python
 __pycache__/
 .venv/
