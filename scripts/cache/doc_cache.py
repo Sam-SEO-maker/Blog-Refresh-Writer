@@ -56,7 +56,6 @@ class DocumentCache:
     def _load_all(self):
         """Charge tous les documents en cache."""
         self._load_claude_guide()
-        self._load_refresh_template()
         self._load_blog_configs()
         self._load_prompts_dispatch()
         self._load_decision_rules()
@@ -91,10 +90,6 @@ class DocumentCache:
         """Charge CLAUDE.md - Guide opérationnel complet."""
         self._cache["claude_guide"] = self._load_file("CLAUDE.md")
 
-    def _load_refresh_template(self):
-        """Charge refresh_article.md."""
-        self._cache["refresh_template"] = self._load_file("_shared/prompts/refresh_article.md")
-
     def _load_blog_configs(self):
         """Charge toutes les configurations de blogs."""
         from _shared.core.tenant_paths import TenantPaths
@@ -124,21 +119,12 @@ class DocumentCache:
         """
         return self._cache.get("claude_guide", "")
 
-    def get_refresh_template(self) -> str:
-        """
-        Retourne le template de refresh.
-
-        Returns:
-            Contenu de refresh_article.md
-        """
-        return self._cache.get("refresh_template", "")
-
     def get_prompt(self, prompt_path: str) -> str:
         """
         Retourne un prompt template.
 
         Args:
-            prompt_path: Chemin relatif du prompt (ex: "subjects/math_sciences.md")
+            prompt_path: Chemin relatif sous `_shared/` (ex: "strategies/full_refresh.md")
 
         Returns:
             Contenu du prompt
@@ -146,7 +132,7 @@ class DocumentCache:
         cache_key = f"prompt_{prompt_path}"
 
         if cache_key not in self._cache:
-            full_path = f"_shared/prompts/{prompt_path}"
+            full_path = f"_shared/{prompt_path}"
             self._cache[cache_key] = self._load_file(full_path)
 
         return self._cache.get(cache_key, "")
@@ -211,8 +197,9 @@ class DocumentCache:
         prompt_file = prompt_info.get("file", "")
 
         if prompt_file:
-            # Retirer le préfixe "prompts/" ou "_shared/prompts/" si présent
-            prompt_path = prompt_file.replace("_shared/prompts/", "").replace("prompts/", "")
+            # Retirer un éventuel préfixe legacy "prompts/" ; le chemin est
+            # ensuite résolu sous _shared/ par get_prompt.
+            prompt_path = prompt_file.replace("prompts/", "")
             return self.get_prompt(prompt_path)
 
         return ""

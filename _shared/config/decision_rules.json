@@ -157,7 +157,7 @@
       "action": "PARTIAL_REFRESH",
       "rewrite_scope": "diff_based",
       "estimated_tokens": 1500,
-      "prompt_template": "strategies/partial_refresh.md",
+      "prompt_template": "strategies/full_refresh.md",
       "refresh_elements": [
         "statistics_update",
         "date_references",
@@ -176,7 +176,7 @@
       "action": "FULL_REFRESH",
       "rewrite_scope": "full_content",
       "estimated_tokens": 4000,
-      "prompt_template": "prompts/refresh_article.md"
+      "prompt_template": "strategies/full_refresh.md"
     },
     {
       "id": "position_drop_significant",

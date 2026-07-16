@@ -765,7 +765,7 @@ Retourne l'article complet réécrit en HTML:
         Structure : contraintes data-driven → instructions éditoriales (.md) → contexte → HTML original
 
         Les règles éditoriales (ton, E-E-A-T, storytelling, format HTML, ponctuation)
-        sont dans CLAUDE.md (contexte système) et les fichiers _shared/prompts/.
+        sont dans CLAUDE.md (contexte système), les skills et les fichiers _shared/strategies/.
         Ce prompt n'injecte que des données spécifiques à l'article.
         """
         current_year = datetime.now().year

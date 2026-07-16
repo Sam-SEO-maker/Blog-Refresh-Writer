@@ -3,7 +3,7 @@ Title Optimizer Module
 
 Génère des titres optimisés SEO en utilisant Claude (Max).
 Intègre les métriques GSC/SERP pour des recommandations data-driven.
-Configuration scalable : lit les guidelines depuis _shared/prompts/sites/{blog_id}.md
+Configuration scalable : lit les guidelines depuis tenants/{blog_id}/prompts/site.md
 """
 
 from datetime import datetime

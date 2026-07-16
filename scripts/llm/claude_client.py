@@ -27,12 +27,12 @@ class ClaudeClient:
         Initialise le client Claude.
 
         Args:
-            prompts_path: Chemin vers _shared/prompts/corrections/
+            prompts_path: Chemin vers _shared/corrections/
         """
         if prompts_path is None:
             current_file = Path(__file__).resolve()
             project_root = current_file.parent.parent.parent
-            prompts_path = project_root / "_shared" / "prompts" / "corrections"
+            prompts_path = project_root / "_shared" / "corrections"
 
         self.prompts_path = prompts_path
         self.simulation_mode = True  # True = retourne prompts, False = exécute sub-agents
@@ -345,7 +345,7 @@ Utiliser un angle différent ou résumer l'information.
 
     def _load_prompt(self, filename: str) -> str:
         """
-        Charge un prompt de correction depuis _shared/prompts/corrections/.
+        Charge un prompt de correction depuis _shared/corrections/.
 
         Args:
             filename: Nom du fichier prompt

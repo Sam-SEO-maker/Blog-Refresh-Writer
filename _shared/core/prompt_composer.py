@@ -34,28 +34,25 @@ class PromptComposer:
             content_type="review"
         )
 
-        # Lister les sujets disponibles
-        subjects = composer.list_available_subjects()
+        # Lister les stratégies disponibles
+        strategies = composer.list_available_strategies()
     """
 
-    def __init__(self, prompts_path: Optional[Path] = None):
+    def __init__(self, project_root: Optional[Path] = None):
         """
         Initialise le composer.
 
         Args:
-            prompts_path: Chemin vers _shared/prompts/ (par défaut: auto-détecté)
+            project_root: Racine du projet (par défaut: auto-détectée). Les stratégies
+                vivent désormais sous `_shared/strategies/` ; les overrides de site sont
+                résolus via TenantPaths depuis la racine.
         """
-        if prompts_path is None:
+        if project_root is None:
             current_file = Path(__file__).resolve()
             project_root = current_file.parent.parent.parent
-            prompts_path = project_root / "_shared" / "prompts"
 
-        self.prompts_path = prompts_path
-        self.strategies_path = self.prompts_path / "strategies"
-        self.subjects_path = self.prompts_path / "subjects"  # Legacy fallback
-        self.categories_path = self.prompts_path / "categories"  # NEW
-        self.sites_path = self.prompts_path / "sites"  # NEW
-        self.templates_path = self.prompts_path / "templates"  # NEW
+        self.project_root = project_root
+        self.strategies_path = project_root / "_shared" / "strategies"
 
     def compose(
         self,
@@ -123,15 +120,12 @@ class PromptComposer:
         """
         Charge les prompts de base toujours inclus (Niveau 1).
 
-        callouts.md est chargé systématiquement car ses templates HTML
-        (callouts, CTA, disclaimers) s'appliquent à tous les articles.
+        Plus aucun prompt de base sur disque : les templates de callouts colorés
+        sont interdits (cf. skills). Conservé comme point d'extension.
 
         Returns:
-            Liste avec le prompt callouts
+            Liste vide
         """
-        callouts = self._load_prompt(self.templates_path / "callouts.md")
-        if callouts:
-            return [f"# Templates Callouts\n\n{callouts}"]
         return []
 
     def _load_strategy_prompt(self, strategy: str) -> Optional[str]:
@@ -150,58 +144,19 @@ class PromptComposer:
             self._load_prompt(self.strategies_path / f"{strategy}.txt")
         )
 
-    def _load_category_prompt(self, subject: str) -> Optional[str]:
-        """
-        Charge le prompt de catégorie depuis categories/{group}/{subject}.md (Niveau 2).
-
-        Args:
-            subject: Nom du subject (ex: "education_reviews", "music_lessons")
-
-        Returns:
-            Contenu du prompt ou None
-        """
-        # Mapping subject → category path
-        category_mapping = {
-            "education_reviews": "education/education_reviews.md",
-            "education_general": "education/education_general.md",
-            "math_sciences": "education/math_sciences.md",
-            "music_lessons": "music/music_lessons.md",
-            "yoga_wellness": "wellness/yoga_wellness.md",
-            "sports_coaching": "sports/sports_coaching.md",
-        }
-
-        category_path = category_mapping.get(subject)
-        if not category_path:
-            return None
-
-        full_path = self.categories_path / category_path
-        return self._load_prompt(full_path)
-
     def _load_category_prompt_with_fallback(
         self,
         subject: str,
         site_id: Optional[str] = None
     ) -> Optional[str]:
         """
-        Charge le prompt de catégorie avec fallback vers ancienne structure.
+        Niveau 2 (catégorie) : plus aucun prompt de catégorie sur disque.
 
-        Essaie d'abord la nouvelle structure categories/, puis fallback sur subjects/
-        pour rétrocompatibilité pendant la migration.
-
-        Args:
-            subject: Nom du subject
-            site_id: ID du site (pour fallback legacy)
-
-        Returns:
-            Contenu du prompt ou None
+        Les répertoires `categories/` et `subjects/` legacy ont été retirés ; la
+        structure/le ton spécifiques vivent désormais dans les skills du tenant.
+        Conservé comme point d'extension (retourne toujours None).
         """
-        # Essayer nouvelle structure categories/
-        new_prompt = self._load_category_prompt(subject)
-        if new_prompt:
-            return new_prompt
-
-        # Fallback sur ancienne structure subjects/ (legacy)
-        return self._load_subject_prompt(subject, site_id)
+        return None
 
     def _load_site_override(self, site_id: str) -> Optional[str]:
         """
@@ -213,10 +168,9 @@ class PromptComposer:
         Returns:
             Contenu du prompt ou None
         """
-        # Résolution via le point unique TenantPaths (base = parent de _shared/prompts).
+        # Résolution via le point unique TenantPaths (base = racine du projet).
         from _shared.core.tenant_paths import TenantPaths
-        base_path = self.prompts_path.parent.parent
-        return self._load_prompt(TenantPaths(base_path=base_path).site_prompt(site_id))
+        return self._load_prompt(TenantPaths(base_path=self.project_root).site_prompt(site_id))
 
     def _load_vs_concurrent(self, site_id: str) -> Optional[str]:
         """Charge le prompt du sous-type versus depuis tenants/{id}/prompts/vs_concurrent.md.
@@ -225,50 +179,13 @@ class PromptComposer:
         plupart des tenants).
         """
         from _shared.core.tenant_paths import TenantPaths
-        base_path = self.prompts_path.parent.parent
-        return self._load_prompt(TenantPaths(base_path=base_path).vs_concurrent_prompt(site_id))
+        return self._load_prompt(TenantPaths(base_path=self.project_root).vs_concurrent_prompt(site_id))
 
     def _load_template(self, content_type: str) -> Optional[str]:
         """
-        Charge le template depuis templates/{content_type}_template.md (Niveau 5).
-
-        Args:
-            content_type: Type de contenu (ex: "review", "guide")
-
-        Returns:
-            Contenu du template ou None
+        Niveau 5 (template) : plus aucun template sur disque (répertoire
+        `templates/` legacy retiré). Conservé comme point d'extension.
         """
-        return self._load_prompt(self.templates_path / f"{content_type}_template.md")
-
-    def _load_subject_prompt(
-        self,
-        subject: str,
-        site_id: Optional[str] = None
-    ) -> Optional[str]:
-        """
-        Charge le prompt de sujet avec fallback :
-        1. Essaie {site_id}_{subject}.txt (ex: enseigna_cours_maths.txt)
-        2. Sinon essaie {subject}.txt (ex: cours_maths.txt)
-        3. Sinon retourne None
-
-        Args:
-            subject: Nom du sujet
-            site_id: ID du site pour prompts site-specific
-
-        Returns:
-            Contenu du prompt ou None
-        """
-        # Essayer avec préfixe site (site-specific)
-        if site_id:
-            site_specific = self.subjects_path / f"{site_id}_{subject}.txt"
-            if site_specific.exists():
-                return self._load_prompt(site_specific)
-
-        # Fallback sur prompt générique
-        generic = self.subjects_path / f"{subject}.txt"
-        if generic.exists():
-            return self._load_prompt(generic)
-
         return None
 
     def _load_prompt(self, path: Path) -> Optional[str]:
@@ -283,26 +200,14 @@ class PromptComposer:
             print(f"Erreur chargement prompt {path}: {e}")
             return None
 
-    def list_available_subjects(self) -> list[str]:
-        """
-        Liste tous les prompts de sujets disponibles.
-
-        Returns:
-            Liste des noms de sujets (sans extension .txt)
-        """
-        if not self.subjects_path.exists():
-            return []
-
-        return [p.stem for p in self.subjects_path.glob("*.txt")]
-
     def list_available_strategies(self) -> list[str]:
         """
         Liste toutes les stratégies disponibles.
 
         Returns:
-            Liste des noms de stratégies (sans extension .txt)
+            Liste des noms de stratégies (sans extension)
         """
         if not self.strategies_path.exists():
             return []
 
-        return [p.stem for p in self.strategies_path.glob("*.txt")]
+        return [p.stem for p in self.strategies_path.glob("*.md")]

@@ -121,7 +121,7 @@ class StrategySelector:
         if key and key in strategy_prompts:
             return strategy_prompts[key].get("file", "")
 
-        return "prompts/refresh_article.md"  # Fallback
+        return "strategies/full_refresh.md"  # Fallback
 
     def _get_subject_prompt(self) -> Optional[str]:
         """Retourne le prompt spécifique à la matière du blog."""

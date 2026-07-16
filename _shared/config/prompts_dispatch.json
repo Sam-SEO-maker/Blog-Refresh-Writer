@@ -78,25 +78,25 @@
 
   "strategy_prompts": {
     "title_optimization": {
-      "file": "prompts/strategies/title_optimization.md",
+      "file": "strategies/title_optimization.md",
       "trigger_conditions": ["ctr_low", "impressions_high"],
       "scope": "title_meta_only",
       "estimated_tokens": 500
     },
     "semantic_reorientation": {
-      "file": "prompts/strategies/semantic_reorientation.md",
+      "file": "strategies/semantic_reorientation.md",
       "trigger_conditions": ["keyword_decline", "variants_rising"],
       "scope": "full_with_eeat",
       "estimated_tokens": 4000
     },
     "format_adaptation": {
-      "file": "prompts/strategies/format_adaptation.md",
+      "file": "strategies/format_adaptation.md",
       "trigger_conditions": ["format_mismatch"],
       "scope": "structure_change",
       "estimated_tokens": 3000
     },
     "partial_refresh": {
-      "file": "prompts/strategies/full_refresh.md",
+      "file": "strategies/full_refresh.md",
       "trigger_conditions": ["content_stale", "stats_outdated"],
       "scope": "diff_based",
       "estimated_tokens": 1500
