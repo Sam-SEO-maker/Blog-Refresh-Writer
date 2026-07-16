@@ -90,7 +90,6 @@ lit `generation_prompt.txt`, écrit les fichiers, ne renvoie pas de HTML dans le
 - **Rédaction / format / interdits** → skills ci-dessus + `_shared/docs/STYLE_GUIDE.md`.
 - **E-E-A-T** (framework + exemples) → `_shared/docs/EEAT_GUIDE.md` (canonique).
 - **GEO / SEO** → `_shared/docs/GEO_2026_GUIDELINES.md`, `_shared/docs/SEO_GUIDELINES.md` (hub).
-- **Cocons sémantiques** (PARENT/CHILD, maillage) → `_shared/docs/COCONS_GUIDE.md`.
 - **Formats & métadonnées, template refresh** → skill `format-wordpress`,
   `_shared/docs/CONTENT_REFRESH_GUIDE.md`, `_shared/prompts/refresh_article.md`.
 - **Règles site-spécifiques** → `tenants/{id}/prompts/site.md`.
