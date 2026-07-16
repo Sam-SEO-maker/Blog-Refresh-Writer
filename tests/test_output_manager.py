@@ -44,11 +44,12 @@ class TestOutputManagerInit:
         assert output_mgr._tenant_paths.tenants_root == expected
         assert expected.exists()
 
-    def test_temp_root_created(self, output_mgr, temp_base_path):
-        """Test that temp root directory is created"""
-        expected = temp_base_path / "_shared" / "temp"
-        assert output_mgr.temp_root == expected
-        assert output_mgr.temp_root.exists()
+    def test_scrape_cache_dir_resolved(self, output_mgr, temp_base_path):
+        """Le cache de HTML scrapé vit sous tenants/{id}/outputs/_scrape_cache/."""
+        expected = temp_base_path / "tenants" / "enseigna" / "outputs" / "_scrape_cache"
+        assert output_mgr._temp_dir("enseigna") == expected
+        # domaine hérité en entrée → même dossier (site_id normalisé)
+        assert output_mgr._temp_dir("enseigna.fr") == expected
 
     def test_site_id_is_tenant_id_based(self, output_mgr):
         """Les site_id sont désormais des tenant_id (sites.json), plus des domaines.
@@ -89,7 +90,7 @@ class TestInitWorkspace:
     def test_init_workspace_purges_temp_cache(self, output_mgr):
         """Test that init_workspace purges temp cache"""
         # Create some temp files
-        temp_site_dir = output_mgr.temp_root / "enseigna.fr"
+        temp_site_dir = output_mgr._temp_dir("enseigna")
         temp_site_dir.mkdir(parents=True, exist_ok=True)
         (temp_site_dir / "test1.html").write_text("test")
         (temp_site_dir / "test2.html").write_text("test")
@@ -105,7 +106,7 @@ class TestInitWorkspace:
     def test_init_workspace_no_purge(self, output_mgr):
         """Test that init_workspace can skip purging temp cache"""
         # Create temp file
-        temp_site_dir = output_mgr.temp_root / "enseigna.fr"
+        temp_site_dir = output_mgr._temp_dir("enseigna")
         temp_site_dir.mkdir(parents=True, exist_ok=True)
         test_file = temp_site_dir / "test.html"
         test_file.write_text("test")

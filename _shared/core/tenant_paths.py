@@ -88,6 +88,10 @@ class TenantPaths:
         """`tenants/{id}/outputs/` — dossier de sortie du tenant."""
         return self.tenant_dir(tenant_id) / "outputs"
 
+    def scrape_cache_dir(self, tenant_id: str) -> Path:
+        """`tenants/{id}/outputs/_scrape_cache/` — cache de HTML scrapé (comparaison avant/après refresh)."""
+        return self.output_dir(tenant_id) / "_scrape_cache"
+
     def output_dirs(self) -> list[tuple[str, Path]]:
         """Liste (tenant_id, dossier outputs) pour tous les tenants ayant un outputs/."""
         if not self.tenants_root.exists():

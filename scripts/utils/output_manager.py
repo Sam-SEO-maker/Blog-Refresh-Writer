@@ -4,11 +4,11 @@ Output Manager Module
 Centralized handler for all file outputs in the autonomous "Scrape & Refresh" workflow.
 
 Architecture:
-- Temp cache: _shared/temp/{site_id}/ (scraped HTML for comparison)
+- Scrape cache: tenants/{tenant_id}/outputs/_scrape_cache/ (scraped HTML for comparison)
 - Permanent outputs:
-  - _shared/outputs/{site_id}/html/ (refreshed HTML files)
-  - _shared/outputs/{site_id}/metadata/ (metadata and audit JSON files)
-  - _shared/outputs/{site_id}/editorial_audits/ (editorial audit markdown files)
+  - tenants/{tenant_id}/outputs/html/ (refreshed HTML files)
+  - tenants/{tenant_id}/outputs/metadata/ (metadata and audit JSON files)
+  - tenants/{tenant_id}/outputs/editorial_audits/ (editorial audit markdown files)
 
 Multi-tenant support : dossiers indexés par `tenant_id` (clé de sites.json),
 p.ex. `enseigna`, `superprof-ressources`. Registre ouvert (tout tenant présent
@@ -63,8 +63,8 @@ class OutputManager:
     Manages all file outputs for the autonomous workflow.
 
     Ensures:
-    - Single output location (_shared/outputs/)
-    - Temporary cache for scraped HTML (_shared/temp/)
+    - Single output location per tenant (tenants/{id}/outputs/)
+    - Temporary cache for scraped HTML (tenants/{id}/outputs/_scrape_cache/)
     - Consistent directory structure
     - Validation before writes
     - Atomic file operations
@@ -83,23 +83,21 @@ class OutputManager:
         # déplacement vers tenants/{id}/ ne changera que TenantPaths, pas ici.
         from _shared.core.tenant_paths import TenantPaths
         self._tenant_paths = TenantPaths(base_path=self.base_path)
-        self.temp_root = self.base_path / "_shared" / "temp"
 
         # Ensure base directories exist (outputs sont désormais par tenant)
         self._tenant_paths.tenants_root.mkdir(parents=True, exist_ok=True)
-        self.temp_root.mkdir(parents=True, exist_ok=True)
 
     def init_workspace(self, purge_temp: bool = True) -> Dict[str, int]:
         """
         Initialize workspace: purge temp cache and ensure outputs structure.
 
         Cette fonction garantit:
-        1. _shared/temp/ est purgé (si purge_temp=True)
-        2. _shared/outputs/{site_id}/ existe pour chaque site
-        3. _shared/outputs/{site_id}/editorial_audits/ existe
+        1. le _scrape_cache de chaque tenant est purgé (si purge_temp=True)
+        2. tenants/{id}/outputs/ existe pour chaque site
+        3. tenants/{id}/outputs/editorial_audits/ existe
 
         Args:
-            purge_temp: Si True, supprime tout le contenu de _shared/temp/
+            purge_temp: Si True, supprime le _scrape_cache de chaque tenant
 
         Returns:
             {
@@ -114,16 +112,15 @@ class OutputManager:
             "subdirs_created": 0
         }
 
-        # Purge temp cache
-        if purge_temp and self.temp_root.exists():
-            for item in self.temp_root.iterdir():
-                if item.is_dir():
-                    shutil.rmtree(item)
-                    stats["temp_files_removed"] += sum(1 for _ in item.rglob("*") if _.is_file())
-                else:
-                    item.unlink()
-                    stats["temp_files_removed"] += 1
-            logger.info(f"Purged temp cache: {stats['temp_files_removed']} files removed")
+        # Purge scrape cache — le _scrape_cache de chaque tenant.
+        if purge_temp:
+            for _tenant_id, output_dir in self._tenant_paths.output_dirs():
+                cache_dir = output_dir / "_scrape_cache"
+                if not cache_dir.exists():
+                    continue
+                stats["temp_files_removed"] += sum(1 for _ in cache_dir.rglob("*") if _.is_file())
+                shutil.rmtree(cache_dir)
+            logger.info(f"Purged scrape cache: {stats['temp_files_removed']} files removed")
 
         # Ensure outputs structure for all sites
         for site_id in self._known_tenant_ids():
@@ -235,6 +232,10 @@ class OutputManager:
     # TEMP CACHE METHODS (for scraped HTML)
     # =========================================================================
 
+    def _temp_dir(self, site_id: str) -> Path:
+        """Dossier de cache scrapé du tenant (site_id normalisé)."""
+        return self._tenant_paths.scrape_cache_dir(self._validate_site_id(site_id))
+
     def save_temp_html(self, site_id: str, url_slug: str, html_content: str) -> Path:
         """
         Save scraped HTML to temp cache for editorial audit comparison.
@@ -247,10 +248,8 @@ class OutputManager:
         Returns:
             Path to saved temp file
         """
-        site_id = self._validate_site_id(site_id)
-
-        # Create site temp directory
-        temp_dir = self.temp_root / site_id
+        # Create site scrape-cache directory (_temp_dir valide site_id)
+        temp_dir = self._temp_dir(site_id)
         temp_dir.mkdir(parents=True, exist_ok=True)
 
         # Save HTML
@@ -271,16 +270,14 @@ class OutputManager:
         Returns:
             HTML content if exists, None otherwise
         """
-        site_id = self._validate_site_id(site_id)
-
-        temp_file = self.temp_root / site_id / f"{url_slug}.html"
+        temp_file = self._temp_dir(site_id) / f"{url_slug}.html"
         if temp_file.exists():
             return temp_file.read_text(encoding="utf-8")
         return None
 
     def _cleanup_temp(self, site_id: str, url_slug: str):
         """Remove temp file for a delivered article."""
-        temp_file = self.temp_root / site_id / f"{url_slug}.html"
+        temp_file = self._temp_dir(site_id) / f"{url_slug}.html"
         if temp_file.exists():
             temp_file.unlink()
             logger.debug(f"Cleaned up temp file: {temp_file}")
@@ -296,26 +293,25 @@ class OutputManager:
             Number of files removed
         """
         if site_id:
-            site_id = self._validate_site_id(site_id)
-            temp_dir = self.temp_root / site_id
+            temp_dir = self._temp_dir(site_id)
             if temp_dir.exists():
                 file_count = sum(1 for _ in temp_dir.rglob("*.html"))
                 shutil.rmtree(temp_dir)
                 temp_dir.mkdir(parents=True, exist_ok=True)
-                logger.info(f"Cleared temp cache for {site_id}: {file_count} files")
+                logger.info(f"Cleared scrape cache for {temp_dir.parent.parent.name}: {file_count} files")
                 return file_count
             return 0
         else:
-            # Clear all sites : itère les dossiers temp RÉELLEMENT présents sur
-            # disque (pas le registre) — robuste à un tenant retiré du registre.
+            # Clear all sites : itère le _scrape_cache de chaque tenant présent
+            # sur disque (via output_dirs) — robuste à un tenant retiré du registre.
             total = 0
-            if self.temp_root.exists():
-                for temp_dir in self.temp_root.iterdir():
-                    if temp_dir.is_dir():
-                        file_count = sum(1 for _ in temp_dir.rglob("*.html"))
-                        shutil.rmtree(temp_dir)
-                        temp_dir.mkdir(parents=True, exist_ok=True)
-                        total += file_count
+            for _tenant_id, output_dir in self._tenant_paths.output_dirs():
+                temp_dir = output_dir / "_scrape_cache"
+                if temp_dir.is_dir():
+                    file_count = sum(1 for _ in temp_dir.rglob("*.html"))
+                    shutil.rmtree(temp_dir)
+                    temp_dir.mkdir(parents=True, exist_ok=True)
+                    total += file_count
             return total
 
     # =========================================================================
@@ -481,7 +477,7 @@ class OutputManager:
         """
         Save editorial audit markdown report.
 
-        Stocké dans: _shared/outputs/{site_id}/editorial_audits/{url_slug}_editorial_audit.md
+        Stocké dans: tenants/{site_id}/outputs/editorial_audits/{url_slug}_editorial_audit.md
 
         Args:
             site_id: Blog identifier
@@ -538,7 +534,7 @@ class OutputManager:
             "serp": metadata_dir / f"{url_slug}_serp.json",
             "gsc": metadata_dir / f"{url_slug}_gsc.json",
             "editorial_audit": editorial_dir / f"{url_slug}_editorial_audit.md",
-            "temp_html": self.temp_root / site_id / f"{url_slug}.html"
+            "temp_html": self._temp_dir(site_id) / f"{url_slug}.html"
         }
 
     def validate_outputs_exist(
@@ -591,13 +587,13 @@ class OutputManager:
             "total_output_size_mb": 0.0
         }
 
-        # Temp cache stats — itère les dossiers présents sur disque
-        if self.temp_root.exists():
-            for temp_dir in self.temp_root.iterdir():
-                if temp_dir.is_dir():
-                    files = list(temp_dir.rglob("*.html"))
-                    stats["temp_cache"][temp_dir.name] = len(files)
-                    stats["total_temp_size_mb"] += sum(f.stat().st_size for f in files) / (1024 * 1024)
+        # Temp cache stats — le _scrape_cache de chaque tenant
+        for tenant_id, output_dir in self._tenant_paths.output_dirs():
+            cache_dir = output_dir / "_scrape_cache"
+            if cache_dir.is_dir():
+                files = list(cache_dir.rglob("*.html"))
+                stats["temp_cache"][tenant_id] = len(files)
+                stats["total_temp_size_mb"] += sum(f.stat().st_size for f in files) / (1024 * 1024)
 
         # Output stats — un dossier outputs/ par tenant (tenants/{id}/outputs/)
         for tenant_id, output_dir in self._tenant_paths.output_dirs():
