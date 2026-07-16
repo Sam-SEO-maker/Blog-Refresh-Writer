@@ -5,10 +5,23 @@ Agent autonome de **refresh SEO multi-tenant** : optimise des contenus existants
 de chaque tenant. Décisions data-driven (audit → décision → génération → QC → maillage).
 
 Tenants actuels : `enseigna`, `superprof-ressources`. Le registre est ouvert
-(`_shared/config/sites.json`) : onboarder un tenant = 1 dossier `tenants/{id}/`
-+ 1 entrée dans `sites.json`, zéro code.
+(`_shared/config/sites.json`) : onboarder un marché = `python3 content_writer.py
+tenant init <id>` (squelette `tenants/{id}/` + entrée `sites.json` + sparse-checkout),
+puis compléter l'éditorial. Voir [onboarding/](onboarding/README.md).
 
-## Installation
+## Onboarding (nouveaux SEO Managers)
+
+Un SEO Manager de marché (ES, UK, US, MX, ID, JP…) ne clone **que son tenant** grâce à
+un git sparse-checkout : le moteur commun + son seul `tenants/{id}/`, jamais les autres
+marchés. Parcours complet (en anglais) : **[onboarding/README.md](onboarding/README.md)**.
+
+Clone recommandé (sparse) :
+
+```bash
+bash onboarding/scripts/setup_sparse.sh <tenant-id>   # ex. es-es-ressources
+```
+
+## Installation (mainteneur / clone complet)
 
 ```bash
 pip install -r requirements.txt
@@ -23,6 +36,8 @@ auto-générée par Click :
 ```bash
 python3 content_writer.py --help
 python3 content_writer.py <groupe> --help    # ex. refresh, batch, audit, tenant
+python3 content_writer.py tenant list        # catalogue des marchés onboardables
+python3 content_writer.py tenant init <id>   # onboarder un tenant (squelette + sparse)
 ```
 
 Exemple : `python3 content_writer.py refresh <url> --blog enseigna`

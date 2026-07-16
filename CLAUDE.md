@@ -51,9 +51,14 @@ tenants/{id}/
     (Notion « config pays » → sites.json, unidirectionnel ; le moteur ne lit jamais Notion au runtime).
 - **Résolution des chemins** : `_shared/core/tenant_paths.py` (point unique). `tenants/` ne
   contient QUE les tenants travaillés, il grossit à la demande — jamais 90 dossiers.
-- **Onboarder un tenant** : 1 dossier `tenants/{id}/` (config + prompts + `.claude/skills/`) +
-  1 entrée `sites.json`. L'éditorial (`site.md`, skill de génération) reste à écrire.
-  *(Outillage d'onboarding en refonte.)*
+- **Isolation par SEO Manager** : chaque responsable pays clone en **git sparse-checkout**
+  (moteur commun + son seul `tenants/{id}/`) ; les autres marchés restent sur GitHub, absents
+  du disque. Parcours d'onboarding (anglais) : `onboarding/` + `onboarding/scripts/setup_sparse.sh`.
+- **Onboarder un tenant** : `python3 content_writer.py tenant init <id>` — scaffolde
+  `tenants/{id}/` (config pré-remplie depuis le catalogue + prompts + outputs), ajoute
+  l'entrée `sites.json`, et matérialise le dossier dans le sparse-checkout (sauté sur un
+  worktree plein). L'éditorial (`site.md`, skill de génération) reste à écrire. `tenant list`
+  parcourt le catalogue.
 - **Nommage** : Superprof pays = `lang-country-type` (`es-es-ressources`, `en-uk-ressources`) ;
   client autonome = slug de marque (`enseigna`). `superprof-ressources` = dérogation historique.
 - **Skills par tenant** : les skills de rédaction propres à un tenant vivent sous
@@ -89,6 +94,9 @@ Maillage → Sync.
 CLI réel (les commandes wrappent) : `python3 content_writer.py <groupe> <cmd>`.
 Liste des groupes/commandes à jour : `python3 content_writer.py --help` (et
 `… <groupe> --help`), auto-générée par Click — source de vérité.
+
+> Onboarding (pas de slash, CLI only) : `tenant list` (catalogue) et
+> `tenant init <id>` (scaffold tenant + sites.json + sparse-checkout). Voir `onboarding/`.
 
 ## Index — Skills (`.claude/skills/`)
 
