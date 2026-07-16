@@ -73,8 +73,19 @@
 2. **Créer la skill `edito-refresh`** : condenser SEO+GEO+EEAT+STYLE§11 en consignes,
    en appliquant les arbitrages ci-dessus (occurrences, ≥3 sources, pas de bio HTML…).
 3. **Câbler la skill** : la référencer dans content-generator.md (chargée pour tous tenants).
-4. **Supprimer `_shared/docs/{SEO,GEO,EEAT}_*.md`** + STYLE_GUIDE (contenu migré).
-   Garder CONTENT_REFRESH (matrice tiers) + OUTPUT_ARCHITECTURE (technique).
+4. **Supprimer `_shared/docs/{SEO,GEO,EEAT}_*.md`** (contenu migré en edito-refresh).
+   - **STYLE_GUIDE** : migrer AVANT suppression. Ses 11 sections sont actionnables :
+     anti-patterns de FORME (§7 bullets, §8 balises obsolètes, §9 emojis) → format-wordpress ;
+     anti-patterns RÉDACTIONNELS (§1 clickbait, §3 vague, §6 tonalité, §10 empilement,
+     §2 keyword stuffing, §5 généralités sans sources) → nouvelle reference
+     `edito-refresh/references/style-anti-patterns.md`. §11 déjà migré (semantic-density).
+     §4 suppression assets = Règle d'Or (déjà format-wordpress). Puis supprimer STYLE_GUIDE.
+   - **CONTENT_REFRESH_GUIDE** : FAIT CORRIGÉ — n'est PAS lu par le code. La matrice de
+     décision réelle vit dans `decision_rules.json` (redirect/partiel/total avec seuils),
+     pas dans ce doc. Donc doc inerte → migrer ce qui est unique (le cas échéant) puis
+     supprimer, comme SEO/GEO/EEAT.
+   - **OUTPUT_ARCHITECTURE** : GARDER (seul vrai doc technique infra, zéro règle éditoriale).
+   Résultat cible : `_shared/docs/` ne garde que OUTPUT_ARCHITECTURE + ce fichier d'arbitrages.
 5. **Nettoyer les strategies** des règles remontées (callouts, structure, chiffres).
 6. **OUVERT** : B6 (câbler tenant.json→prompt), lecture de reference.md par le subagent.
 

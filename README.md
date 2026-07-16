@@ -139,12 +139,9 @@ Content Writer/
 │   │   │   ├── text_utils.py
 │   │   │   └── scoring_utils.py
 │   │   └── constants.py    # Constantes globales
-│   ├── docs/               # Documentation SEO
-│   │   ├── GEO_2026_GUIDELINES.md
-│   │   ├── EEAT_2026_GUIDELINES.md
-│   │   ├── CONTENT_REFRESH_GUIDE.md
-│   │   ├── SEO_GUIDELINES.md
-│   │   └── GOOGLE_SHEETS_SETUP.md
+│   ├── docs/               # Documentation technique
+│   │   └── OUTPUT_ARCHITECTURE.md
+│   │   # Règles SEO/GEO/E-E-A-T → skill .claude/skills/edito-refresh/
 │   ├── modules/            # Modules de détection
 │   │   ├── deindexation_detector.md
 │   │   └── topic_discovery_refresh.md
@@ -436,13 +433,15 @@ Détails : Voir configuration dans `config/blogs/`
 
 ## Documentation
 
-Consultez les guides dans `_shared/docs/` :
+Les règles éditoriales (SEO / GEO / E-E-A-T, ranking) vivent dans les **skills**,
+chargées par le subagent de génération :
 
-| Document | Description |
-|----------|-------------|
-| [GEO_2026_GUIDELINES.md](_shared/docs/GEO_2026_GUIDELINES.md) | Guide GEO (Generative Engine Optimization) |
-| [EEAT_2026_GUIDELINES.md](_shared/docs/EEAT_2026_GUIDELINES.md) | Guide E-E-A-T complet |
-| [CONTENT_REFRESH_GUIDE.md](_shared/docs/CONTENT_REFRESH_GUIDE.md) | Workflow de rafraîchissement |
+| Skill | Description |
+|-------|-------------|
+| [edito-refresh](.claude/skills/edito-refresh/SKILL.md) | Règles SEO/GEO/E-E-A-T transverses + `references/` détaillées |
+| [format-wordpress](.claude/skills/format-wordpress/SKILL.md) | Règles de forme HTML/WordPress transverses |
+
+Doc technique restante : [OUTPUT_ARCHITECTURE.md](_shared/docs/OUTPUT_ARCHITECTURE.md).
 
 ---
 

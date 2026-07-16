@@ -64,5 +64,5 @@ vous stimulez une croissance musculaire durable."
 → 1x "squat", termes variés, lecture fluide
 ```
 
-*Source : STYLE_GUIDE.md §11 (référence canonique conservée ; ce fichier en est la
-copie de travail pour la génération).*
+*Référence canonique du modèle SOSEO/DSEO (migré depuis l'ancien STYLE_GUIDE.md §11,
+supprimé). Cité par les strategies full_refresh et semantic_reorientation.*

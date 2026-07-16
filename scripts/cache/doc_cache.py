@@ -16,7 +16,7 @@ class DocumentCache:
     Cache singleton pour les documents.
 
     Charge une seule fois:
-    - SEO_GUIDELINES.md
+    - CLAUDE.md (orientation)
     - Prompts templates
     - Configurations de blogs
 
@@ -56,10 +56,6 @@ class DocumentCache:
     def _load_all(self):
         """Charge tous les documents en cache."""
         self._load_claude_guide()
-        self._load_seo_guidelines()
-        self._load_geo_guidelines()
-        self._load_eeat_guidelines()
-        self._load_refresh_guide()
         self._load_refresh_template()
         self._load_blog_configs()
         self._load_prompts_dispatch()
@@ -95,22 +91,6 @@ class DocumentCache:
         """Charge CLAUDE.md - Guide opérationnel complet."""
         self._cache["claude_guide"] = self._load_file("CLAUDE.md")
 
-    def _load_seo_guidelines(self):
-        """Charge SEO_GUIDELINES.md."""
-        self._cache["seo_guidelines"] = self._load_file("_shared/docs/SEO_GUIDELINES.md")
-
-    def _load_geo_guidelines(self):
-        """Charge GEO_2026_GUIDELINES.md."""
-        self._cache["geo_guidelines"] = self._load_file("_shared/docs/GEO_2026_GUIDELINES.md")
-
-    def _load_eeat_guidelines(self):
-        """Charge EEAT_GUIDE.md (canonique v3.0, fusion des 2 anciens docs E-E-A-T)."""
-        self._cache["eeat_guidelines"] = self._load_file("_shared/docs/EEAT_GUIDE.md")
-
-    def _load_refresh_guide(self):
-        """Charge CONTENT_REFRESH_GUIDE.md."""
-        self._cache["refresh_guide"] = self._load_file("_shared/docs/CONTENT_REFRESH_GUIDE.md")
-
     def _load_refresh_template(self):
         """Charge refresh_article.md."""
         self._cache["refresh_template"] = self._load_file("_shared/prompts/refresh_article.md")
@@ -143,42 +123,6 @@ class DocumentCache:
             Contenu de CLAUDE.md (architecture multi-tenant, règles éditoriales, cocons, etc.)
         """
         return self._cache.get("claude_guide", "")
-
-    def get_guidelines(self) -> str:
-        """
-        Retourne les guidelines SEO complètes.
-
-        Returns:
-            Contenu de SEO_GUIDELINES.md
-        """
-        return self._cache.get("seo_guidelines", "")
-
-    def get_geo_guidelines(self) -> str:
-        """
-        Retourne les guidelines GEO 2026.
-
-        Returns:
-            Contenu de GEO_2026_GUIDELINES.md
-        """
-        return self._cache.get("geo_guidelines", "")
-
-    def get_eeat_guidelines(self) -> str:
-        """
-        Retourne les guidelines E-E-A-T.
-
-        Returns:
-            Contenu de EEAT_GUIDE.md (canonique)
-        """
-        return self._cache.get("eeat_guidelines", "")
-
-    def get_refresh_guide(self) -> str:
-        """
-        Retourne le guide de refresh.
-
-        Returns:
-            Contenu de CONTENT_REFRESH_GUIDE.md
-        """
-        return self._cache.get("refresh_guide", "")
 
     def get_refresh_template(self) -> str:
         """
@@ -275,22 +219,15 @@ class DocumentCache:
 
     def get_combined_guidelines(self, include_geo: bool = True, include_eeat: bool = True, include_claude: bool = True) -> str:
         """
-        Retourne les guidelines combinées.
+        Retourne l'orientation issue de CLAUDE.md (Règle d'Or + architecture).
 
-        Args:
-            include_claude: Inclure le guide opérationnel CLAUDE.md (défaut: True)
-            include_geo: Inclure les guidelines GEO
-            include_eeat: Inclure les guidelines E-E-A-T
-
-        Returns:
-            Guidelines combinées
+        Depuis 2026-07, les guidelines SEO/GEO/E-E-A-T ne vivent plus dans
+        `_shared/docs/` mais dans la skill `edito-refresh` (chargée par le
+        subagent de génération). Ne restent ici que les sections clés de
+        CLAUDE.md. Les paramètres include_* sont conservés pour compatibilité
+        d'appel mais n'ont plus d'effet.
         """
         parts = []
-
-        # PRIORITY 1: CLAUDE.md — orientation (Règle d'Or + architecture).
-        # Depuis la refonte v4.0, CLAUDE.md est un index léger : le détail
-        # procédural (règles éditoriales, formats, cocons) vit dans _shared/docs/
-        # et est chargé ci-dessous (P2bis), plus dans les skills lues par le subagent.
         if include_claude:
             claude = self.get_claude_guide()
             if claude:
@@ -299,36 +236,6 @@ class DocumentCache:
                     claude,
                     ["Règle d'Or", "Architecture multi-tenant"]
                 ))
-                parts.append("\n\n---\n\n")
-
-        # PRIORITY 2: SEO Guidelines (hub)
-        parts.append(self.get_guidelines())
-
-        # PRIORITY 2bis: anti-patterns & style — dans _shared/docs/ (déplacés hors
-        # de CLAUDE.md par la refonte v4.0). Chargés en entier : références compactes
-        # que le générateur doit voir complètes.
-        # (Les règles de FORMAT — tiret cadratin, ancres, ponctuation listes —
-        # vivent dans la skill format-wordpress, lue par le subagent générateur.)
-        # NB: le maillage en silo (cocons PARENT/CHILD) n'est plus pratiqué → le
-        # COCONS_GUIDE n'est plus injecté (retiré 2026-07).
-        style = self._load_file("_shared/docs/STYLE_GUIDE.md")
-        if style:
-            parts.append("\n\n---\n\n" + style)
-
-        # PRIORITY 3: GEO Guidelines (résumé)
-        if include_geo:
-            geo = self.get_geo_guidelines()
-            if geo:
-                parts.append("\n\n---\n\n# Guidelines GEO 2026 (Résumé)\n\n")
-                parts.append(self._extract_key_sections(geo, ["Stratégies GEO", "Checklist"]))
-
-        # PRIORITY 4: E-E-A-T Guidelines (résumé)
-        if include_eeat:
-            eeat = self.get_eeat_guidelines()
-            if eeat:
-                parts.append("\n\n---\n\n# Guidelines E-E-A-T 2026 (Résumé)\n\n")
-                parts.append(self._extract_key_sections(eeat, ["Quatre Piliers", "Checklist"]))
-
         return "".join(parts)
 
     def _extract_key_sections(self, content: str, section_keywords: list[str]) -> str:

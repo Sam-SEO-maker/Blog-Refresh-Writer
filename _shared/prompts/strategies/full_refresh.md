@@ -144,7 +144,7 @@ favorise la dépense calorique, même plusieurs heures après l'entraînement
 - Multimodal content (images, tableaux, vidéos)
 - Structured data hints (tableaux bien formatés)
 
-**Équilibre couverture / suroptimisation** (voir STYLE_GUIDE.md section 11) :
+**Équilibre couverture / suroptimisation** (voir skill `edito-refresh`, `references/semantic-density.md`) :
 - Privilégier la LARGEUR du vocabulaire (beaucoup de termes différents) plutôt que la répétition des mêmes termes
 - Mot-clé principal (exact match) : **3-6 occurrences** dans l'article (H1 + intro + 1-2 H2 + conclusion)
 - Termes importants du sujet : **2-5 occurrences** chacun, distribués uniformément

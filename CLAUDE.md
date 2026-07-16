@@ -87,11 +87,11 @@ lit `generation_prompt.txt`, écrit les fichiers, ne renvoie pas de HTML dans le
 
 ## Où trouver le « comment »
 
-- **Rédaction / format / interdits** → skills ci-dessus + `_shared/docs/STYLE_GUIDE.md`.
-- **E-E-A-T** (framework + exemples) → `_shared/docs/EEAT_GUIDE.md` (canonique).
-- **GEO / SEO** → `_shared/docs/GEO_2026_GUIDELINES.md`, `_shared/docs/SEO_GUIDELINES.md` (hub).
+- **Rédaction / format / interdits** → skill `format-wordpress`.
+- **SEO / GEO / E-E-A-T** (ranking, transverse) → skill `edito-refresh`
+  (`SKILL.md` + `references/{geo-strategies,eeat-framework,semantic-density}.md`).
 - **Formats & métadonnées, template refresh** → skill `format-wordpress`,
-  `_shared/docs/CONTENT_REFRESH_GUIDE.md`, `_shared/prompts/refresh_article.md`.
+  `_shared/prompts/refresh_article.md`.
 - **Règles site-spécifiques** → `tenants/{id}/prompts/site.md`.
 - **Stratégies de rédaction** (2 : full_refresh, eeat_rewrite) → `_shared/prompts/strategies/`.
 

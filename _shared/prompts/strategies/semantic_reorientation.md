@@ -115,7 +115,7 @@ Conclusion
 4. **Corps** : Alterner naturellement
 5. **FAQ** : Questions avec variantes
 
-### Anti-suroptimisation (voir STYLE_GUIDE.md section 11)
+### Anti-suroptimisation (voir skill `edito-refresh`, `references/semantic-density.md`)
 
 La réorientation sémantique vise la LARGEUR (couvrir des variantes) plutôt que la PROFONDEUR (répéter les mêmes). Cible : zone TOP 3 (SOSEO 55-75%, DSEO < 20%).
 - Chaque variante : **2-4 occurrences** distribuées dans l'article
