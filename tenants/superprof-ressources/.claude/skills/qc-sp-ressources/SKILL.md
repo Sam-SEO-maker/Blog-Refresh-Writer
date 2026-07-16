@@ -71,7 +71,7 @@ Quand un contenu est une suite de dates/événements (« dates clés », « gran
 étapes »), coder un `wp:superprof/timeline-block` — **pas** une infobox, une
 liste ou un tableau.
 
-- **Format canonique** : `_shared/prompts/sites/superprof-ressources.md`
+- **Format canonique** : `tenants/superprof-ressources/prompts/site.md`
   (bloc `wp:superprof/timeline-block`, ~l. 298).
 - **Règle des infobox** : si un timeline **remplace** une infobox, conserver
   **1 infobox bleue + 1 jaune** (ajouter une infobox de remplacement ou recolorer
@@ -94,7 +94,7 @@ max 3 tableaux/article), les rédacteurs l'intègrent en mode code depuis le CSV
 - **Ton « tu » + emojis** dans les H2/H3 — [[feedback-sp-ressources-gutenberg-house-format]].
 - **Blocs AdvGB au format exact** (commentaires `<!-- wp:advgb/* -->`, HTML sur
   une seule ligne, `{uuid}` cohérent JSON↔classe CSS) — [[feedback-advgb-block-format]] ;
-  référence canonique `_shared/prompts/sites/superprof-ressources-reference.md` (l. 25-167).
+  référence canonique `tenants/superprof-ressources/prompts/reference.md`.
 - **5 blocs obligatoires** : 2 infobox (1 bleue + 1 jaune), 1 count-up, 1 citation,
   1 bloc sources — [[feedback-sp-ressources-gutenberg-house-format]],
   [[feedback-sp-sources-block-format]].
@@ -116,5 +116,5 @@ cette skill.
 - Format maison : [[feedback-sp-ressources-gutenberg-house-format]].
 - Blocs AdvGB : [[feedback-advgb-block-format]].
 - FAQ emoji : [[feedback-faq-question-emoji]].
-- Prompt principal : `_shared/prompts/sites/superprof-ressources.md`.
-- Référence HTML canonique : `_shared/prompts/sites/superprof-ressources-reference.md`.
+- Prompt principal : `tenants/superprof-ressources/prompts/site.md`.
+- Référence HTML canonique : `tenants/superprof-ressources/prompts/reference.md`.

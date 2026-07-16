@@ -208,7 +208,7 @@ Jamais : "la meilleure solution", "bien mieux que [concurrent]", lien direct ver
 ## Exemples Gutenberg (référence obligatoire)
 
 Avant toute génération d'article, charger les fichiers pertinents depuis :
-`_shared/prompts/sites/enseigna/`
+`tenants/enseigna/prompts/blocks/`
 
 Consulter `INDEX.md` dans ce dossier pour choisir les fichiers à charger selon le contenu à produire. Ces exemples sont **exclusifs à Enseigna** — ne pas les utiliser pour d'autres sites.
 

@@ -21,8 +21,8 @@ dans les H2/H3. YMYL low.
 > pour cette raison. Réf. [[feedback-sp-ressources-gutenberg-house-format]].
 >
 > **Source de vérité canonique** :
-> `_shared/prompts/sites/superprof-ressources-reference.md` (fait foi) +
-> `_shared/prompts/sites/superprof-ressources.md` (prompt principal) +
+> `tenants/superprof-ressources/prompts/site.md` (règles maîtresses, prompt principal) +
+> `tenants/superprof-ressources/prompts/reference.md` (exemple HTML Gutenberg à imiter) +
 > `tenants/superprof-ressources/outputs/batches/REGEN_BRIEF.md` (brief réutilisable).
 
 ## Livrable
