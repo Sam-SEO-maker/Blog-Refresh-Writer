@@ -1,0 +1,80 @@
+---
+name: edito-refresh
+description: >-
+  Règles éditoriales SEO/GEO/E-E-A-T transverses pour faire ranker les articles
+  (tous tenants). Consignes actionnables appliquées à chaque refresh : réponse
+  directe en début de H2, statistiques et citations sourcées, densité sémantique
+  par occurrences (pas en %), sources institutionnelles, structure GEO-ready,
+  fraîcheur. Le détail (9 stratégies GEO, paires ❌/✅ E-E-A-T, SOSEO/DSEO) vit
+  dans references/, chargé à la demande. Complète format-wordpress (forme) et la
+  skill du tenant (structure/ton spécifiques).
+disable-model-invocation: false
+---
+
+# Règles éditoriales : SEO / GEO / E-E-A-T (transverses)
+
+Règles de **fond** communes à tous les tenants, appliquées à chaque refresh pour
+maximiser le ranking (SERP + moteurs génératifs). Ce fichier porte l'actionnable ;
+le détail et les exemples vivent dans `references/` (à lire au besoin) :
+
+- `references/geo-strategies.md`, les 9 stratégies GEO 2026 détaillées + exemples.
+- `references/eeat-framework.md`, les 4 piliers E-E-A-T avec paires ❌/✅ et signaux.
+- `references/semantic-density.md`, modèle SOSEO/DSEO (densité par occurrences).
+
+> Les **valeurs chiffrées par tenant** (longueur min/max, nb de liens externes)
+> vivent dans `config/tenant.json` (`seo_settings`). Ce guide fixe les règles
+> transverses ; il ne redéfinit pas ces chiffres.
+
+## 1. Réponse directe (extraction IA)
+
+Les moteurs génératifs extraient **les premières phrases** de chaque section.
+Chaque `<h2>` est suivi d'une **réponse directe en 1-2 phrases** (40-60 mots),
+avant tout développement. Idem pour chaque question de FAQ (réponse 50-100 mots).
+
+## 2. Preuves : statistiques et citations sourcées
+
+- **≥ 2 statistiques** chiffrées récentes (2025-2026), au format `[chiffre] + [source] + [date]`.
+  Ex. ✅ « Selon le DEPP (2026), 40% des collégiens bénéficient d'un soutien scolaire. »
+- **≥ 1 citation d'expert** avec credentials vérifiables (nom, titre, institution).
+- Jamais de statistique sans date (considéré obsolète par les LLMs).
+
+## 3. Sources institutionnelles
+
+- **≥ 3 sources institutionnelles** citées avec lien (uniforme, tous tenants).
+- Whitelist d'autorité (éducation) : eduscol.education.fr, education.gouv.fr, onisep.fr,
+  cned.fr, has-sante.fr, inserm.fr, etudiant.gouv.fr, service-public.fr.
+  Liste complète et par domaine : `references/eeat-framework.md`.
+- **Pas de bloc « Sources » / bio auteur dans le HTML** : l'auteur et ses credentials
+  sont gérés par WordPress (profil), hors du corps de l'article. (Exception format
+  tenant : Superprof Ressources a son propre bloc Sources Gutenberg, voir sa skill.)
+
+## 4. Densité sémantique : par occurrences, PAS en pourcentage
+
+Ne jamais raisonner en « densité % ». Viser la **couverture** (largeur du champ
+sémantique) sans **suroptimiser** (répétition). Plafonds :
+
+- Mot-clé principal (exact) : **3-6 occurrences** (H1 + intro + 1-2 H2 + conclusion).
+- Top termes du sujet : 2-5 occurrences chacun, distribués.
+- Tout terme ≥ 3 occurrences → varier par synonyme/périphrase dans ≥ 50% des cas.
+- Cible SOSEO 55-75% / DSEO < 20% (zone TOP 3). Détail + exemples : `references/semantic-density.md`.
+
+## 5. Formats extractibles par l'IA
+
+- Listes à puces pour les énumérations, tableaux comparatifs pour les synthèses.
+- Format Q&A explicite en FAQ (**3-5 questions** PAA par défaut ; FAQ étendue possible
+  si le type d'article le justifie).
+- Phrases courtes (15-20 mots), structure sujet-verbe-complément, jargon défini.
+
+## 6. Fraîcheur
+
+- Statistiques et dates actualisées (sources 2025-2026), années obsolètes corrigées
+  dans les titres et le corps.
+- **Jamais** changer la date sans modification substantielle (pénalisé par Google).
+- Ne pas modifier les URLs ni les citations académiques existantes.
+
+## 7. Structure GEO-ready (rappel)
+
+Réponse directe post-H2 → développement sourcé → citation d'expert → liste de points.
+Template de paragraphe et structure d'article complète : `references/geo-strategies.md`.
+La **structure d'ensemble** (blocs, ordre, intro) est définie par la skill du tenant,
+qui prime sur ce rappel.
