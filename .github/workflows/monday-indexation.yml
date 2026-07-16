@@ -31,6 +31,11 @@ jobs:
           mkdir -p ~/.credentials/google
           printf '%s' "$GOOGLE_SA_JSON" > ~/.credentials/google/google-service-account.json
 
+      - name: Write tenant registry (sites.json is git-ignored)
+        env:
+          SITES_JSON: ${{ secrets.SITES_JSON }}
+        run: printf '%s' "$SITES_JSON" > _shared/config/sites.json
+
       - name: Run Monday Indexation Report
         env:
           GOOGLE_SA_PATH: ~/.credentials/google/google-service-account.json
