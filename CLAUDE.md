@@ -51,9 +51,9 @@ tenants/{id}/
     (Notion « config pays » → sites.json, unidirectionnel ; le moteur ne lit jamais Notion au runtime).
 - **Résolution des chemins** : `_shared/core/tenant_paths.py` (point unique). `tenants/` ne
   contient QUE les tenants travaillés, il grossit à la demande — jamais 90 dossiers.
-- **Onboarder un tenant** : `cw tenant init <id>` (l'id doit exister au catalogue) crée le
-  squelette `tenants/{id}/` pré-rempli + l'entrée `sites.json` (merge additif). L'éditorial
-  (`site.md`, skill de génération) reste à écrire. `cw tenant list [--type]` liste le catalogue.
+- **Onboarder un tenant** : 1 dossier `tenants/{id}/` (config + prompts + `.claude/skills/`) +
+  1 entrée `sites.json`. L'éditorial (`site.md`, skill de génération) reste à écrire.
+  *(Outillage d'onboarding en refonte.)*
 - **Nommage** : Superprof pays = `lang-country-type` (`es-es-ressources`, `en-uk-ressources`) ;
   client autonome = slug de marque (`enseigna`). `superprof-ressources` = dérogation historique.
 - **Skills par tenant** : les skills de rédaction propres à un tenant vivent sous

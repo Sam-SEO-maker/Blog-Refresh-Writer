@@ -47,7 +47,6 @@ from cli.commands import ytg, notion_cmd
 from cli.commands import finalize as finalize_cmd
 from cli.commands import statuts as statuts_cmd
 from cli.commands import ngl_status as ngl_status_cmd
-from cli.commands import tenant as tenant_cmd
 
 # Enregistrer les commandes
 cli.add_command(refresh.refresh)
@@ -62,7 +61,6 @@ cli.add_command(ytg.ytg)
 cli.add_command(notion_cmd.notion)
 cli.add_command(statuts_cmd.statuts)
 cli.add_command(ngl_status_cmd.ngl_status)
-cli.add_command(tenant_cmd.tenant)
 
 
 if __name__ == "__main__":
