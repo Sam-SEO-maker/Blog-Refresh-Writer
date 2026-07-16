@@ -461,6 +461,21 @@ class AuditEngine:
         main_keyword = report.provided_keyword or (report.gsc_analysis.performance.main_keyword if report.gsc_analysis else "")
         self.logger.debug(f"[to_dict] url={report.url}, report.provided_keyword='{report.provided_keyword}', gsc_main_keyword='{report.gsc_analysis.performance.main_keyword if report.gsc_analysis else 'N/A'}', final main_keyword='{main_keyword}'")
 
+        # SERP : PAA + secondary keywords extraits de l'analyse SERP (DataForSEO).
+        # Sans ce reversement, audit_data ressort avec people_also_ask="" et la
+        # génération part à l'aveugle malgré une SERP correctement récupérée.
+        serp = report.serp_analysis
+        paa_questions = list(serp.paa_questions) if serp and serp.paa_questions else []
+        secondary_keywords: list[str] = []
+        if serp and serp.organic_results:
+            kw_set: list[str] = []
+            for result in serp.organic_results[:10]:
+                for kw in (getattr(result, "keywords", None) or [])[:3]:
+                    if kw and kw not in kw_set:
+                        kw_set.append(kw)
+            secondary_keywords = kw_set[:10]
+        self.logger.debug(f"[to_dict] SERP: {len(paa_questions)} PAA, {len(secondary_keywords)} secondary_keywords")
+
         return {
             "url": report.url,
             "blog_id": report.blog_id,
@@ -513,6 +528,16 @@ class AuditEngine:
                 "shift_detected": report.intent_analysis.intent_shift_detected if report.intent_analysis else False,
                 "format_mismatch": report.intent_analysis.format_shift_detected if report.intent_analysis else False,
             } if report.intent_analysis else None,
+            # PAA / secondary keywords issus de la SERP DataForSEO (comma-separated,
+            # cf. modèles sheets_models / composition du prompt de génération).
+            "people_also_ask": ", ".join(paa_questions[:5]),
+            "secondary_keywords": ", ".join(secondary_keywords[:10]),
+            "serp": {
+                "dominant_format": serp.dominant_format if serp else "",
+                "our_position": serp.our_position if serp else None,
+                "paa_questions": paa_questions,
+                "secondary_keywords": secondary_keywords,
+            } if serp else None,
             "assets": report.assets,
         }
 

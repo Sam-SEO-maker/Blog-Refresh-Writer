@@ -862,6 +862,29 @@ Retourne l'article complet réécrit en HTML:
                     prompt_parts.append(f"- {rec}")
                 prompt_parts.append("")
 
+        # People Also Ask (questions SERP réelles) → à couvrir en FAQ.
+        # Source : SERP DataForSEO (audit_engine.to_dict). Sans cette section,
+        # la FAQ générée n'est pas alignée sur les questions réellement posées.
+        paa_raw = audit_data.get("people_also_ask", "")
+        paa_questions = [q.strip() for q in paa_raw.split(",") if q.strip()] if isinstance(paa_raw, str) else list(paa_raw or [])
+        if paa_questions:
+            prompt_parts.append("### People Also Ask (questions SERP à couvrir en FAQ)")
+            prompt_parts.append(
+                "Traiter ces questions réellement posées sur Google (FAQ ou corps), "
+                "chacune avec une réponse directe :"
+            )
+            for q in paa_questions[:5]:
+                prompt_parts.append(f"- {q}")
+            prompt_parts.append("")
+
+        # Secondary keywords (SERP / related searches) à couvrir naturellement.
+        sk_raw = audit_data.get("secondary_keywords", "")
+        secondary_keywords = [k.strip() for k in sk_raw.split(",") if k.strip()] if isinstance(sk_raw, str) else list(sk_raw or [])
+        if secondary_keywords:
+            prompt_parts.append("### Mots-clés secondaires (SERP) à couvrir")
+            prompt_parts.append(", ".join(secondary_keywords[:10]))
+            prompt_parts.append("")
+
         # Recommandations audit
         recommendations = rewrite_context['audit_insights']['recommendations']
         if recommendations:

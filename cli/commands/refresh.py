@@ -136,6 +136,10 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
             blogpost_url=url,
             title=title,
             main_keyword=keyword or result.main_keyword or "",
+            # PAA / secondary keywords issus de l'audit SERP live (DataForSEO),
+            # sans quoi le contexte de génération part sans questions SERP.
+            people_also_ask=result.people_also_ask or "",
+            secondary_keywords=result.secondary_keywords or "",
         )
 
         context_dir = orchestrator._prepare_context_for_claude_code(

@@ -25,6 +25,10 @@ class RefreshWorkflowResult:
     errors: list[str]
     execution_time_seconds: float
     main_keyword: str = field(default="")
+    # PAA + secondary keywords issus de la SERP (audit live) — permettent au CLI
+    # refresh unitaire de peupler le contexte de génération sans passer par le Sheet.
+    people_also_ask: str = field(default="")
+    secondary_keywords: str = field(default="")
 
 
 @dataclass

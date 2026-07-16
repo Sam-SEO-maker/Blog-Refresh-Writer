@@ -791,6 +791,8 @@ class RefreshOrchestrator:
                 errors=errors,
                 execution_time_seconds=(datetime.now() - start_time).total_seconds(),
                 main_keyword=audit_dict.get("main_keyword", ""),
+                people_also_ask=audit_dict.get("people_also_ask", ""),
+                secondary_keywords=audit_dict.get("secondary_keywords", ""),
             )
 
         except Exception as e:
