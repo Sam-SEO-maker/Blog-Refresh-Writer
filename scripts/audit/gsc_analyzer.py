@@ -391,6 +391,95 @@ class GSCAnalyzer:
         keywords.sort(key=lambda k: (-k["clicks"], -k["impressions"]))
         return keywords[:limit]
 
+    def fetch_blog_performance(self, days: int = 28, top_kw: int = 20) -> dict:
+        """Perfs SEO au niveau **propriété/blog** (pas par URL) : totaux + top KW.
+
+        Routage identique aux autres fetch : MCP gsc-remote pour superprof.*
+        (fallback SA sur erreur), service account pour enseigna/tenants hors MCP.
+        Le top KW est plafonné à ~20 côté MCP ; `top_kw>20` force la voie SA.
+
+        Retourne : {
+          "property", "source" ("mcp"|"service_account"), "days",
+          "totals": {clicks, impressions, ctr, position},
+          "top_keywords": [{query, clicks, impressions, ctr, position}, ...],
+        }
+        """
+        if self.uses_mcp and top_kw <= 20:
+            try:
+                return self._fetch_blog_performance_via_mcp(days, top_kw)
+            except Exception as e:  # GSCMCPError ou réseau → fallback SA
+                print(f"[GSC] MCP indisponible ({str(e)[:80]}) — fallback service account.")
+        return self._fetch_blog_performance_via_sa(days, top_kw)
+
+    def _fetch_blog_performance_via_mcp(self, days: int, top_kw: int) -> dict:
+        """Voie MCP : get_performance_overview + get_search_analytics (dimensions=query)."""
+        from scripts.audit.gsc_mcp_client import GSCMCPClient
+        client = GSCMCPClient()
+        totals = client.performance_overview(self.gsc_property, days=days)
+        top = client.search_analytics(self.gsc_property, days=days,
+                                      dimensions="query", limit=top_kw)
+        return {
+            "property": self.gsc_property,
+            "source": SOURCE_MCP,
+            "days": days,
+            "totals": totals,
+            "top_keywords": top,
+        }
+
+    def _fetch_blog_performance_via_sa(self, days: int, top_kw: int) -> dict:
+        """Voie service account : une requête propriété (dimensions=query), agrégée localement."""
+        empty = {
+            "property": self.gsc_property, "source": SOURCE_SERVICE_ACCOUNT,
+            "days": days, "totals": {"clicks": 0, "impressions": 0, "ctr": 0, "position": 0},
+            "top_keywords": [],
+        }
+        if not self._gsc_service:
+            return empty
+        today = datetime.now()
+        start_date = (today - timedelta(days=days)).strftime("%Y-%m-%d")
+        end_date = today.strftime("%Y-%m-%d")
+        request_body = {
+            "startDate": start_date,
+            "endDate": end_date,
+            "dimensions": ["query"],
+            "rowLimit": 25000,
+        }
+        try:
+            response = self._gsc_service.searchanalytics().query(
+                siteUrl=self.gsc_property, body=request_body
+            ).execute()
+        except Exception as e:
+            print(f"Erreur GSC fetch_blog_performance ({self.gsc_property}): {e}")
+            return empty
+
+        rows = response.get("rows", [])
+        total_clicks = sum(int(r.get("clicks", 0)) for r in rows)
+        total_impr = sum(int(r.get("impressions", 0)) for r in rows)
+        # Position moyenne pondérée par impressions (cohérent avec le reste du module).
+        pos_sum = sum(r.get("position", 0) * r.get("impressions", 0) for r in rows)
+        avg_pos = round(pos_sum / total_impr, 1) if total_impr > 0 else 0
+        ctr = round(total_clicks / total_impr * 100, 2) if total_impr > 0 else 0
+
+        keywords = [
+            {
+                "query": r["keys"][0],
+                "clicks": int(r.get("clicks", 0)),
+                "impressions": int(r.get("impressions", 0)),
+                "ctr": round(r.get("ctr", 0) * 100, 2),
+                "position": round(r.get("position", 0), 1),
+            }
+            for r in rows
+        ]
+        keywords.sort(key=lambda k: (-k["clicks"], -k["impressions"]))
+        return {
+            "property": self.gsc_property,
+            "source": SOURCE_SERVICE_ACCOUNT,
+            "days": days,
+            "totals": {"clicks": total_clicks, "impressions": total_impr,
+                       "ctr": ctr, "position": avg_pos},
+            "top_keywords": keywords[:top_kw],
+        }
+
     def _calculate_trends_direct(
         self,
         url: str,

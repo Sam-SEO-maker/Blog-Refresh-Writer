@@ -215,3 +215,69 @@ def test_parse_query_table_preserves_accents():
     rows = gsc_mcp_client.parse_query_table(text)
     assert rows[0]["query"] == "formule maths 3ème"
     assert rows[1]["query"] == "mathématiques élémentaires"
+
+
+# --- perfs blog (fetch_blog_performance) : overview parser + routage -----------
+
+def test_parse_overview_text_extracts_totals():
+    text = (
+        "Performance Overview for https://x/ (last 28 days):\n"
+        "----------------------------------------\n"
+        "Total Clicks: 89,756\n"
+        "Total Impressions: 6,790,895\n"
+        "Average CTR: 1.32%\n"
+        "Average Position: 7.3\n"
+        "\nDaily Trend:\n"
+        "Date | Clicks | Impressions | CTR | Position\n"
+        "06/18 | 4480 | 332993 | 1.35% | 7.2\n"  # ligne de trend ignorée
+    )
+    out = gsc_mcp_client.parse_overview_text(text)
+    assert out == {"clicks": 89756, "impressions": 6790895, "ctr": 1.32, "position": 7.3}
+
+
+def test_parse_overview_text_raises_when_illegible():
+    with pytest.raises(gsc_mcp_client.GSCMCPError):
+        gsc_mcp_client.parse_overview_text("réponse inattendue sans totaux")
+
+
+def test_blog_perf_superprof_uses_mcp():
+    a = _analyzer_no_sa("https://www.superprof.fr/ressources/")
+    with mock.patch.object(gsc_mcp_client.GSCMCPClient, "performance_overview",
+                           return_value={"clicks": 10, "impressions": 100, "ctr": 10.0, "position": 5.0}), \
+         mock.patch.object(gsc_mcp_client.GSCMCPClient, "search_analytics",
+                           return_value=_FAKE_ROWS):
+        r = a.fetch_blog_performance(days=28, top_kw=20)
+    assert r["source"] == "mcp"
+    assert r["totals"]["clicks"] == 10
+    assert [k["query"] for k in r["top_keywords"]] == ["kw a", "kw b"]
+
+
+def test_blog_perf_mcp_error_falls_back_to_sa():
+    a = _analyzer_no_sa("https://www.superprof.fr/ressources/")
+    with mock.patch.object(gsc_mcp_client.GSCMCPClient, "performance_overview",
+                           side_effect=gsc_mcp_client.GSCMCPError("down")), \
+         mock.patch.object(GSCAnalyzer, "_fetch_blog_performance_via_sa",
+                           return_value={"source": "service_account", "totals": {}, "top_keywords": []}) as sa:
+        r = a.fetch_blog_performance(days=28, top_kw=20)
+    assert r["source"] == "service_account"
+    sa.assert_called_once()
+
+
+def test_blog_perf_top_kw_over_20_bypasses_mcp():
+    a = _analyzer_no_sa("https://www.superprof.fr/ressources/")
+    with mock.patch.object(GSCAnalyzer, "_fetch_blog_performance_via_mcp",
+                           side_effect=AssertionError("MCP ne doit pas être appelé si top_kw>20")), \
+         mock.patch.object(GSCAnalyzer, "_fetch_blog_performance_via_sa",
+                           return_value={"source": "service_account", "totals": {}, "top_keywords": []}):
+        r = a.fetch_blog_performance(days=28, top_kw=50)
+    assert r["source"] == "service_account"
+
+
+def test_blog_perf_enseigna_never_calls_mcp():
+    a = _analyzer_no_sa("https://enseigna.fr/")
+    with mock.patch.object(GSCAnalyzer, "_fetch_blog_performance_via_mcp",
+                           side_effect=AssertionError("enseigna ne doit jamais router vers le MCP")), \
+         mock.patch.object(GSCAnalyzer, "_fetch_blog_performance_via_sa",
+                           return_value={"source": "service_account", "totals": {}, "top_keywords": []}):
+        r = a.fetch_blog_performance(days=28, top_kw=10)
+    assert r["source"] == "service_account"

@@ -161,6 +161,30 @@ class GSCMCPClient:
         })
         return parse_query_table(text)
 
+    def performance_overview(self, site_url: str, days: int = 28) -> dict:
+        """Totaux de trafic d'une propriété (niveau blog, pas par-URL).
+
+        Retourne {clicks, impressions, ctr, position}. Lève GSCMCPError si le
+        MCP est indisponible ou si l'en-tête est illisible.
+        """
+        text = self._call_tool("get_performance_overview", {
+            "site_url": site_url, "days": days,
+        })
+        return parse_overview_text(text)
+
+    def search_analytics(self, site_url: str, days: int = 28,
+                         dimensions: str = "query", limit: int = 20) -> list[dict]:
+        """Top requêtes d'une propriété (niveau blog).
+
+        Retourne au plus `limit` lignes {query, clicks, impressions, ctr,
+        position} triées clics DESC. Le MCP plafonne l'affichage (~20 lignes) —
+        `limit` borne côté client. Lève GSCMCPError si le MCP est indisponible.
+        """
+        text = self._call_tool("get_search_analytics", {
+            "site_url": site_url, "days": days, "dimensions": dimensions,
+        })
+        return parse_query_table(text)[:limit]
+
 
 # -- parsing des tableaux texte MCP ------------------------------------------
 
@@ -172,6 +196,32 @@ _ROW_RE = re.compile(
 
 def _num(s: str) -> float:
     return float(s.replace(",", "").strip())
+
+
+_OVERVIEW_RE = {
+    "clicks": re.compile(r"Total Clicks:\s*([\d.,]+)", re.IGNORECASE),
+    "impressions": re.compile(r"Total Impressions:\s*([\d.,]+)", re.IGNORECASE),
+    "ctr": re.compile(r"Average CTR:\s*([\d.,]+)%", re.IGNORECASE),
+    "position": re.compile(r"Average Position:\s*([\d.,]+)", re.IGNORECASE),
+}
+
+
+def parse_overview_text(text: str) -> dict:
+    """Parse l'en-tête `Total Clicks / Total Impressions / Average CTR / Average
+    Position` de `get_performance_overview`. Ignore la table « Daily Trend ».
+
+    Retourne {clicks:int, impressions:int, ctr:float, position:float}. Lève
+    GSCMCPError si aucun total n'est trouvé (réponse inattendue).
+    """
+    out: dict = {}
+    for key, rx in _OVERVIEW_RE.items():
+        m = rx.search(text)
+        if m:
+            val = _num(m.group(1))
+            out[key] = int(val) if key in ("clicks", "impressions") else round(val, 2)
+    if "clicks" not in out or "impressions" not in out:
+        raise GSCMCPError("overview MCP illisible (Total Clicks/Impressions absents)")
+    return out
 
 
 def parse_query_table(text: str) -> list[dict]:

@@ -126,6 +126,65 @@ def enseigna_refresh_list(months, dry_run):
         raise click.Abort()
 
 
+@audit.command("gsc-perf")
+@blog_option(required=True)
+@click.option('--days', type=int, default=28, help='Fenêtre en jours (défaut: 28)')
+@click.option('--top-kw', type=int, default=20, help='Nombre de requêtes à ramener (défaut: 20)')
+@click.option('--dry-run', is_flag=True, help='Ne pas écrire le dump JSON local')
+def gsc_perf(blog, days, top_kw, dry_run):
+    """Perfs SEO d'un blog via le MCP GSC : totaux + top keywords (résumé chat)."""
+    from scripts.audit.gsc_perf import run_gsc_perf
+
+    click.echo(f"\n📊 GSC PERF — {blog} ({days}j, top {top_kw} KW)")
+    try:
+        r = run_gsc_perf(blog, days=days, top_kw=top_kw, dry_run=dry_run)
+        t = r["totals"]
+        click.echo(f"  Source:      {r['source']}")
+        click.echo(f"  Clics:       {t['clicks']:,}")
+        click.echo(f"  Impressions: {t['impressions']:,}")
+        click.echo(f"  CTR:         {t['ctr']}%")
+        click.echo(f"  Position:    {t['position']}")
+        top = r.get("top_keywords", [])
+        if top:
+            click.echo(f"\n  Top {len(top)} requêtes :")
+            for k in top:
+                click.echo(f"    {k['clicks']:>6,} clics | pos {k['position']:>4} | {k['query']}")
+        if r.get('output_path'):
+            click.echo(f"\n  Dump: {r['output_path']}")
+    except Exception as e:
+        click.echo(f"\n❌ ERREUR: {e}", err=True)
+        raise click.Abort()
+
+
+@audit.command("gsc-page")
+@click.argument('url')
+@click.option('--days', type=int, default=28, help='Fenêtre en jours (défaut: 28)')
+@click.option('--dry-run', is_flag=True, help='Ne pas écrire le dump JSON local')
+def gsc_page(url, days, dry_run):
+    """Perfs GSC d'une URL précise via le MCP : requêtes, clics, impressions, position."""
+    from scripts.audit.gsc_perf import run_gsc_page
+
+    click.echo(f"\n📄 GSC PAGE — {url} ({days}j)")
+    try:
+        r = run_gsc_page(url, days=days, dry_run=dry_run)
+        t = r["totals"]
+        click.echo(f"  Tenant: {r['site_id']} | Source: {r['source']}")
+        click.echo(f"  Clics:       {t['clicks']:,}")
+        click.echo(f"  Impressions: {t['impressions']:,}")
+        kws = r.get("keywords", [])
+        if kws:
+            click.echo(f"\n  {len(kws)} requêtes :")
+            for k in kws:
+                click.echo(f"    {k['clicks']:>4,} clics | {k['impressions']:>6,} impr | pos {k['position']:>4} | {k['query']}")
+        else:
+            click.echo("  (aucune requête — page sans trafic sur la période)")
+        if r.get('output_path'):
+            click.echo(f"\n  Dump: {r['output_path']}")
+    except Exception as e:
+        click.echo(f"\n❌ ERREUR: {e}", err=True)
+        raise click.Abort()
+
+
 @audit.command("gsc-state")
 @click.option('--site', required=True, type=click.Choice(['superprof-ressources', 'enseigna']), help='Site cible')
 @click.option('--months', type=int, default=3, help='Période en mois (défaut: 3)')
