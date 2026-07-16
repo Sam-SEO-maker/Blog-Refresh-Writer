@@ -100,7 +100,7 @@ def fake_root(monkeypatch):
 
 
 def test_onboard_creates_skeleton_and_prefills(fake_root):
-    rep = T.onboard_tenant("es-es-ressources", base_path=fake_root)
+    rep = T.onboard_tenant("es-es-ressources", base_path=fake_root, no_sparse=True)
     cfg = json.loads((fake_root / "tenants" / "es-es-ressources" / "config" / "tenant.json").read_text())
     assert cfg["gsc_property"] == "https://www.superprof.es/apuntes/"
     assert cfg["domain"] == "superprof.es"
@@ -109,10 +109,11 @@ def test_onboard_creates_skeleton_and_prefills(fake_root):
     assert (fake_root / "tenants" / "es-es-ressources" / "prompts" / "site.md").exists()
     assert (fake_root / "tenants" / "es-es-ressources" / "outputs").is_dir()
     assert rep["registry_updated"] is True
+    assert rep["sparse_added"] is False  # --no-sparse honoured
 
 
 def test_onboard_merges_sites_json_without_loss(fake_root):
-    T.onboard_tenant("es-es-ressources", base_path=fake_root)
+    T.onboard_tenant("es-es-ressources", base_path=fake_root, no_sparse=True)
     sites = json.loads((fake_root / "_shared" / "config" / "sites.json").read_text())
     assert sites["notion_refresh_tracker_db_id"] == "KEEP"
     ens = next(s for s in sites["sites"] if s["id"] == "enseigna")
@@ -121,14 +122,14 @@ def test_onboard_merges_sites_json_without_loss(fake_root):
 
 
 def test_onboard_refuses_existing_without_force(fake_root):
-    T.onboard_tenant("es-es-ressources", base_path=fake_root)
+    T.onboard_tenant("es-es-ressources", base_path=fake_root, no_sparse=True)
     with pytest.raises(ValueError):
-        T.onboard_tenant("es-es-ressources", base_path=fake_root)
+        T.onboard_tenant("es-es-ressources", base_path=fake_root, no_sparse=True)
 
 
 def test_onboard_force_no_duplicate_registry(fake_root):
-    T.onboard_tenant("es-es-ressources", base_path=fake_root)
-    rep2 = T.onboard_tenant("es-es-ressources", base_path=fake_root, force=True)
+    T.onboard_tenant("es-es-ressources", base_path=fake_root, no_sparse=True)
+    rep2 = T.onboard_tenant("es-es-ressources", base_path=fake_root, force=True, no_sparse=True)
     assert rep2["registry_updated"] is False
     sites = json.loads((fake_root / "_shared" / "config" / "sites.json").read_text())
     assert sum(1 for s in sites["sites"] if s["id"] == "es-es-ressources") == 1
@@ -136,4 +137,10 @@ def test_onboard_force_no_duplicate_registry(fake_root):
 
 def test_onboard_rejects_unknown_id(fake_root):
     with pytest.raises(ValueError):
-        T.onboard_tenant("xx-zz-blog", base_path=fake_root)
+        T.onboard_tenant("xx-zz-blog", base_path=fake_root, no_sparse=True)
+
+
+def test_onboard_skips_sparse_on_non_git_root(fake_root):
+    """A non-git temp dir is not sparse → sparse_added stays False, no crash."""
+    rep = T.onboard_tenant("es-es-ressources", base_path=fake_root)
+    assert rep["sparse_added"] is False

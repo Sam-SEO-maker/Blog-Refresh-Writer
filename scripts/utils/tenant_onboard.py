@@ -3,7 +3,10 @@
 `cw tenant init <id>` matérialise un tenant :
   1. crée le squelette `tenants/{id}/` (config/tenant.json pré-rempli + prompts/,
      linking_maps/, outputs/) ;
-  2. ajoute une entrée dans `_shared/config/sites.json` (registre runtime).
+  2. ajoute une entrée dans `_shared/config/sites.json` (registre runtime) ;
+  3. matérialise le dossier dans le sparse-checkout (`git sparse-checkout add`) si
+     le worktree est sparse — un SEO Manager voit alors son tenant sans exposer
+     les autres. Sur un worktree plein (mainteneur), l'étape est ignorée sans risque.
 
 Le pré-remplissage vient du catalogue `superprof_blogs_catalog.json` (gsc_property,
 url_base, langue, pays). Les champs éditoriaux (ton, blacklist, guides) restent des
@@ -15,6 +18,7 @@ Idempotent et sûr : refuse d'écraser un tenant existant sans --force.
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 from typing import Optional
 
@@ -59,14 +63,45 @@ def build_tenant_config(entry: dict) -> dict:
         "_TODO": (
             "Compléter par le responsable pays : tone_profile, seo_settings, "
             "editorial_guides (déposer prompts/site.md + guides dans ce dossier), "
-            "sheets, wp_api_config, brand_rules. Voir tenants/superprof-ressources "
-            "comme modèle Ressources."
+            "sheets, wp_api_config, brand_rules. Copier depuis "
+            "onboarding/tenant-model/ (livré sur ta machine) ; le tenant de référence "
+            "superprof-ressources n'est pas sur ton disque (sparse-checkout)."
         ),
     }
 
 
+def _worktree_is_sparse(root: Path) -> bool:
+    """True si le worktree git est en sparse-checkout (sinon plein / pas un repo)."""
+    try:
+        res = subprocess.run(
+            ["git", "sparse-checkout", "list"],
+            cwd=str(root), capture_output=True, text=True,
+        )
+    except (OSError, FileNotFoundError):
+        return False
+    # `git sparse-checkout list` renvoie 0 + des lignes en sparse ;
+    # sur un worktree plein il échoue ("this worktree is not sparse").
+    return res.returncode == 0 and bool(res.stdout.strip())
+
+
+def _sparse_add_tenant(root: Path, tenant_id: str) -> bool:
+    """Ajoute `tenants/{id}` au sparse-checkout si le worktree est sparse.
+
+    Retourne True si la matérialisation a été demandée, False si sautée (worktree
+    plein, hors repo git, ou git absent). Ne convertit jamais un worktree plein
+    en sparse — sûr pour le mainteneur.
+    """
+    if not _worktree_is_sparse(root):
+        return False
+    subprocess.run(
+        ["git", "sparse-checkout", "add", f"tenants/{tenant_id}"],
+        cwd=str(root), capture_output=True, text=True, check=False,
+    )
+    return True
+
+
 def onboard_tenant(tenant_id: str, base_path: Optional[Path] = None,
-                   force: bool = False) -> dict:
+                   force: bool = False, no_sparse: bool = False) -> dict:
     """Crée le dossier tenant + l'entrée sites.json. Retourne un rapport.
 
     Lève ValueError si le tenant n'est pas au catalogue, ou existe déjà sans force.
@@ -109,12 +144,17 @@ def onboard_tenant(tenant_id: str, base_path: Optional[Path] = None,
     # 4. Entrée sites.json (merge additif, ne touche pas aux autres tenants)
     added_to_registry = _add_to_sites_json(root, tenant_id, entry)
 
+    # 5. Sparse-checkout : matérialise le dossier du tenant sans exposer les autres.
+    #    Sauté si --no-sparse, ou si le worktree n'est pas sparse (mainteneur).
+    sparse_added = False if no_sparse else _sparse_add_tenant(root, tenant_id)
+
     return {
         "tenant_id": tenant_id,
         "tenant_dir": str(tenant_dir.relative_to(root)),
         "dirs_created": created,
         "config": str(cfg_path.relative_to(root)),
         "registry_updated": added_to_registry,
+        "sparse_added": sparse_added,
         "catalog_entry": entry,
     }
 

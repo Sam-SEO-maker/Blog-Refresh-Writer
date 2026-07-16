@@ -1,0 +1,8 @@
+_shared
+cli
+scripts
+utils
+workflows
+.github
+.claude
+onboarding
