@@ -63,7 +63,9 @@ Maillage → Sync.
 | `/batch --action X --blog <id>` | Refresh batch depuis Google Sheets |
 | `/audit serp <url>` | Audit SERP ciblé (PAA, secondary keywords) |
 | `/decide --blog <id>` | Moteur de décision data-driven (Sheet) |
-| `/market-status --site <id>` | État des lieux SEO GSC d'un tenant |
+| `/market-status --site <id>` | État des lieux SEO GSC d'un tenant (→ Sheet) |
+| `/blog --market <id>` | Perfs SEO d'un blog via MCP GSC : totaux + top KW (résumé chat) |
+| `/page <url>` | Perfs SEO d'une URL précise via MCP GSC (tenant déduit de l'URL) |
 
 CLI réel (les commandes wrappent) : `python3 content_writer.py <groupe> <cmd>`.
 Liste des groupes/commandes à jour : `python3 content_writer.py --help` (et
