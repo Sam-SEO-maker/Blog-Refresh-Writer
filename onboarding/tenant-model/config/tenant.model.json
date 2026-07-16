@@ -1,0 +1,60 @@
+{
+  "_comment": "tenant.json MODEL — shipped to every SEO Manager via onboarding/ (sparse-checkout). Copy this file to tenants/<your-id>/config/tenant.json and adapt each value. The identity fields (blog_id, domain, url_base, gsc_property, language) are normally already pre-filled by `tenant init` — don't overwrite them. Replace everything in <...> or marked TODO.",
+  "blog_id": "<your-id>",
+  "display_name": "<Superprof PAYS (type)>",
+  "domain": "<superprof.xx>",
+  "url_base": "<https://www.superprof.xx/blog/>",
+  "gsc_property": "<https://www.superprof.xx/blog/>",
+  "auth_mode": "service_account",
+  "content_type": "blog_article",
+  "subject_category": "education_general",
+  "language": "<xx>",
+  "tone_profile": {
+    "style": "natural_informal",
+    "formality": "informal",
+    "voice": "encouraging_educator",
+    "characteristics": [
+      "Truthful",
+      "Ambitious",
+      "Understanding",
+      "Frame things positively"
+    ],
+    "_TODO": "Adapt the tone to your language/market. Do NOT copy any 'TODO_a_confirmer_PO' field — describe your market's actual register."
+  },
+  "seo_settings": {
+    "min_word_count": 1200,
+    "max_word_count": 1600,
+    "max_external_links": 2,
+    "money_keywords_in_blog_anchors_forbidden": true
+  },
+  "refresh_thresholds": {
+    "stale_months": 12,
+    "critical_months": 24,
+    "ctr_low_threshold": 2.0,
+    "impression_high_threshold": 1000,
+    "position_decline_alert": 5
+  },
+  "editorial_guides": [
+    "tenants/<your-id>/prompts/site.md"
+  ],
+  "brand_rules": {
+    "name": "Superprof",
+    "forbidden_spellings": ["Super Prof", "SuperProf", "SP"],
+    "no_pronouns": true
+  },
+  "sheets": {
+    "_TODO": "Optionnel : ton Google Sheet si tu pilotes les refresh depuis une feuille. Sinon supprime ce bloc.",
+    "spreadsheet_id": "<sheet-id>",
+    "spreadsheet_env": "SPREADSHEET_ID_<YOUR_MARKET>",
+    "tabs": [{ "name": "<TabName>", "col_url": 0, "col_keyword": 1 }],
+    "status_col": "F"
+  },
+  "wp_api_config": {
+    "api_base_url": "<https://www.superprof.xx/blog/wp-json/wp/v2>",
+    "user_env_var": "WP_<YOUR_MARKET>_USER",
+    "password_env_var": "WP_<YOUR_MARKET>_APP_PASSWORD",
+    "timeout": 30
+  },
+  "generation_skill": "<your-writing-skill-name>",
+  "eeat_level": "high"
+}
