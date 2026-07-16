@@ -70,11 +70,18 @@ mémoires de feedback.
    accents corrects, pas de tiret cadratin `—`, ancres sans `<strong>`, pas de
    lien dans les H2/H3, listes ponctuées). Double sortie Gutenberg selon la skill
    du tenant.
+6. **Règles de ranking** : charge et applique `edito-refresh` (réponse directe en
+   début de H2, ≥ 2 statistiques et ≥ 1 citation sourcées, ≥ 3 sources
+   institutionnelles, densité par occurrences et non en %). C'est une skill
+   transverse OBLIGATOIRE, au même titre que format-wordpress — jamais optionnelle.
 
 ## Déroulé
 
 1. Lis `generation_prompt.txt` + le brief de sources.
-2. Charge la skill de rédaction du tenant (+ `edito-refresh` + `format-wordpress`).
+2. Charge (outil Skill), dans cet ordre, les **trois** skills — aucune n'est optionnelle :
+   a. la skill de rédaction du tenant (`generation_skill` de tenant.json),
+   b. **`edito-refresh`** (règles de ranking SEO/GEO/E-E-A-T),
+   c. **`format-wordpress`** (règles de forme HTML/WP).
 3. Rédige le HTML en injectant les sources vérifiées dans le contenu et
    `eeat_sources`.
 4. Valide les assets (après ≥ avant) ; si un asset manque, restaure-le.
