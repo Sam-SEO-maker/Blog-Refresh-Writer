@@ -101,6 +101,16 @@ def test_locale_partielle_complete_par_les_defauts():
     assert analyzer.language == "fr"
 
 
+def test_locale_vide_retombe_sur_les_defauts():
+    """Le scaffold écrit "" si le pays n'est pas résolu : ne pas propager du vide."""
+    configs = {"xx-zz-blog": {"serp_location": "", "language": ""}}
+
+    analyzer = _resolve(configs, "xx-zz-blog")
+
+    assert analyzer.location == "France"
+    assert analyzer.language == "fr"
+
+
 # --- Cache ------------------------------------------------------------------
 
 def test_analyzer_mis_en_cache_par_blog():

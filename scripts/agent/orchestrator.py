@@ -215,9 +215,11 @@ class RefreshOrchestrator:
             # Normalize blog_id to get correct config
             normalized_blog_id = self._normalize_blog_id(blog_id)
             blog_config = self.doc_cache.get_blog_config(normalized_blog_id)
+            # `or` et non .get(défaut) : le scaffold écrit "" quand le pays n'est
+            # pas résolu, et une locale vide ferait échouer l'appel DataForSEO.
             self._serp_analyzers[blog_id] = SERPAnalyzer(
-                location=blog_config.get("serp_location", "France"),
-                language=blog_config.get("language", "fr"),
+                location=blog_config.get("serp_location") or "France",
+                language=blog_config.get("language") or "fr",
             )
         return self._serp_analyzers[blog_id]
 
