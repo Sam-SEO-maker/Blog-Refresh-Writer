@@ -47,6 +47,8 @@ définitive). C'est ce qui fait grossir le tier 1 au fil des articles.
 
 - **Primaire de préférence** : INSERM, INSEE, ministères, revues à comité de
   lecture, organismes officiels, plutôt que blogs/agrégateurs.
+- **Jamais Wikipédia** : c'est un agrégateur, pas une source. Remonter à la source
+  primaire qu'il cite et retenir celle-ci dans le brief.
 - **Récente** quand la donnée est datée (stats, réglementations).
 - **Vérifiable** : URL résolvable, auteur/organisme identifiable.
 - **Pertinente** au niveau E-E-A-T du blog (voir la skill du site).
@@ -73,6 +75,7 @@ cite pas une source hors de son propos.
 - ❌ **Inventer une source ou un chiffre.** Une anecdote/statistique sans source
   vérifiable ne s'écrit pas (cf. Preuves d'Expérience E-E-A-T : ne pas fabriquer
   d'anecdotes chiffrées).
+- ❌ **Retenir Wikipédia comme source** dans le brief — [[feedback-no-wikipedia-links]].
 - ❌ « Consulté le [date] » dans les références restituées — [[feedback-no-consulte-le]].
 - ❌ Tiret cadratin `—` — [[feedback-no-em-dash]].
 

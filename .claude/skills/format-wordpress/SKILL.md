@@ -64,6 +64,9 @@ demi-cadratin `–` si un séparateur visuel est indispensable. Tous blogs. Réf
 - **Ancres sans `<strong>`** : `<a href="…">texte</a>`, jamais
   `<a href="…"><strong>texte</strong></a>` (anti-pattern sur-optimisation).
 - **Pas de lien dans les H2/H3** : un `<a>` dans un heading est un red flag SEO.
+- **Jamais de _nouveau_ lien vers Wikipédia** (tous tenants) : lier la source primaire,
+  pas l'article encyclopédique — [[feedback-no-wikipedia-links]]. (Un lien Wikipédia
+  déjà présent reste conservé au titre de la Règle d'Or ; l'interdiction porte sur l'ajout.)
 - **Sources** : pas de « Consulté le [date] » — [[feedback-no-consulte-le]].
 
 ## Ponctuation des listes à puces
