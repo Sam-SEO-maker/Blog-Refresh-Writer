@@ -22,6 +22,20 @@ priorité ces domaines d'autorité au tier 2 (web), au lieu de chercher à l'ave
   reprise de l'article d'origine. Ces deux domaines valent domaine d'autorité pour
   **chaque** matière scolaire, en plus des lignes du tableau.
 
+## Socle transverse FR (toutes matières)
+
+Domaines d'autorité valables quel que soit le sujet (repris de l'ancienne whitelist
+d'`eeat-framework.md`, désormais consolidée ici) :
+
+| Champ | Domaines |
+|---|---|
+| Éducation / programmes | eduscol.education.fr, education.gouv.fr |
+| Orientation / vie étudiante | onisep.fr, cned.fr, etudiant.gouv.fr, service-public.fr |
+| Santé (YMYL) | has-sante.fr, inserm.fr, ameli.fr, santepubliquefrance.fr |
+| Finance / droit (YMYL) | economie.gouv.fr, banque-france.fr, amf-france.org, legifrance.gouv.fr |
+| Sport / culture | sports.gouv.fr, culture.gouv.fr |
+| Statistiques | insee.fr, oecd.org |
+
 ## Sciences (maths, physique-chimie, SVT, informatique)
 
 | Matière | Domaines d'autorité prioritaires | Types de sources à viser | Pièges à éviter |
@@ -61,6 +75,7 @@ priorité ces domaines d'autorité au tier 2 (web), au lieu de chercher à l'ave
 | Arts appliqués | culture.gouv.fr, centrepompidou.fr, ina.fr, musées nationaux | institutions culturelles, fonds muséaux, archives | images/analyses sans attribution ni crédit |
 
 > Liste ouverte : ajouter une matière ou un domaine validé au fil des articles (tier 3 de
-> la cascade). Un domaine cité ici doit rester cohérent avec la whitelist transverse
-> (`edito-refresh/references/eeat-framework.md`) — pas de forum, pas de réseau social, pas
-> de Wikipédia.
+> la cascade). Un domaine cité ici doit respecter les types d'autorité transverses
+> (`edito-refresh/references/eeat-framework.md`) et ne jamais figurer dans la blacklist
+> (`recherche-sources/references/blacklisted-domains.md`) — pas de forum, pas de réseau
+> social, pas de Wikipédia.

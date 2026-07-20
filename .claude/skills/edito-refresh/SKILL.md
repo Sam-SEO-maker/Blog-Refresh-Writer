@@ -41,9 +41,10 @@ avant tout développement. Idem pour chaque question de FAQ (réponse 50-100 mot
 ## 3. Sources institutionnelles
 
 - **≥ 3 sources institutionnelles** citées avec lien (uniforme, tous tenants).
-- Whitelist d'autorité (éducation) : eduscol.education.fr, education.gouv.fr, onisep.fr,
-  cned.fr, has-sante.fr, inserm.fr, etudiant.gouv.fr, service-public.fr.
-  Liste complète et par domaine : `references/eeat-framework.md`.
+- Les **domaines d'autorité** sont un savoir **par marché/tenant**, pas transverse :
+  annuaire du tenant `tenants/{id}/sources/authority-map.md` (par matière + socle
+  transverse), consommé via la skill `recherche-sources`. Les *types* de domaines à
+  viser (gouvernemental, académique, statistique) : `references/eeat-framework.md`.
 - **Jamais de lien vers Wikipédia** (tous tenants) : citer la source primaire que
   Wikipédia agrège (étude, texte officiel, institution), jamais l'article encyclopédique.
   Wikipédia n'est pas une source d'autorité E-E-A-T et affaiblit le signal.

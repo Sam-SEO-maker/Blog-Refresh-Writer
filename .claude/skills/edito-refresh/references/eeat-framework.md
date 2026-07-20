@@ -33,18 +33,24 @@ Signaux : disclaimers transparents, méthodologie expliquée, dates visibles, so
 > Enseigna** (voir sa skill), ne pas l'inclure. Elle n'est prescrite pour aucun
 > tenant actuel par défaut.
 
-## Sources institutionnelles (whitelist par domaine)
-
-- **Éducation** : eduscol.education.fr, education.gouv.fr, onisep.fr, cned.fr, etudiant.gouv.fr, service-public.fr
-- **Santé** : has-sante.fr, inserm.fr, ameli.fr, santepubliquefrance.fr
-- **Finance/droit** : economie.gouv.fr, banque-france.fr, amf-france.org, legifrance.gouv.fr
-- **Sport/culture** : sports.gouv.fr, culture.gouv.fr
+## Sources institutionnelles (principe transverse)
 
 **Minimum : ≥ 3 sources institutionnelles citées avec lien** (uniforme, tous tenants).
 
+**Types de domaines à viser** (valable quel que soit le marché) :
+- **Gouvernemental / officiel** : ministères, agences publiques, autorités de régulation.
+- **Académique** : archives ouvertes, revues à comité de lecture, presses universitaires.
+- **Statistique** : institut national de statistiques, organismes internationaux (OCDE…).
+
+**Les domaines concrets sont un savoir par marché/tenant, pas transverse** : ils vivent
+dans l'annuaire du tenant `tenants/{id}/sources/authority-map.md` (par matière + socle
+transverse), consommé au tier 1 de la skill `recherche-sources`. Ne pas maintenir de
+liste de domaines ici. Domaines interdits (concurrents, agrégateurs) :
+`recherche-sources/references/blacklisted-domains.md`.
+
 **Jamais de lien vers Wikipédia** (tous tenants) : Wikipédia agrège des sources primaires
 sans être lui-même une autorité E-E-A-T. Remonter à la source qu'il cite (étude, texte
-officiel, institution de la whitelist ci-dessus) et lier celle-ci à la place.
+officiel, institution) et lier celle-ci à la place.
 
 ## YMYL (Your Money or Your Life)
 
