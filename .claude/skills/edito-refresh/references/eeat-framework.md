@@ -42,6 +42,10 @@ Signaux : disclaimers transparents, méthodologie expliquée, dates visibles, so
 
 **Minimum : ≥ 3 sources institutionnelles citées avec lien** (uniforme, tous tenants).
 
+**Jamais de lien vers Wikipédia** (tous tenants) : Wikipédia agrège des sources primaires
+sans être lui-même une autorité E-E-A-T. Remonter à la source qu'il cite (étude, texte
+officiel, institution de la whitelist ci-dessus) et lier celle-ci à la place.
+
 ## YMYL (Your Money or Your Life)
 
 Sujets impactant santé, finances ou bonheur du lecteur → niveau E-E-A-T élevé requis.

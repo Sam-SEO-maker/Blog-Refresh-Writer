@@ -167,6 +167,8 @@ Jamais : "la meilleure solution", "bien mieux que [concurrent]", lien direct ver
 
 **Raison** : Concurrents directs. Les articles les mentionnent pour comparaison, mais SANS lien.
 
+❌ **JAMAIS de lien vers Wikipédia** : lier la source primaire (étude, institution, texte officiel) que Wikipédia agrège, jamais l'article encyclopédique. Wikipédia n'est pas une source d'autorité.
+
 ---
 
 ## Rating System (Notation /10)
