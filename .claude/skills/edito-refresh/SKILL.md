@@ -44,6 +44,9 @@ avant tout développement. Idem pour chaque question de FAQ (réponse 50-100 mot
 - Whitelist d'autorité (éducation) : eduscol.education.fr, education.gouv.fr, onisep.fr,
   cned.fr, has-sante.fr, inserm.fr, etudiant.gouv.fr, service-public.fr.
   Liste complète et par domaine : `references/eeat-framework.md`.
+- **Jamais de lien vers Wikipédia** (tous tenants) : citer la source primaire que
+  Wikipédia agrège (étude, texte officiel, institution), jamais l'article encyclopédique.
+  Wikipédia n'est pas une source d'autorité E-E-A-T et affaiblit le signal.
 - **Pas de bloc « Sources » / bio auteur dans le HTML** : l'auteur et ses credentials
   sont gérés par WordPress (profil), hors du corps de l'article. (Exception format
   tenant : Superprof Ressources a son propre bloc Sources Gutenberg, voir sa skill.)
@@ -78,3 +81,12 @@ Réponse directe post-H2 → développement sourcé → citation d'expert → li
 Template de paragraphe et structure d'article complète : `references/geo-strategies.md`.
 La **structure d'ensemble** (blocs, ordre, intro) est définie par la skill du tenant,
 qui prime sur ce rappel.
+
+## 8. Structure du plan (renvoi)
+
+La **construction de l'outline** (mapping PAA→sections, placement des preuves, gap
+concurrentiel) et les **invariants de hiérarchie des titres** (≥ 3 H2, pas de H2/H3
+orphelin, 2-4 H3 par H2 au-delà de 150 mots, `?` sur les titres interrogatifs)
+vivent dans la skill dédiée **`seo-outline`**, invoquée à l'étape 2bis de `/refresh`
+avant la génération. Cette skill-ci porte le *fond* de chaque section ; `seo-outline`
+porte leur *agencement*.
