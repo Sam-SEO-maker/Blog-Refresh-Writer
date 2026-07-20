@@ -86,6 +86,7 @@ Internal linking → Sync.
 | `/refresh <url> --blog <id> --keyword ""` | Full refresh: audit → decision → source research → generation → `cw finalize` |
 | `/batch --action X --blog <id>` | Batch refresh from Google Sheets |
 | `/audit serp <url> --keyword ""` | Targeted SERP audit (PAA, SERP features, top 10). Always pass `--keyword`: without it the keyword is derived from the URL slug, so any typo or shorthand in the slug is queried verbatim and the SERP answers a keyword nobody searches |
+| `/plan-check <url> --blog <id>` | Validate the editorial outline (`content_plan.md`) against the SEO invariants — heading hierarchy, PAA coverage, proof placement. Deterministic (no generation). Verdict OK / A_CORRIGER before writing. Scaffold it first with `plan init` (CLI lays the file + injects signals; the agent fills the outline via the `seo-outline` skill) |
 | `/decide --blog <id>` | Data-driven decision engine (Sheet) |
 | `/market-status --site <id>` | GSC SEO status of a tenant (→ Sheet) |
 | `/blog --market <id>` | SEO performance of a blog via GSC MCP: totals + top KW (chat summary) |
@@ -103,6 +104,7 @@ Up-to-date list of groups/commands: `python3 content_writer.py --help` (and
 | Skill | Scope | When to invoke |
 |---|---|---|
 | `edito-refresh` | root (cross-cutting) | SEO/GEO/E-E-A-T ranking rules, applied to every article |
+| `seo-outline` | root (cross-cutting) | build the SEO/GEO editorial outline (content_plan.md) before writing — /refresh step 2bis |
 | `format-wordpress` | root (cross-cutting) | cross-cutting HTML/WP rules (accents, dash, anchors, lists) |
 | `recherche-sources <topic\|url>` | root (cross-cutting) | document a topic with verified sources (E-E-A-T brief) |
 | `generate-enseigna-avis` | `tenants/enseigna/` | write an Enseigna review article (ACF JSON, verdict at the end) |
@@ -122,6 +124,8 @@ reads `generation_prompt.txt`, writes the files, never returns HTML in the chat.
 - **Writing / format / forbidden things** → `format-wordpress` skill.
 - **SEO / GEO / E-E-A-T** (ranking, cross-cutting) → `edito-refresh` skill
   (`SKILL.md` + `references/{geo-strategies,eeat-framework,semantic-density}.md`).
+- **Building the outline before writing** (PAA→sections, proof placement, heading
+  hierarchy invariants) → `seo-outline` skill (`/refresh` step 2bis → `content_plan.md`).
 - **Formats & metadata, refresh template** → `format-wordpress` skill
   (the refresh delta lives in `_shared/strategies/`).
 - **Site-specific rules** → `tenants/{id}/prompts/site.md`.

@@ -20,6 +20,12 @@ les règles éditoriales du tenant, et **écrire directement les fichiers de sor
 
 - `generation_prompt.txt` : prompt composé (stratégie + site) avec les signaux
   GSC/SERP/PAA/intent déjà intégrés. **Lis-le en entier.**
+- `content_plan.md` : le **plan éditorial validé** (étape 2bis de `/refresh`) —
+  outline H2/H3 ↔ PAA ↔ intention, placement des sources/stats, gap concurrentiel,
+  assets à préserver/ajouter. **Rédige à partir de ce plan, section par section ;
+  ne le ré-invente pas.** Respecte ses invariants de structure (≥ 3 H2, pas de H2
+  ni H3 orphelin, 2-4 H3 par H2 au-delà de 150 mots, `?` sur les titres
+  interrogatifs — définis par la skill `seo-outline`).
 - Le **brief de sources vérifiées** (source → claim → url → année) issu de la
   skill `recherche-sources`.
 - `blog_id` (tenant) : détermine la skill de rédaction à charger.
@@ -77,7 +83,9 @@ mémoires de feedback.
 
 ## Déroulé
 
-1. Lis `generation_prompt.txt` + le brief de sources.
+1. Lis `generation_prompt.txt` + `content_plan.md` + le brief de sources. Le plan
+   fixe l'outline (H2/H3, PAA, placement des preuves) : rédige section par section
+   en le suivant, ne réorganise pas la structure validée.
 2. Charge (outil Skill), dans cet ordre, les **trois** skills — aucune n'est optionnelle :
    a. la skill de rédaction du tenant (`generation_skill` de tenant.json),
    b. **`edito-refresh`** (règles de ranking SEO/GEO/E-E-A-T),

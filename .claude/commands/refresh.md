@@ -51,12 +51,50 @@ web `WebSearch`/`WebFetch` / `deep-research`). Produire un brief structuré
 > Tant que `tenants/{tenant}/sources/` n'existe pas (Phase 4), la skill opère en
 > mode web seul.
 
+## Étape 2bis — Outline éditorial optimisé (artefact vérifiable)
+
+Avant de générer, produire un **outline traçable** dans `content_plan.md`. Objectif :
+vérifier la couverture **avant** de brûler les tokens de rédaction, et rendre la
+correction (si l'outline est mauvais) cent fois moins chère qu'une re-génération.
+
+**Scaffold déterministe** — poser d'abord le squelette au bon chemin, avec les
+signaux (PAA, mot-clé, intent, assets) injectés depuis `audit_data.json` :
+
+```bash
+python3 content_writer.py plan init <url> --blog <id>
+```
+
+Puis invoquer la skill **`seo-outline`** pour **remplir** cet outline (mapping
+PAA→sections, placement des preuves, gap top 10) à partir des signaux de
+`generation_prompt.txt` + le brief de sources. Le CLI a posé la structure ; l'agent
+rédige les H2/H3.
+
+La skill `seo-outline` porte le détail (mapping PAA→sections, placement des preuves,
+gap concurrentiel, invariants de titres : ≥ 3 H2, pas de H2/H3 orphelin, 2-4 H3 par
+H2 au-delà de 150 mots, `?` sur les titres interrogatifs).
+
+Une fois `content_plan.md` écrit, **le valider mécaniquement** (déterministe, zéro
+token) avant de générer :
+
+```bash
+python3 content_writer.py plan check <url> --blog <id>
+```
+
+- **OK** → passer à l'étape 3 ;
+- **A_CORRIGER** → corriger le plan selon les manquements listés (bon marché), puis
+  relancer `plan check`. Ne **pas** générer sur un plan `A_CORRIGER`.
+
+Le `content_plan.md` validé est une **entrée supplémentaire** transmise au subagent à
+l'étape 3 : il rédige *à partir de l'outline*, il ne le ré-invente pas.
+
 ## Étape 3 — Génération (subagent `content-generator`)
 
 Déléguer la rédaction au subagent **content-generator** (abonnement Max, jamais
 l'API payante) via l'outil Task. Lui transmettre :
 
 - le chemin `generation_prompt.txt` (contient déjà PAA, intent, SERP, mot-clé),
+- **le `content_plan.md` de l'étape 2bis** (outline validé : le subagent rédige à
+  partir de ce plan, section par section),
 - **le brief de sources vérifiées de l'étape 2** (à injecter dans le contenu et
   dans `eeat_sources`, pas d'invention),
 - le `blog_id` (pour charger la bonne skill de rédaction),
