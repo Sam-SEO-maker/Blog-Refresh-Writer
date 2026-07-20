@@ -25,6 +25,12 @@ dans les H2/H3. YMYL low.
 > `tenants/superprof-ressources/prompts/reference.md` (exemple HTML Gutenberg à imiter) +
 > `tenants/superprof-ressources/outputs/batches/REGEN_BRIEF.md` (brief réutilisable).
 
+**Connaissance pays FR** : `references/connaissance-fr.md` (à consulter au besoin) —
+système éducatif post-réforme 2021 (piège « Bac S/L/ES »), vocabulaire opérationnel,
+phrasés validés crédit d'impôt (jamais sur les matières loisir), profils d'audience,
+sources/auteurs/références culturelles FR, calendrier scolaire, intentions de
+mots-clés à écarter.
+
 ## Livrable
 
 `tenants/superprof-ressources/outputs/html/{batch}/{slug}_refreshed.gutenberg.html` —

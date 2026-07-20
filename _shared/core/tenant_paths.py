@@ -83,6 +83,15 @@ class TenantPaths:
         """`tenants/{id}/linking_maps/` — cartes de maillage du tenant."""
         return self.tenant_dir(tenant_id) / "linking_maps"
 
+    # --- Sources (annuaire d'autorité, tier 1 de recherche-sources) ----------
+    def sources_dir(self, tenant_id: str) -> Path:
+        """`tenants/{id}/sources/` — annuaire des domaines d'autorité du tenant.
+
+        Alimente le tier 1 de la skill `recherche-sources` (ex. `authority-map.md`,
+        mapping matière → domaines d'autorité). Absent chez les tenants sans annuaire.
+        """
+        return self.tenant_dir(tenant_id) / "sources"
+
     # --- Outputs --------------------------------------------------------------
     def output_dir(self, tenant_id: str) -> Path:
         """`tenants/{id}/outputs/` — dossier de sortie du tenant."""

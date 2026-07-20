@@ -53,6 +53,15 @@ Tout contenu (HTML **et** JSON) utilise les accents corrects (é è ê à ù ç 
 Jamais « ameliorer », « systeme », « debutant ». Un mot français sans accent est
 un **bug bloquant** à corriger avant livraison.
 
+## Typographie française — référence détaillée
+
+Mécanique complète du français dans `references/typographie-fr.md` (à lire pour
+toute rédaction FR) : **espaces insécables** avant `: ; ? ! % €` et dans les
+guillemets `« »`, apostrophe typographique `'`, formats de nombres/dates, casse
+(sentence case, langues/matières en minuscule), **écriture inclusive au point
+médian** (autorisée), **connecteurs IA à bannir** (« Il est important de noter
+que », « En outre »…) et anglicismes.
+
 ## Tiret cadratin interdit
 
 Ne jamais utiliser `—`. Pour les incises : virgules, parenthèses, ou tiret
