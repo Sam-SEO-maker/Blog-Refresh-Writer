@@ -386,7 +386,7 @@ Retourne l'article complet réécrit en HTML:
 ### E-E-A-T
 - Statistiques sourcées (2025-2026)
 - Citation d'expert avec credentials
-- Sources institutionnelles (eduscol, education.gouv, has-sante, inserm)
+- Sources institutionnelles (annuaire du tenant : tenants/{id}/sources/authority-map.md)
 
 ### GEO
 - Réponse directe en début de chaque H2
