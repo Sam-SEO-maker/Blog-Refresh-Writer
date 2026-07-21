@@ -15,7 +15,8 @@ from _shared.core.models import (
     HeadingStructure,
     HTMLAnalysisResult,
 )
-from _shared.core.constants import BLACKLIST_DOMAINS, SUPERPROF_DOMAIN
+from _shared.core.blacklist import is_blacklisted_url
+from _shared.core.constants import SUPERPROF_DOMAIN
 
 
 class HTMLAnalyzer:
@@ -218,7 +219,7 @@ class HTMLAnalyzer:
             link_type = self._classify_link(parsed.netloc)
 
             # Vérifier blacklist
-            is_blacklisted = any(bl in parsed.netloc for bl in BLACKLIST_DOMAINS)
+            is_blacklisted = is_blacklisted_url(full_href)
 
             # Trouver le H2 de contexte
             context_h2 = self._find_context_h2(html, match.start(), h2_list)

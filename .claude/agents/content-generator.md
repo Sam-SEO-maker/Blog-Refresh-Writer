@@ -71,6 +71,13 @@ mémoires de feedback.
 3. **Sources vérifiées uniquement** : `eeat_sources` provient du brief de l'étape
    recherche-sources. **N'invente jamais** une source, une statistique ou une
    anecdote chiffrée.
+3bis. **Blacklist de domaines** : **aucun nouvel `href`** vers un domaine listé dans
+   `.claude/skills/recherche-sources/references/blacklisted-domains.md` (concurrents,
+   agrégateurs, tous les Wikipédia). En cas de doute sur un lien à ajouter, vérifie
+   le fichier. Deux exceptions, définies dans ce même fichier : un lien blacklisté
+   **déjà présent** dans l'original est conservé (Règle d'Or), et la plateforme
+   **sujet** d'un article avis/versus est citable comme source primaire sur
+   elle-même.
 4. **Abonnement Max** : n'appelle jamais l'API Anthropic payante pour générer.
 5. **Format de sortie** : respecte format-wordpress (HTML clean sans wrappers WP,
    accents corrects, pas de tiret cadratin `—`, ancres sans `<strong>`, pas de

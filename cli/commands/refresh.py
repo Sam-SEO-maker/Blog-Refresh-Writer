@@ -57,6 +57,9 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
     - Préparation contexte + prompt de génération
     """
     import traceback
+    from datetime import datetime
+
+    refresh_started_at = datetime.now()
 
     click.echo(f"\n{'='*70}")
     click.echo(f"🔄 REFRESH URL")
@@ -162,6 +165,15 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
             row=row,
             extraction_result=fetch_result,
             ytg_data=ytg_data,
+        )
+
+        # Point de départ du chrono pipeline complet (refresh → finalize) : lu et
+        # affiché par `cw finalize` en fin de chaîne. Écrit APRÈS la préparation
+        # du contexte (sinon l'archivage de la passe précédente l'emporterait).
+        import json as _json
+        (context_dir / "timing.json").write_text(
+            _json.dumps({"refresh_started_at": refresh_started_at.isoformat()}),
+            encoding="utf-8",
         )
 
         # Compose generation prompt via ghostwriter

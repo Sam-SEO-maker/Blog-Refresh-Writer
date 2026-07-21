@@ -48,6 +48,9 @@ def finalize(url, blog_id, html_file, title, article_type, keyword, guide_id, ap
 
     URL de l'article, --blog le tenant, --html-file le HTML brut généré.
     """
+    import time
+    finalize_t0 = time.perf_counter()
+
     base = Path.cwd()
     html_path = Path(html_file)
     if not html_path.is_absolute():
@@ -101,6 +104,7 @@ def finalize(url, blog_id, html_file, title, article_type, keyword, guide_id, ap
         click.echo("\n❌ Verdict BLOQUE — arrêt. Sur-optimisation grave : "
                    "revue humaine requise, pas de re-génération automatique.")
         click.echo("   Maillage NON appliqué (article non finalisable en l'état).")
+        _echo_timers(base, url, finalize_t0)
         return
 
     # -------------------------------------------------------------------
@@ -121,7 +125,42 @@ def finalize(url, blog_id, html_file, title, article_type, keyword, guide_id, ap
                    "les termes signalés puis relancer `finalize` (boucle, cap 2-3).")
     else:
         click.echo("✅ FINALIZE OK — article prêt (contenu + verdict YTG + liens).")
+    _echo_timers(base, url, finalize_t0)
     click.echo(f"{'='*70}")
+
+
+def _echo_timers(base: Path, url: str, finalize_t0: float) -> None:
+    """Affiche la durée du finalize et, si disponible, celle du pipeline complet.
+
+    Le départ du pipeline (`refresh_started_at`) est écrit par `cw refresh` dans
+    `_shared/context/{slug}/timing.json`. Absent (finalize rejoué seul, contexte
+    archivé…) → seule la durée du finalize est affichée.
+    """
+    import time
+    from datetime import datetime
+
+    click.echo(f"⏱ Finalize : {_fmt_duration(time.perf_counter() - finalize_t0)}")
+
+    try:
+        from scripts.audit.ytg_qc import url_to_context_slug
+        timing_path = (base / "_shared" / "context"
+                       / url_to_context_slug(url) / "timing.json")
+        started = json.loads(timing_path.read_text(encoding="utf-8"))["refresh_started_at"]
+        total = (datetime.now() - datetime.fromisoformat(started)).total_seconds()
+        click.echo(f"⏱ Pipeline complet (refresh → finalize) : {_fmt_duration(total)}")
+    except Exception:
+        pass  # pas de timing.json exploitable — durée totale omise
+
+
+def _fmt_duration(seconds: float) -> str:
+    """65.3 → '1m 05s' ; 42.1 → '42.1s'."""
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    minutes, secs = divmod(int(round(seconds)), 60)
+    if minutes < 60:
+        return f"{minutes}m {secs:02d}s"
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours}h {minutes:02d}m {secs:02d}s"
 
 
 def _maybe_publish(base: Path, blog_id: str, url: str, url_slug: str, saved: Path,
@@ -216,8 +255,22 @@ def _validate_assets(base: Path, blog_id: str, url: str, html: str, saved: Path)
     if not original_assets["counts"]:
         return "counts baseline vides — validation ignorée."
 
+    # HTML original du contexte : délimite les violations blacklist (delta —
+    # seuls les liens blacklistés ajoutés sont supprimables, jamais l'existant).
+    original_html_path = audit_path.parent / "original.html"
+    original_content = None
+    if original_html_path.exists():
+        try:
+            original_content = original_html_path.read_text(encoding="utf-8")
+        except Exception:
+            original_content = None
+
     am = AssetManager()
-    result = am.validate(original_assets=original_assets, new_content=html)
+    result = am.validate(
+        original_assets=original_assets,
+        new_content=html,
+        original_content=original_content,
+    )
     if getattr(result, "is_valid", True):
         return "✓ assets préservés (après ≥ avant)."
 

@@ -1561,6 +1561,29 @@ class RefreshOrchestrator:
 
         return results
 
+    @staticmethod
+    def _archive_previous_context(context_dir: Path) -> Optional[Path]:
+        """Archive le contenu d'une passe précédente dans _archive/{timestamp}/.
+
+        Relancer `cw refresh` sur une URL déjà traitée ne doit jamais détruire le
+        contexte précédent (audit, prompt, plan, brief de sources) : tout ce qui
+        n'est pas déjà dans `_archive/` est déplacé vers un sous-dossier horodaté.
+        Retourne le dossier d'archive créé, ou None si le contexte était vierge.
+        """
+        import shutil
+
+        entries = [p for p in context_dir.iterdir() if p.name != "_archive"] \
+            if context_dir.exists() else []
+        if not entries:
+            return None
+
+        archive_dir = context_dir / "_archive" / datetime.now().strftime("%Y%m%d_%H%M%S")
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        for entry in entries:
+            shutil.move(str(entry), str(archive_dir / entry.name))
+        print(f"[CONTEXT] Passe précédente archivée → {archive_dir}")
+        return archive_dir
+
     def _prepare_context_for_claude_code(self, original_html: str, action: str, row, extraction_result: dict = None, ytg_data: dict = None) -> Path:
         """
         Prépare les fichiers de contexte pour Claude Code.
@@ -1593,6 +1616,12 @@ class RefreshOrchestrator:
         # Create context directory
         context_dir = Path("_shared/context") / url_slug
         context_dir.mkdir(parents=True, exist_ok=True)
+
+        # Un refresh précédent a laissé un contexte ? L'archiver AVANT d'écrire
+        # (une relance sur la même URL ne doit jamais écraser la passe d'avant).
+        # Les fichiers courants gardent leurs noms canoniques (audit_data.json,
+        # generation_prompt.txt…), lus en dur par finalize/ytg_qc/plan.
+        self._archive_previous_context(context_dir)
 
         # Save original HTML
         html_file = context_dir / "original.html"
@@ -2125,7 +2154,8 @@ class RefreshOrchestrator:
                         # Validate using correct API
                         validation = self.asset_manager.validate(
                             original_assets=original_assets,
-                            new_content=refreshed_html
+                            new_content=refreshed_html,
+                            original_content=extraction_result["full_html"],
                         )
 
                         if not validation.is_valid:

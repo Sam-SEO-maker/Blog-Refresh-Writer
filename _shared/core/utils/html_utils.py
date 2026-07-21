@@ -10,7 +10,8 @@ from typing import Optional
 from urllib.parse import urljoin, urlparse
 
 from ..models.audit_models import ImageAsset, LinkAsset, CTABlock
-from ..constants import BLACKLIST_DOMAINS, SUPERPROF_DOMAIN
+from ..blacklist import is_blacklisted_url
+from ..constants import SUPERPROF_DOMAIN
 
 
 def extract_images(
@@ -108,7 +109,7 @@ def extract_links(
         link_type = classify_link(parsed.netloc, domain)
 
         # Vérifier blacklist
-        is_blacklisted = any(bl in parsed.netloc for bl in BLACKLIST_DOMAINS)
+        is_blacklisted = is_blacklisted_url(full_href)
 
         # Trouver le H2 de contexte
         context_h2 = find_context_h2(html, match.start(), h2_list)

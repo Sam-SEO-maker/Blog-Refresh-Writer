@@ -8,6 +8,13 @@ Lance le refresh de l'URL fournie en séquençant la chaîne du workflow :
 récupération contenu → GSC → SERP/PAA → user intent → décision →
 **recherche sources** → génération → (QC YTG / maillage en Phase 3bis).
 
+> 🚫 **Règle non négociable — blacklist AVANT tout fetch web.** Lire
+> `.claude/skills/recherche-sources/references/blacklisted-domains.md` **avant le
+> premier WebFetch/WebSearch** de la session (résultats SERP compris). Un domaine
+> blacklisté n'est jamais fetché, jamais retenu dans un top N, jamais cité — le tri
+> se fait a priori, pas après curation. Exceptions (liens existants = Règle d'Or,
+> article avis dont le sujet EST la plateforme) : voir le fichier blacklist.
+
 ## Étape 1 — Récupération + audit + décision déterministes (CLI `cw`)
 
 Exécute :

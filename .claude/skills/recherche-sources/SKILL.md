@@ -32,6 +32,23 @@ tier 1, elle ne le remplace pas.
 > (tier 3, l'agent propose → l'humain valide). Sans annuaire pour un tenant donné, la
 > skill opère en mode « web seul » (tier 2-3) et amorce l'annuaire au passage.
 
+## Étape 0 — Charger la blacklist (obligatoire, AVANT toute recherche)
+
+**Lire `references/blacklisted-domains.md` en entier avant le moindre WebSearch,
+WebFetch ou appel deep-research.** Garder la liste en mémoire de travail pour toute
+la session et l'appliquer **a priori** :
+
+- Un domaine blacklisté n'est **jamais fetché** ni retenu comme candidat — il est
+  écarté dès la lecture de la SERP ou des résultats de recherche, pas après coup.
+- Ne jamais empaqueter un « top N » de résultats sans l'avoir d'abord passé au
+  crible de la blacklist : le tri se fait **avant** la curation, pas après.
+- En **batch / multi-articles** : re-vérifier la blacklist au début de **chaque
+  article** (relire le fichier ou re-résumer ses catégories) — la contrainte ne
+  doit jamais sortir de la mémoire de travail entre deux itérations.
+
+Les deux exceptions (Règle d'Or sur l'existant, article avis dont le sujet EST la
+plateforme) sont définies dans `references/blacklisted-domains.md` et prévalent.
+
 ## Recherche en cascade (3 tiers)
 
 ### Tier 1 — Annuaire des domaines d'autorité (prioritaire)
@@ -57,6 +74,9 @@ primaires du champ). Choisir l'outil selon le besoin :
   date, une source primaire précise).
 
 Bonnes pratiques de requête :
+- **Blacklist d'abord** (étape 0 déjà faite) : un résultat SERP/WebSearch appartenant
+  à un domaine blacklisté est **ignoré sans être fetché** ; chercher immédiatement
+  une alternative non blacklistée.
 - **Restreindre au domaine d'autorité** de l'annuaire (`site:insee.fr`,
   `site:hal.science`) plutôt qu'une recherche ouverte.
 - **Cibler la page précise** (deep-link) qui porte l'information, jamais la homepage.
@@ -101,9 +121,12 @@ rempli et flux d'injection** : `references/brief-schema.md`.
   vérifiable ne s'écrit pas (cf. Preuves d'Expérience E-E-A-T : ne pas fabriquer
   d'anecdotes chiffrées).
 - ❌ **Retenir Wikipédia comme source** dans le brief — [[feedback-no-wikipedia-links]].
-- ❌ **Citer/lier un domaine blacklisté** (concurrents, agrégateurs) : filtrer chaque
-  candidat des tiers 2-3 contre `references/blacklisted-domains.md` ; sans alternative,
-  abandonner la claim (→ `lacunes[]`) plutôt que citer un domaine interdit.
+- ❌ **Citer/lier un domaine blacklisté** (concurrents, agrégateurs) : l'exclusion se
+  joue **a priori** (étape 0 : blacklist chargée avant toute recherche, candidats
+  écartés avant fetch). Le filtrage du brief final contre
+  `references/blacklisted-domains.md` reste un **filet de sécurité**, pas le
+  mécanisme principal ; sans alternative, abandonner la claim (→ `lacunes[]`)
+  plutôt que citer un domaine interdit.
 - ❌ « Consulté le [date] » dans les références restituées — [[feedback-no-consulte-le]].
 - ❌ Tiret cadratin `—` — [[feedback-no-em-dash]].
 

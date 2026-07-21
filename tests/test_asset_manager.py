@@ -66,10 +66,54 @@ class TestAssetManager:
             "superprof_link": {"href": "https://superprof.fr", "anchor": "SP"},
             "counts": {"images": 0, "internal_links": 0, "superprof_links": 1},
         }
-        validation = self.manager.validate(original_assets, sample_html_blacklisted)
+        validation = self.manager.validate(
+            original_assets, sample_html_blacklisted,
+            original_content="<html><body><p>Original sans lien.</p></body></html>",
+        )
         violations = " ".join(validation.blacklist_violations).lower()
         assert "acadomia.fr" in violations
         assert "kelprof.com" in violations
+
+    def test_blacklist_delta_preserves_preexisting(self, sample_html_blacklisted):
+        """Un lien blacklisté DÉJÀ présent dans l'original n'est pas une violation
+        (Règle d'Or : jamais de suppression de lien existant, même concurrent)."""
+        original_assets = {
+            "images": [], "internal_links": [], "external_links": [],
+            "superprof_link": {"href": "https://superprof.fr", "anchor": "SP"},
+            "counts": {"images": 0, "internal_links": 0, "superprof_links": 1},
+        }
+        # L'original contient déjà les mêmes liens blacklistés que le nouveau.
+        validation = self.manager.validate(
+            original_assets, sample_html_blacklisted,
+            original_content=sample_html_blacklisted,
+        )
+        assert validation.blacklist_violations == []
+        # Ils remontent en warning informatif, jamais en erreur.
+        assert any("Règle d'Or" in w for w in validation.warnings)
+
+    def test_blacklist_without_original_never_removes(self, sample_html_blacklisted):
+        """Sans HTML original, impossible de délimiter les ajouts : aucune
+        violation (donc aucune suppression), tout part en warning."""
+        original_assets = {
+            "images": [], "internal_links": [], "external_links": [],
+            "superprof_link": {"href": "https://superprof.fr", "anchor": "SP"},
+            "counts": {"images": 0, "internal_links": 0, "superprof_links": 1},
+        }
+        validation = self.manager.validate(original_assets, sample_html_blacklisted)
+        assert validation.blacklist_violations == []
+
+    def test_remove_blacklisted_links_targets_only_violations(self):
+        """_remove_blacklisted_links ne touche que les hosts en violation."""
+        content = (
+            '<p><a href="https://acadomia.fr/x">Acadomia</a> et '
+            '<a href="https://fr.wikipedia.org/wiki/Japon">Wikipédia</a> et '
+            '<a href="https://www.insee.fr/stat">INSEE</a></p>'
+        )
+        cleaned = self.manager._remove_blacklisted_links(content, ["acadomia.fr"])
+        assert "acadomia.fr" not in cleaned
+        assert "Acadomia" in cleaned  # le texte de l'ancre reste
+        assert 'href="https://fr.wikipedia.org/wiki/Japon"' in cleaned
+        assert 'href="https://www.insee.fr/stat"' in cleaned
 
     def test_assets_counts(self, sample_html):
         """Test comptage des assets."""
@@ -176,7 +220,10 @@ class TestAssetValidation:
             "counts": {"images": 0, "internal_links": 0, "superprof_links": 1},
         }
 
-        validation = self.manager.validate(original_assets, sample_html_blacklisted)
+        validation = self.manager.validate(
+            original_assets, sample_html_blacklisted,
+            original_content="<html><body><p>Original sans lien.</p></body></html>",
+        )
 
         assert len(validation.blacklist_violations) == 2
 

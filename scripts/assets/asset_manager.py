@@ -8,7 +8,8 @@ import re
 from typing import Optional
 
 from _shared.core.models import AssetValidationResult
-from _shared.core.constants import BLACKLIST_DOMAINS, SUPERPROF_DOMAIN
+from _shared.core.blacklist import is_blacklisted_url, url_host
+from _shared.core.constants import SUPERPROF_DOMAIN
 from _shared.core.utils.year_updater import YearUpdater
 
 
@@ -253,7 +254,7 @@ class AssetManager:
             return "superprof"
         elif href.startswith('/') or href.startswith('#'):
             return "internal"
-        elif any(domain in href_lower for domain in BLACKLIST_DOMAINS):
+        elif is_blacklisted_url(href):
             return "blacklisted"
         elif href.startswith('http'):
             return "external"
@@ -263,7 +264,8 @@ class AssetManager:
     def validate(
         self,
         original_assets: dict,
-        new_content: str
+        new_content: str,
+        original_content: Optional[str] = None,
     ) -> AssetValidationResult:
         """
         Valide que les assets sont préservés dans le nouveau contenu.
@@ -273,6 +275,11 @@ class AssetManager:
         Args:
             original_assets: Assets extraits de l'original
             new_content: Nouveau contenu HTML
+            original_content: HTML original (délimite les violations blacklist :
+                seuls les liens blacklistés AJOUTÉS sont des violations — un lien
+                blacklisté déjà présent dans l'original est protégé par la Règle
+                d'Or et n'est jamais touché). Sans original, aucune suppression :
+                les liens blacklistés détectés partent en warning.
 
         Returns:
             AssetValidationResult avec les détails de validation
@@ -300,8 +307,10 @@ class AssetManager:
         cta_superprof_original = [c for c in cta_blocks_original if c.get("type") == "superprof_button"]
         cta_superprof_new = [c for c in cta_blocks_new if c.get("type") == "superprof_button"]
 
-        # Vérifier les violations de blacklist
-        blacklist_violations = self._check_blacklist(new_content)
+        # Vérifier les violations de blacklist (delta : ajouts uniquement)
+        blacklist_violations, blacklist_preexisting = self._check_blacklist(
+            new_content, original_content
+        )
 
         # Validations
         images_valid = images_new >= images_original
@@ -329,7 +338,15 @@ class AssetManager:
             errors.append(f"Trop de liens Superprof: {superprof_count} (exactement 1 requis)")
 
         if blacklist_violations:
-            errors.append(f"Liens blacklistés détectés: {', '.join(blacklist_violations)}")
+            errors.append(
+                f"Liens blacklistés AJOUTÉS (absents de l'original): "
+                f"{', '.join(blacklist_violations)}"
+            )
+        if blacklist_preexisting:
+            warnings.append(
+                f"Domaines blacklistés présents mais non délimitables ou préexistants "
+                f"(conservés — Règle d'Or): {', '.join(blacklist_preexisting)}"
+            )
 
         if not cta_superprof_valid:
             warnings.append("CTA Superprof stylé absent (était présent dans l'original)")
@@ -376,15 +393,39 @@ class AssetManager:
             cta_blocks_preserved=len(cta_blocks_new),
         )
 
-    def _check_blacklist(self, content: str) -> list[str]:
-        """Vérifie la présence de liens blacklistés."""
-        violations = []
+    def _blacklisted_hosts_in(self, content: str) -> set[str]:
+        """Hosts blacklistés parmi les href des <a> du contenu."""
+        hosts = set()
+        for href in re.findall(r'<a[^>]+href=["\']([^"\']+)["\']', content, re.I):
+            if is_blacklisted_url(href):
+                hosts.add(url_host(href))
+        return hosts
 
-        for domain in BLACKLIST_DOMAINS:
-            if domain in content.lower():
-                violations.append(domain)
+    def _check_blacklist(
+        self, content: str, original_content: Optional[str] = None
+    ) -> tuple[list[str], list[str]]:
+        """Vérifie les liens blacklistés en DELTA vs l'original.
 
-        return violations
+        Un lien blacklisté n'est une violation que s'il a été AJOUTÉ : un domaine
+        blacklisté déjà lié dans l'original est protégé (Règle d'Or : ne jamais
+        supprimer un lien existant, même vers un concurrent ; un article avis dont
+        le sujet est la plateforme la lie légitimement).
+
+        Returns:
+            (violations, preexisting) : hosts ajoutés (erreur, supprimables) et
+            hosts préexistants ou non délimitables (warning, jamais touchés).
+        """
+        new_hosts = self._blacklisted_hosts_in(content)
+        if not new_hosts:
+            return [], []
+
+        if original_content is None:
+            # Sans original, impossible de distinguer ajout et existant :
+            # ne RIEN supprimer, tout remonte en warning.
+            return [], sorted(new_hosts)
+
+        original_hosts = self._blacklisted_hosts_in(original_content)
+        return sorted(new_hosts - original_hosts), sorted(new_hosts & original_hosts)
 
     def restore_missing_assets(
         self,
@@ -430,9 +471,12 @@ class AssetManager:
                 if cta.get("required", False) and cta.get("type") == "superprof_button":
                     restored_content = self._restore_cta_block(restored_content, cta)
 
-        # Supprimer les liens blacklistés
+        # Supprimer les liens blacklistés AJOUTÉS (delta uniquement — jamais un
+        # lien présent dans l'original, cf. _check_blacklist)
         if validation_result.blacklist_violations:
-            restored_content = self._remove_blacklisted_links(restored_content)
+            restored_content = self._remove_blacklisted_links(
+                restored_content, validation_result.blacklist_violations
+            )
 
         return restored_content
 
@@ -579,14 +623,26 @@ class AssetManager:
         # Fallback: ajouter à la fin
         return content + f"\n\n{superprof_link['html']}\n"
 
-    def _remove_blacklisted_links(self, content: str) -> str:
-        """Supprime les liens vers des domaines blacklistés."""
-        for domain in BLACKLIST_DOMAINS:
-            # Pattern pour supprimer le lien mais garder le texte
-            pattern = rf'<a[^>]*href=["\'][^"\']*{re.escape(domain)}[^"\']*["\'][^>]*>(.*?)</a>'
-            content = re.sub(pattern, r'\1', content, flags=re.I | re.S)
+    def _remove_blacklisted_links(self, content: str, violation_hosts: list[str]) -> str:
+        """Supprime UNIQUEMENT les liens des hosts en violation (ajouts).
 
-        return content
+        Ne reçoit que les violations delta de `_check_blacklist` : un lien
+        blacklisté préexistant dans l'original n'arrive jamais ici (Règle d'Or).
+        Le texte de l'ancre est conservé, seul le tag <a> saute.
+        """
+        if not violation_hosts:
+            return content
+        targets = set(violation_hosts)
+
+        def _strip_if_violation(match: re.Match) -> str:
+            if url_host(match.group(1)) in targets:
+                return match.group(2)
+            return match.group(0)
+
+        return re.sub(
+            r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',
+            _strip_if_violation, content, flags=re.I | re.S,
+        )
 
     def generate_assets_report(
         self,
