@@ -226,29 +226,58 @@ def aggregate_by_page(rows: list[dict]) -> list[list]:
     return out
 
 
-def _ensure_tab(service, spreadsheet_id: str, title: str):
-    """Crée l'onglet s'il n'existe pas."""
+def _ensure_tab(service, spreadsheet_id: str, title: str) -> dict:
+    """Crée l'onglet s'il n'existe pas. Retourne ses properties (sheetId, gridProperties…)."""
     meta = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
-    existing = {s["properties"]["title"] for s in meta.get("sheets", [])}
-    if title in existing:
-        return
-    service.spreadsheets().batchUpdate(
+    for s in meta.get("sheets", []):
+        if s["properties"]["title"] == title:
+            return s["properties"]
+    resp = service.spreadsheets().batchUpdate(
         spreadsheetId=spreadsheet_id,
         body={"requests": [{"addSheet": {"properties": {"title": title}}}]},
     ).execute()
+    return resp["replies"][0]["addSheet"]["properties"]
 
 
 def _write_tab(service, spreadsheet_id: str, title: str, headers: list[str], rows: list[list]):
-    _ensure_tab(service, spreadsheet_id, title)
+    props = _ensure_tab(service, spreadsheet_id, title)
     # Clear
     service.spreadsheets().values().clear(
         spreadsheetId=spreadsheet_id,
         range=f"{title}!A:Z",
         body={},
     ).execute()
+    values = [headers] + rows
+    # La grille doit précéder l'écriture : update ne l'étend pas au-delà du rowCount.
+    # On serre aussi le columnCount : 385k lignes × 26 colonnes par défaut
+    # frôlent le plafond Sheets de 10M cellules par spreadsheet.
+    # En deux requêtes ordonnées (colonnes PUIS lignes) : l'API valide la hausse
+    # de rowCount contre le columnCount courant, d'où un faux dépassement sinon.
+    grid = props.get("gridProperties", {})
+    resize_requests = []
+    if grid.get("columnCount", 0) != len(headers):
+        resize_requests.append({"updateSheetProperties": {
+            "properties": {
+                "sheetId": props["sheetId"],
+                "gridProperties": {"columnCount": len(headers)},
+            },
+            "fields": "gridProperties.columnCount",
+        }})
+    if grid.get("rowCount", 0) != len(values):
+        resize_requests.append({"updateSheetProperties": {
+            "properties": {
+                "sheetId": props["sheetId"],
+                "gridProperties": {"rowCount": len(values)},
+            },
+            "fields": "gridProperties.rowCount",
+        }})
+    for req in resize_requests:
+        service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={"requests": [req]},
+        ).execute()
     # Write par chunks : une requête unique dépasse le timeout HTTP au-delà
     # de ~100k lignes (vu sur GSC_KW_Raw superprof.fr-ressources, 385k lignes).
-    values = [headers] + rows
     chunk_size = 50000
     for start in range(0, len(values), chunk_size):
         chunk = values[start:start + chunk_size]
