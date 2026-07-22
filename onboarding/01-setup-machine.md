@@ -101,10 +101,14 @@ cp .env.example .env   # creates .env from the template; open .env.example first
 > variable name and that the value is your WP password, and let it write the file rather
 > than showing the secret back in the conversation.
 
-Now open the new `.env` in VS Code (`Cmd/Ctrl+P`, type `.env`) and set:
+Now open the new `.env` in VS Code (`Cmd/Ctrl+P`, type `.env`) and fill in the two
+shared credentials from the **welcome kit** the maintainer sent you (no kit yet?
+ask Sam — see [the maintainer checklist](maintainer-checklist.md)):
 
-- **DataForSEO** (`DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD`) — **shared account**,
-  ask Sam if values needed. Paste them and you're done.
+- **DataForSEO** (`DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD`) — shared account,
+  powers the SERP analysis.
+- **YourTextGuru** (`YTG_NEW_API_KEY`) — shared key, powers the semantic guides
+  and the post-generation QC.
 - **Google Search Console** — **nothing to do.** GSC data for `superprof.*` properties
   comes through the **shared Superprof MCP server** (`gsc-remote`, already declared in
   [`.mcp.json`](../.mcp.json)); Claude Code starts it automatically and the

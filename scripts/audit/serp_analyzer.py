@@ -87,6 +87,14 @@ class SERPAnalyzer:
 
     def _init_direct_api(self):
         """Initialise les credentials pour l'API directe DataforSEO."""
+        # 1) Variables d'environnement (.env) — parcours onboarding standard.
+        login = os.environ.get("DATAFORSEO_LOGIN", "")
+        password = os.environ.get("DATAFORSEO_PASSWORD", "")
+        if login and password and login != "your_login_here":
+            credentials = f"{login}:{password}"
+            self._api_credentials = base64.b64encode(credentials.encode()).decode()
+            return
+        # 2) Fallback : fichier de credentials JSON.
         if DATAFORSEO_CREDENTIALS_PATH.exists():
             try:
                 with open(DATAFORSEO_CREDENTIALS_PATH) as f:
