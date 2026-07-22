@@ -15,8 +15,8 @@
 
 set -euo pipefail
 
-REPO_URL="https://github.com/Sam-SEO-maker/content-writer.git"
-REPO_DIR="content-writer"
+REPO_URL="https://github.com/Sam-SEO-maker/Blog-Refresh-Writer.git"
+REPO_DIR="Blog-Refresh-Writer"
 
 SITE_SLUG="${1:-}"
 if [[ -z "$SITE_SLUG" ]]; then

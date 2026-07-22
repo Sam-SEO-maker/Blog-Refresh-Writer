@@ -6,7 +6,7 @@ steps in order.
 
 ## 1. Prerequisites
 
-- A **GitHub account** with access to the `content-writer` repository. Ask the
+- A **GitHub account** with access to the `Blog-Refresh-Writer` repository. Ask the
   maintainer (**@Sam-SEO-maker**) to invite you if you can't see it.
 - Admin rights to install software on your machine.
 
@@ -51,21 +51,22 @@ shared engine plus your site. From an empty folder where you keep your projects:
 
 ```bash
 # Get the script (one-off download), then run it with your site id:
-curl -fsSL https://raw.githubusercontent.com/Sam-SEO-maker/content-writer/main/onboarding/scripts/setup_sparse.sh -o setup_sparse.sh
+curl -fsSL https://raw.githubusercontent.com/Sam-SEO-maker/Blog-Refresh-Writer/main/onboarding/scripts/setup_sparse.sh -o setup_sparse.sh
 bash setup_sparse.sh <site-slug>
-cd content-writer
+cd Blog-Refresh-Writer
 ```
 
 This clones the repo, enables sparse-checkout, and materialises the engine +
 `sites/<site-slug>/`. The other sites are never written to your disk. Open this
-`content-writer` folder in VS Code (*File → Open Folder*).
+`Blog-Refresh-Writer` folder in VS Code (*File → Open Folder*).
 
-> If your site folder doesn't exist yet, that's expected — you'll create it in
-> [02 — Onboard my site](02-onboard-my-site.md). The engine is enough to continue.
+> If your site folder (`Blog-Refresh-Writer/sites/<site-slug>`) doesn't exist yet,
+> that's expected — you'll create it in [02 — Onboard my site](02-onboard-my-site.md).
+> The engine is enough to continue.
 
 ## 6. Create the Python environment and install dependencies
 
-In VS Code's terminal, inside the `content-writer` folder:
+In VS Code's terminal, inside the `Blog-Refresh-Writer` folder:
 
 ```bash
 python3 -m venv .venv

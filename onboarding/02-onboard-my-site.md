@@ -31,6 +31,10 @@ and a ressources site, the ressources slug appends its real URL segment
 (e.g. `superprof.es-apuntes`, `superprof.de-lernplattform`). A `[x]` means the site is
 already onboarded.
 
+> The list is long (~96 sites). Easiest way: ask Claude Code in plain language —
+> *"find superprof for (country) in the site list"* — it runs the command and filters
+> the output for you.
+
 ## 2. Scaffold your site
 
 ```bash
@@ -178,7 +182,7 @@ blank canvas, not a pattern to copy. Want to see a fully worked example? Ask the
 maintainer.
 
 > **What's already on your machine vs what you create.** The **cross-cutting** skills
-> (`edito-refresh`, `format-wordpress`, `recherche-sources`) and the **slash commands**
+> (`edito-refresh`, `format-wordpress`, `source-research`) and the **slash commands**
 > (`/refresh`, `/audit`, `/batch`, …) live at the repo root under `.claude/`, which is
 > part of the shared engine — they're already on your disk and working, **you don't
 > install or recreate them**. The only skill you create is **your own** writing (and
