@@ -1,5 +1,5 @@
 """
-Commandes YourTextGuru (YTG).
+YourTextGuru (YTG) commands.
 
 Usage:
     cw ytg create-guide --main-keyword "bienfaits yoga"
@@ -21,29 +21,29 @@ from scripts.audit.ytg_analyzer import YTGAnalyzer, YTGAPIError, YTGGuideTimeout
 
 @click.group()
 def ytg():
-    """Gestion des guides sémantiques YourTextGuru."""
+    """YourTextGuru semantic guide management."""
     pass
 
 
 @ytg.command(name='create-guide')
 @click.option('--main-keyword', '--keyword', 'keyword', required=True,
               help='Main keyword for the guide. --keyword = legacy alias.')
-@click.option('--lang', default='fr', show_default=True, help='Langue (fr, en, ...)')
-@click.option('--country', default='fr', show_default=True, help='Pays (fr, us, ...)')
+@click.option('--lang', default='fr', show_default=True, help='Language (fr, en, ...)')
+@click.option('--country', default='fr', show_default=True, help='Country (fr, us, ...)')
 def create_guide(keyword, lang, country):
     """
-    Crée un guide YTG pour un mot-clé et attend le résultat.
+    Creates a YTG guide for a keyword and waits for the result.
 
-    Affiche le guide_id, les scores SOSEO/DSEO concurrents et la liste
-    des termes à optimiser.
+    Shows the guide_id, the competitors' SOSEO/DSEO scores and the list
+    of terms to optimize.
     """
-    click.echo(f"\n[YTG] Création guide pour : '{keyword}'")
-    click.echo(f"      Langue: {lang} | Pays: {country}\n")
+    click.echo(f"\n[YTG] Creating guide for: '{keyword}'")
+    click.echo(f"      Language: {lang} | Country: {country}\n")
 
     analyzer = YTGAnalyzer()
     if not analyzer.is_configured:
         click.echo(
-            "[ERREUR] YTG_API_KEY manquant. Ajouter dans .env ou "
+            "[ERROR] YTG_API_KEY missing. Add it to .env or "
             "~/.credentials/ytg/credentials.json",
             err=True
         )
@@ -52,17 +52,17 @@ def create_guide(keyword, lang, country):
     try:
         result = analyzer.create_and_wait(keyword, language=lang, country=country)
         if not result:
-            click.echo("[ERREUR] Création du guide échouée.", err=True)
+            click.echo("[ERROR] Guide creation failed.", err=True)
             sys.exit(1)
 
         click.echo(f"Guide ID   : {result.guide_id}")
-        click.echo(f"Statut     : {result.status}")
+        click.echo(f"Status     : {result.status}")
         click.echo()
-        click.echo("Scores concurrents :")
-        click.echo(f"  TOP 3  — SOSEO: {result.top3_soseo:.1f}%  DSEO: {result.top3_dseo:.1f}%")
-        click.echo(f"  TOP 10 — SOSEO: {result.top10_soseo:.1f}%  DSEO: {result.top10_dseo:.1f}%")
+        click.echo("Competitor scores:")
+        click.echo(f"  TOP 3  - SOSEO: {result.top3_soseo:.1f}%  DSEO: {result.top3_dseo:.1f}%")
+        click.echo(f"  TOP 10 - SOSEO: {result.top10_soseo:.1f}%  DSEO: {result.top10_dseo:.1f}%")
         click.echo()
-        click.echo(f"Termes à optimiser ({len(result.semantic_terms)}) :")
+        click.echo(f"Terms to optimize ({len(result.semantic_terms)}):")
 
         # Grouper par couleur
         by_color = {"blue": [], "green": [], "orange": [], "red": []}
@@ -70,78 +70,78 @@ def create_guide(keyword, lang, country):
             by_color.get(term.color, by_color["green"]).append(term.term)
 
         if by_color["blue"]:
-            click.echo(f"  Sous-optimisés (bleu)  : {', '.join(by_color['blue'][:15])}")
+            click.echo(f"  Under-optimized (blue) : {', '.join(by_color['blue'][:15])}")
         if by_color["orange"]:
-            click.echo(f"  Forte optim. (orange)  : {', '.join(by_color['orange'][:15])}")
+            click.echo(f"  Heavily optim. (orange): {', '.join(by_color['orange'][:15])}")
         if by_color["red"]:
-            click.echo(f"  En surdose (rouge)     : {', '.join(by_color['red'][:15])}")
+            click.echo(f"  Overdosed (red)        : {', '.join(by_color['red'][:15])}")
         if by_color["green"]:
-            click.echo(f"  Normal (vert)          : {', '.join(by_color['green'][:15])}")
+            click.echo(f"  Normal (green)         : {', '.join(by_color['green'][:15])}")
 
         click.echo()
         click.echo(
-            f"[OK] Guide pret. Ajouter dans audit_data.json : "
+            f"[OK] Guide ready. Add to audit_data.json: "
             f'"ytg_guide_id": "{result.guide_id}"'
         )
 
     except YTGAPIError as e:
-        click.echo(f"[ERREUR API] {e}", err=True)
+        click.echo(f"[API ERROR] {e}", err=True)
         sys.exit(1)
     except YTGGuideTimeoutError as e:
-        click.echo(f"[TIMEOUT] Guide non pret apres {e.attempts} tentatives.", err=True)
-        click.echo(f"Reessayer plus tard : cw ytg check-guide --guide-id {e.guide_id}")
+        click.echo(f"[TIMEOUT] Guide not ready after {e.attempts} attempts.", err=True)
+        click.echo(f"Retry later: cw ytg check-guide --guide-id {e.guide_id}")
         sys.exit(1)
 
 
 @ytg.command(name='check-guide')
-@click.option('--guide-id', required=True, help='ID du guide YTG à vérifier')
+@click.option('--guide-id', required=True, help='ID of the YTG guide to check')
 def check_guide(guide_id):
-    """Vérifie le statut d'un guide YTG existant."""
-    click.echo(f"\n[YTG] Vérification guide : {guide_id}\n")
+    """Checks the status of an existing YTG guide."""
+    click.echo(f"\n[YTG] Checking guide: {guide_id}\n")
 
     analyzer = YTGAnalyzer()
     if not analyzer.is_configured:
-        click.echo("[ERREUR] YTG_API_KEY manquant.", err=True)
+        click.echo("[ERROR] YTG_API_KEY missing.", err=True)
         sys.exit(1)
 
     try:
         raw = analyzer.get_guide_status(guide_id)
         if not raw:
-            click.echo("[ERREUR] Impossible de récupérer le guide.", err=True)
+            click.echo("[ERROR] Could not fetch the guide.", err=True)
             sys.exit(1)
 
         status = raw.get("status") or raw.get("data", {}).get("status", "?")
-        click.echo(f"Statut : {status}")
+        click.echo(f"Status: {status}")
 
         if status == "ready":
             result = analyzer.get_guide(guide_id)
             if result:
                 click.echo(f"TOP 3  SOSEO: {result.top3_soseo:.1f}%  DSEO: {result.top3_dseo:.1f}%")
                 click.echo(f"TOP 10 SOSEO: {result.top10_soseo:.1f}%  DSEO: {result.top10_dseo:.1f}%")
-                click.echo(f"Termes      : {len(result.semantic_terms)}")
+                click.echo(f"Terms       : {len(result.semantic_terms)}")
                 if result.semantic_terms:
-                    click.echo(f"Apercu      : {', '.join(result.semantic_terms[:10])}...")
+                    click.echo(f"Preview     : {', '.join(result.semantic_terms[:10])}...")
         else:
-            click.echo("Guide pas encore prêt. Relancer dans quelques minutes.")
+            click.echo("Guide not ready yet. Retry in a few minutes.")
     except YTGAPIError as e:
-        click.echo(f"[ERREUR API] {e}", err=True)
+        click.echo(f"[API ERROR] {e}", err=True)
         sys.exit(1)
 
 
 @ytg.command(name='list-guides')
-@click.option('--lang', default=None, help='Filtrer par langue (ex: fr)')
-@click.option('--status', default=None, help='Filtrer par statut (ready, in_progress, ...)')
+@click.option('--lang', default=None, help='Filter by language (e.g. fr)')
+@click.option('--status', default=None, help='Filter by status (ready, in_progress, ...)')
 def list_guides(lang, status):
     """
-    Liste les guides YTG dans le groupe thematic-websites.
+    Lists the YTG guides in the thematic-websites group.
 
-    Permet de vérifier les guides existants avant d'en créer de nouveaux.
+    Lets you check the existing guides before creating new ones.
     """
-    click.echo(f"\n[YTG] Liste des guides (groupId={YTGAnalyzer.DEFAULT_GROUP_ID})\n")
+    click.echo(f"\n[YTG] Guide list (groupId={YTGAnalyzer.DEFAULT_GROUP_ID})\n")
 
     analyzer = YTGAnalyzer()
     if not analyzer.is_configured:
-        click.echo("[ERREUR] YTG_API_KEY manquant.", err=True)
+        click.echo("[ERROR] YTG_API_KEY missing.", err=True)
         sys.exit(1)
 
     try:
@@ -150,10 +150,10 @@ def list_guides(lang, status):
             status=status,
         )
         if not guides:
-            click.echo("Aucun guide trouvé.")
+            click.echo("No guide found.")
             return
 
-        click.echo(f"{'ID':<12} {'Statut':<14} {'Langue':<8} {'Query'}")
+        click.echo(f"{'ID':<12} {'Status':<14} {'Lang':<8} {'Query'}")
         click.echo("-" * 70)
         for g in guides:
             gid = str(g.get("id", "?"))
@@ -169,50 +169,50 @@ def list_guides(lang, status):
             query = str(g.get("query", g.get("keyword", "?")))
             click.echo(f"{gid:<12} {gstatus:<14} {glang:<8} {query}")
 
-        click.echo(f"\nTotal : {len(guides)} guide(s)")
+        click.echo(f"\nTotal: {len(guides)} guide(s)")
     except YTGAPIError as e:
-        click.echo(f"[ERREUR API] {e}", err=True)
+        click.echo(f"[API ERROR] {e}", err=True)
         sys.exit(1)
 
 
 @ytg.command(name='batch-prefetch')
 @click.option('--spreadsheet-id', required=True, help='Google Sheet ID')
 @blog_option()
-@click.option('--lang', default='fr', show_default=True, help='Langue des guides')
-@click.option('--country', default='fr', show_default=True, help='Pays des guides')
+@click.option('--lang', default='fr', show_default=True, help='Language of the guides')
+@click.option('--country', default='fr', show_default=True, help='Country of the guides')
 @click.option('--create-missing', is_flag=True, default=False,
-              help='Créer les guides manquants (sinon: match uniquement)')
+              help='Create the missing guides (otherwise: match only)')
 def batch_prefetch(spreadsheet_id, blog, lang, country, create_missing):
     """
-    Match la colonne D du spreadsheet (main_keyword) avec les guides YTG existants.
+    Matches column D of the spreadsheet (main_keyword) with the existing YTG guides.
 
-    1. Télécharge TOUS les guides YTG du groupe en une seule passe
-    2. Lit le spreadsheet (col D = main_keyword) pour chaque URL
-    3. Mappe localement : main_keyword == YTG query
-    4. Pour chaque match → écrit ytg_guide_id dans audit_data.json
-    5. Avec --create-missing : crée les guides absents
+    1. Downloads ALL the group's YTG guides in a single pass
+    2. Reads the spreadsheet (col D = main_keyword) for each URL
+    3. Maps locally: main_keyword == YTG query
+    4. For each match → writes ytg_guide_id into audit_data.json
+    5. With --create-missing: creates the missing guides
 
-    A lancer AVANT cw batch audit-serp pour que le STEP 2.5 soit
-    un cache hit (< 1s) et n'impacte pas le temps du workflow principal.
+    Run it BEFORE cw batch audit-serp so that STEP 2.5 is a cache hit
+    (< 1s) and does not impact the main workflow's runtime.
     """
     import glob
     from scripts.sheets.sheets_client import SheetsClient
 
-    click.echo(f"\n[YTG] Batch prefetch — matching col D vs guides YTG")
+    click.echo(f"\n[YTG] Batch prefetch - matching col D vs YTG guides")
     if blog:
         click.echo(f"Blog: {blog}")
     click.echo()
 
     analyzer = YTGAnalyzer()
     if not analyzer.is_configured:
-        click.echo("[ERREUR] YTG_API_KEY manquant.", err=True)
+        click.echo("[ERROR] YTG_API_KEY missing.", err=True)
         sys.exit(1)
 
     # ÉTAPE 1 : Télécharger TOUS les guides YTG en une seule passe
-    click.echo("[1/3] Téléchargement des guides YTG...")
+    click.echo("[1/3] Downloading YTG guides...")
     all_guides = analyzer.list_guides_all()
     query_index = analyzer.build_query_index(all_guides)
-    click.echo(f"      {len(all_guides)} guides téléchargés, index prêt")
+    click.echo(f"      {len(all_guides)} guides downloaded, index ready")
     click.echo()
 
     # ÉTAPE 2 : Lire les onglets RÉELS du blog pour récupérer les main_keywords.
@@ -221,13 +221,13 @@ def batch_prefetch(spreadsheet_id, blog, lang, country, create_missing):
     # "A ajouter" ; Superprof → "New Growing List".
     from scripts.audit.keyword_resolver import _SHEET_LAYOUT, _norm_url
 
-    click.echo("[2/3] Lecture des onglets réels du blog...")
+    click.echo("[2/3] Reading the site's real tabs...")
     if not blog:
-        click.echo("[ERREUR] --site est requis (onglets réels différents par blog).", err=True)
+        click.echo("[ERROR] --site is required (real tabs differ per site).", err=True)
         sys.exit(1)
     layout = _SHEET_LAYOUT.get(blog)
     if not layout:
-        click.echo(f"[ERREUR] Aucun layout d'onglet connu pour le blog '{blog}'.", err=True)
+        click.echo(f"[ERROR] No known tab layout for site '{blog}'.", err=True)
         sys.exit(1)
 
     sheets = SheetsClient(spreadsheet_id=spreadsheet_id)
@@ -237,7 +237,7 @@ def batch_prefetch(spreadsheet_id, blog, lang, country, create_missing):
         try:
             data = sheets._read_sheet(tab)
         except Exception as e:
-            click.echo(f"  [WARN] onglet '{tab}' illisible: {e}")
+            click.echo(f"  [WARN] tab '{tab}' unreadable: {e}")
             continue
         if not data:
             continue
@@ -259,11 +259,11 @@ def batch_prefetch(spreadsheet_id, blog, lang, country, create_missing):
                 "row_idx": i,
             })
 
-    click.echo(f"      {len(sheet_rows)} URLs avec main_keyword")
+    click.echo(f"      {len(sheet_rows)} URLs with a main_keyword")
     click.echo()
 
     # ÉTAPE 3 : Matching local + mise à jour audit_data.json
-    click.echo("[3/3] Matching et mise à jour audit_data.json...")
+    click.echo("[3/3] Matching and updating audit_data.json...")
     context_dir = Path.cwd() / "_shared" / "context"
 
     matched = 0
@@ -310,17 +310,17 @@ def batch_prefetch(spreadsheet_id, blog, lang, country, create_missing):
                         _save_ytg_to_audit(audit_file, audit_data, result, url, row["site_slug"])
                         click.echo(
                             f"  [MATCH] {kw[:45]:<45} → guide {guide_id} "
-                            f"({len(result.semantic_terms)} termes)"
+                            f"({len(result.semantic_terms)} terms)"
                         )
                         matched += 1
                     else:
-                        click.echo(f"  [WAIT]  {kw[:45]} guide {guide_id} pas encore prêt")
+                        click.echo(f"  [WAIT]  {kw[:45]} guide {guide_id} not ready yet")
                         missing += 1
                 except Exception as e:
                     click.echo(f"  [ERR]   {kw[:45]}: {e}", err=True)
                     failed += 1
             else:
-                click.echo(f"  [WAIT]  {kw[:45]} guide {guide_id} en cours de génération")
+                click.echo(f"  [WAIT]  {kw[:45]} guide {guide_id} still generating")
                 missing += 1
         else:
             # Pas de guide existant
@@ -331,28 +331,28 @@ def batch_prefetch(spreadsheet_id, blog, lang, country, create_missing):
                     if result:
                         _save_ytg_to_audit(audit_file, audit_data, result, url, row["site_slug"])
                         click.echo(
-                            f"           OK — guide {result.guide_id} "
-                            f"({len(result.semantic_terms)} termes, "
-                            f"SOSEO cible={result.top3_soseo:.0f}%)"
+                            f"           OK - guide {result.guide_id} "
+                            f"({len(result.semantic_terms)} terms, "
+                            f"target SOSEO={result.top3_soseo:.0f}%)"
                         )
                         created += 1
                     else:
                         failed += 1
                 except (YTGAPIError, YTGGuideTimeoutError) as e:
-                    click.echo(f"           ERREUR: {e}", err=True)
+                    click.echo(f"           ERROR: {e}", err=True)
                     failed += 1
             else:
-                click.echo(f"  [MISS]  {kw[:45]} — aucun guide (utiliser --create-missing)")
+                click.echo(f"  [MISS]  {kw[:45]} - no guide (use --create-missing)")
                 missing += 1
 
     click.echo()
-    click.echo("[YTG] Résumé :")
-    click.echo(f"  Matchés (maj audit_data) : {matched}")
-    click.echo(f"  Déjà en cache            : {already_cached}")
+    click.echo("[YTG] Summary:")
+    click.echo(f"  Matched (audit_data updated): {matched}")
+    click.echo(f"  Already cached              : {already_cached}")
     if create_missing:
-        click.echo(f"  Créés                    : {created}")
-    click.echo(f"  Sans guide               : {missing}")
-    click.echo(f"  Erreurs                  : {failed}")
+        click.echo(f"  Created                     : {created}")
+    click.echo(f"  Without guide               : {missing}")
+    click.echo(f"  Errors                      : {failed}")
 
 
 def _find_audit_file(context_dir: Path, url: str) -> Optional[Path]:
@@ -421,22 +421,22 @@ def _save_ytg_to_audit(
 
 
 @ytg.command(name='analyze')
-@click.option('--guide-id', required=True, help='ID du guide YTG')
+@click.option('--guide-id', required=True, help='YTG guide ID')
 @click.option('--html-file', required=True, type=click.Path(exists=True),
-              help='Fichier HTML à analyser')
+              help='HTML file to analyze')
 def analyze(guide_id, html_file):
     """
-    Analyse un fichier HTML contre un guide YTG existant.
+    Analyzes an HTML file against an existing YTG guide.
 
-    Affiche le SOSEO et DSEO obtenus pour notre contenu,
-    comparés aux moyennes TOP 3/TOP 10.
+    Shows the SOSEO and DSEO obtained for our content,
+    compared to the TOP 3/TOP 10 averages.
     """
-    click.echo(f"\n[YTG] Analyse contenu contre guide {guide_id}")
-    click.echo(f"      Fichier: {html_file}\n")
+    click.echo(f"\n[YTG] Analyzing content against guide {guide_id}")
+    click.echo(f"      File: {html_file}\n")
 
     analyzer = YTGAnalyzer()
     if not analyzer.is_configured:
-        click.echo("[ERREUR] YTG_API_KEY manquant.", err=True)
+        click.echo("[ERROR] YTG_API_KEY missing.", err=True)
         sys.exit(1)
 
     # Lire le contenu HTML et en extraire le texte
@@ -447,16 +447,16 @@ def analyze(guide_id, html_file):
         soup = BeautifulSoup(html, "html.parser")
         text = soup.get_text(separator=" ", strip=True)
     except Exception as e:
-        click.echo(f"[ERREUR] Lecture fichier: {e}", err=True)
+        click.echo(f"[ERROR] File read: {e}", err=True)
         sys.exit(1)
 
     try:
         result = analyzer.analyze_content(guide_id, text)
         if not result:
-            click.echo("[ERREUR] Analyse échouée.", err=True)
+            click.echo("[ERROR] Analysis failed.", err=True)
             sys.exit(1)
 
-        click.echo(f"Notre contenu  — SOSEO: {result.get('our_soseo', 0):.1f}%  "
+        click.echo(f"Our content    - SOSEO: {result.get('our_soseo', 0):.1f}%  "
                    f"DSEO: {result.get('our_dseo', 0):.1f}%")
 
         colors = result.get("term_colors", {})
@@ -466,14 +466,14 @@ def analyze(guide_id, html_file):
             orange = [t for t, c in colors.items() if c == "orange"]
             click.echo()
             if blue:
-                click.echo(f"Sous-optimises (bleu)  : {', '.join(blue[:10])}")
+                click.echo(f"Under-optimized (blue) : {', '.join(blue[:10])}")
             if orange:
-                click.echo(f"Forte optim.  (orange) : {', '.join(orange[:10])}")
+                click.echo(f"Heavily optim. (orange): {', '.join(orange[:10])}")
             if red:
-                click.echo(f"En surdose    (rouge)  : {', '.join(red[:10])}")
+                click.echo(f"Overdosed (red)        : {', '.join(red[:10])}")
 
     except YTGAPIError as e:
-        click.echo(f"[ERREUR API] {e}", err=True)
+        click.echo(f"[API ERROR] {e}", err=True)
         sys.exit(1)
 
 
@@ -489,7 +489,7 @@ def _load_blog_ytg_config(site_slug: str) -> dict:
     from _shared.core.site_paths import SitePaths
     cfg_path = SitePaths(base_path=base).site_config(site_slug)
     if not cfg_path.exists():
-        click.echo(f"[ERREUR] Config blog introuvable: {cfg_path}", err=True)
+        click.echo(f"[ERROR] Site config not found: {cfg_path}", err=True)
         sys.exit(1)
     with open(cfg_path, encoding="utf-8") as f:
         return json.load(f).get("ytg", {}) or {}
@@ -517,24 +517,24 @@ def _infer_url_from_html_path(site_slug: str, path) -> str:
 
 @ytg.command(name='qc')
 @blog_option(required=True, dest='site_slug')
-@click.option('--slug', default='', help='Filtrer sur un slug d\'article précis')
+@click.option('--slug', default='', help='Filter on a specific article slug')
 @click.option('--main-keyword', '--keyword', 'keyword', default='',
               help='Forced main keyword (overrides the resolver). Requires --slug '
                    '(a single article): the YTG guide is created/resolved on this keyword. '
                    '--keyword = alias legacy.')
 @click.option('--fix', is_flag=True, default=False,
-              help='Signaler les articles NEEDS_FIX pour correction ciblée (corrector)')
+              help='Flag NEEDS_FIX articles for targeted correction (corrector)')
 @click.option('--json-out', 'json_out', is_flag=True, default=False,
-              help='Écrire le rapport récap dans _shared/outputs/{blog}/ytg_qc_report.json')
+              help='Write the summary report to _shared/outputs/{blog}/ytg_qc_report.json')
 def qc(site_slug, slug, keyword, fix, json_out):
     """
-    QC sémantique YTG sur les HTML générés d'un blog, AVANT intégration WP.
+    YTG semantic QC on a site's generated HTML, BEFORE WP integration.
 
-    Pour chaque article :
-      1. Résout le mot-clé principal (Notion / Sheet / GSC / slug).
-      2. Résout ou crée le guide YTG.
-      3. Analyse le HTML → SOSEO/DSEO vs cibles TOP3.
-      4. Rend un verdict : OPTIMAL / NEEDS_FIX / BLOCKED / SKIP.
+    For each article:
+      1. Resolves the main keyword (Notion / Sheet / GSC / slug).
+      2. Resolves or creates the YTG guide.
+      3. Analyzes the HTML → SOSEO/DSEO vs TOP3 targets.
+      4. Returns a verdict: OPTIMAL / NEEDS_FIX / BLOCKED / SKIP.
     """
     from scripts.audit.ytg_qc import (
         YTGQualityCheck,
@@ -548,17 +548,17 @@ def qc(site_slug, slug, keyword, fix, json_out):
 
     ytg_cfg = _load_blog_ytg_config(site_slug)
     if ytg_cfg.get("enabled") is False:
-        click.echo(f"[YTG QC] Désactivé pour '{site_slug}' (ytg.enabled=false). Rien à faire.")
+        click.echo(f"[YTG QC] Disabled for '{site_slug}' (ytg.enabled=false). Nothing to do.")
         return
 
     analyzer = YTGAnalyzer()
     if not analyzer.is_configured:
-        click.echo("[ERREUR] YTG_API_KEY manquant.", err=True)
+        click.echo("[ERROR] YTG_API_KEY missing.", err=True)
         sys.exit(1)
 
     files = discover_generated_html(site_slug, slug_filter=slug)
     if not files:
-        click.echo(f"[YTG QC] Aucun HTML généré trouvé pour '{site_slug}'"
+        click.echo(f"[YTG QC] No generated HTML found for '{site_slug}'"
                    + (f" (slug '{slug}')" if slug else "") + ".")
         return
 
@@ -567,13 +567,13 @@ def qc(site_slug, slug, keyword, fix, json_out):
     keyword = (keyword or "").strip()
     if keyword and len(files) != 1:
         click.echo(
-            f"[ERREUR] --main-keyword nécessite de cibler un seul article "
-            f"(utilise --slug). {len(files)} fichiers correspondent actuellement.",
+            f"[ERROR] --main-keyword requires targeting a single article "
+            f"(use --slug). {len(files)} files currently match.",
             err=True,
         )
         sys.exit(1)
 
-    click.echo(f"\n[YTG QC] {site_slug} — {len(files)} article(s) à analyser\n")
+    click.echo(f"\n[YTG QC] {site_slug} - {len(files)} article(s) to analyze\n")
 
     qc_engine = YTGQualityCheck(analyzer=analyzer, rate_limiter=RateLimiter())
     counts = {VERDICT_OPTIMAL: 0, VERDICT_NEEDS_FIX: 0, VERDICT_BLOCKED: 0, VERDICT_SKIP: 0}
@@ -601,21 +601,21 @@ def qc(site_slug, slug, keyword, fix, json_out):
         }.get(res.verdict, "[?]    ")
         click.echo(f"{icon} {path.stem[:50]:<50} {res.verdict}  {res.message}")
         if res.verdict == VERDICT_NEEDS_FIX and res.under_optimized_terms:
-            click.echo(f"         à enrichir: {', '.join(res.under_optimized_terms[:8])}")
+            click.echo(f"         to enrich: {', '.join(res.under_optimized_terms[:8])}")
         if res.verdict == VERDICT_NEEDS_FIX and res.over_optimized_terms:
-            click.echo(f"         à réduire : {', '.join(res.over_optimized_terms[:8])}")
+            click.echo(f"         to reduce: {', '.join(res.over_optimized_terms[:8])}")
         if res.verdict == VERDICT_NEEDS_FIX:
             to_fix.append(res)
 
     click.echo()
-    click.echo("[YTG QC] Résumé :")
+    click.echo("[YTG QC] Summary:")
     click.echo(f"  OPTIMAL    : {counts[VERDICT_OPTIMAL]}")
     click.echo(f"  NEEDS_FIX : {counts[VERDICT_NEEDS_FIX]}")
     click.echo(f"  BLOCKED     : {counts[VERDICT_BLOCKED]}")
     click.echo(f"  SKIP       : {counts[VERDICT_SKIP]}")
     if ytg_cfg.get("gate"):
-        click.echo(f"  [GATE actif] {counts[VERDICT_NEEDS_FIX] + counts[VERDICT_BLOCKED]} article(s) "
-                   "à revoir avant push WP.")
+        click.echo(f"  [GATE active] {counts[VERDICT_NEEDS_FIX] + counts[VERDICT_BLOCKED]} article(s) "
+                   "to review before WP push.")
 
     if json_out:
         from _shared.core.site_paths import SitePaths
@@ -623,12 +623,12 @@ def qc(site_slug, slug, keyword, fix, json_out):
         out = SitePaths(base_path=_root).output_dir(site_slug) / "ytg_qc_report.json"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-        click.echo(f"\n[YTG QC] Rapport écrit: {out}")
+        click.echo(f"\n[YTG QC] Report written: {out}")
 
     if fix and to_fix:
         from scripts.audit.ytg_autocorrect import YTGAutoCorrector
 
-        click.echo(f"\n[YTG QC] --fix : préparation de {len(to_fix)} correction(s)…")
+        click.echo(f"\n[YTG QC] --fix: preparing {len(to_fix)} correction(s)...")
         autocorrector = YTGAutoCorrector(
             site_slug, analyzer=analyzer, rate_limiter=RateLimiter()
         )
@@ -644,17 +644,17 @@ def qc(site_slug, slug, keyword, fix, json_out):
         ]
         tasks = autocorrector.prepare(items)
         if not tasks:
-            click.echo("[YTG QC] Aucune tâche de correction préparée (analyse par terme KO).")
+            click.echo("[YTG QC] No correction task prepared (per-term analysis failed).")
             return
 
         from _shared.core.site_paths import SitePaths
         manifest = (SitePaths(base_path=Path(__file__).resolve().parent.parent.parent)
                     .output_dir(site_slug) / "ytg_fix_manifest.json")
-        click.echo(f"[YTG QC] {len(tasks)} tâche(s) de correction prête(s).")
-        click.echo(f"[YTG QC] Manifest : {manifest}")
+        click.echo(f"[YTG QC] {len(tasks)} correction task(s) ready.")
+        click.echo(f"[YTG QC] Manifest: {manifest}")
         click.echo(
-            "[YTG QC] La correction est appliquée par les sub-agents Claude Code "
-            "(plan Max) : chaque sub-agent lit son prompt, réécrit le HTML et écrit "
-            "le `_corrected.html` sur disque. La re-validation (assets + SOSEO/DSEO) "
-            "est ensuite automatique via YTGAutoCorrector.revalidate()."
+            "[YTG QC] The correction is applied by the Claude Code sub-agents "
+            "(Max plan): each sub-agent reads its prompt, rewrites the HTML and writes "
+            "the `_corrected.html` to disk. Re-validation (assets + SOSEO/DSEO) "
+            "is then automatic via YTGAutoCorrector.revalidate()."
         )

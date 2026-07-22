@@ -1,5 +1,5 @@
 """
-Commandes d'indexation.
+Indexing commands.
 
 Usage:
     cw indexing request --site enseigna.fr [--spreadsheet-id <ID>]
@@ -18,7 +18,7 @@ from _shared.config.sites import SITE_CONFIGS
 
 @click.group()
 def indexing():
-    """Gestion de l'indexation Google."""
+    """Google indexing management."""
     pass
 
 
@@ -27,80 +27,80 @@ def indexing():
 @click.option('--spreadsheet-id', required=True, help='Google Sheet ID')
 def request(blog, spreadsheet_id):
     """
-    Demande d'indexation pour URLs avec status 'CONTENT DONE'.
+    Indexing request for URLs with status 'CONTENT DONE'.
 
-    Utilise l'API Google Indexing pour forcer l'indexation.
+    Uses the Google Indexing API to force indexing.
     """
-    click.echo(f"\n📤 DEMANDE INDEXATION")
+    click.echo(f"\n📤 INDEXING REQUEST")
     click.echo(f"Blog: {blog}")
     click.echo()
 
     # Get blog config
     site_config = SITE_CONFIGS.get(blog)
     if not site_config:
-        click.echo(f"❌ Blog ID inconnu: {blog}", err=True)
+        click.echo(f"❌ Unknown site slug: {blog}", err=True)
         raise click.Abort()
 
     gsc_property = site_config.get("gsc_property")
 
     # Get URLs with status = CONTENT DONE
-    click.echo("[1/2] Lecture spreadsheet...")
+    click.echo("[1/2] Reading spreadsheet...")
     sheets_client = SheetsClient(spreadsheet_id)
     rows = sheets_client.read_pending_for_refresh(action=None, site_slug=blog)
     urls_to_index = [row.blogpost_url for row in rows if row.status == "CONTENT DONE"]
 
     if not urls_to_index:
-        click.echo("  ℹ Aucune URL avec status 'CONTENT DONE' à indexer")
+        click.echo("  ℹ No URL with status 'CONTENT DONE' to index")
         return
 
-    click.echo(f"  ✓ {len(urls_to_index)} URLs à indexer")
+    click.echo(f"  ✓ {len(urls_to_index)} URLs to index")
 
     # Request indexing
-    click.echo("[2/2] Demande indexation Google...")
+    click.echo("[2/2] Requesting Google indexing...")
     requester = IndexingRequester(gsc_property)
 
     try:
         results = requester.batch_request_indexing(urls_to_index, delay=2.0)
 
-        click.echo(f"\n📊 RÉSULTATS:")
+        click.echo(f"\n📊 RESULTS:")
         click.echo(f"  Total:          {results['total']}")
-        click.echo(f"  Succès:         {results['success']}")
-        click.echo(f"  Échecs:         {results['failed']}")
-        click.echo(f"  Quota dépassé:  {results['quota_exceeded']}")
+        click.echo(f"  Succeeded:      {results['success']}")
+        click.echo(f"  Failed:         {results['failed']}")
+        click.echo(f"  Quota exceeded: {results['quota_exceeded']}")
 
         if results['failed'] > 0:
-            click.echo(f"\n  ⚠ Échecs (premiers 5):")
+            click.echo(f"\n  ⚠ Failures (first 5):")
             for error in results.get('errors', [])[:5]:
                 click.echo(f"    - {error}")
 
         if results['success'] > 0:
-            click.echo(f"\n✅ {results['success']} URLs soumises à l'indexation")
+            click.echo(f"\n✅ {results['success']} URLs submitted for indexing")
         else:
-            click.echo(f"\n❌ Aucune URL indexée avec succès")
+            click.echo(f"\n❌ No URL successfully indexed")
 
     except Exception as e:
-        click.echo(f"\n❌ ERREUR: {str(e)}", err=True)
+        click.echo(f"\n❌ ERROR: {str(e)}", err=True)
         raise click.Abort()
 
 
 @indexing.command()
 @blog_option(required=True)
-@click.option('--limit', type=int, default=100, help='Limite du nombre d\'URLs à scanner')
+@click.option('--limit', type=int, default=100, help='Maximum number of URLs to scan')
 def scan(blog, limit):
     """
-    Scan indexation status pour toutes les URLs du blog.
+    Scans the indexing status of every URL of the site.
 
-    Vérifie via GSC API quelles URLs sont indexées.
+    Checks via the GSC API which URLs are indexed.
     """
-    click.echo(f"\n🔍 SCAN INDEXATION")
+    click.echo(f"\n🔍 INDEXING SCAN")
     click.echo(f"Blog:  {blog}")
     click.echo(f"Limit: {limit}")
     click.echo()
 
-    click.echo("⚠ Fonctionnalité à implémenter:")
-    click.echo("  1. Récupérer toutes les URLs du blog depuis spreadsheet")
-    click.echo("  2. Vérifier status indexation via GSC API")
-    click.echo("  3. Générer rapport (indexé, non-indexé, erreurs)")
+    click.echo("⚠ Feature to implement:")
+    click.echo("  1. Fetch every URL of the site from the spreadsheet")
+    click.echo("  2. Check the indexing status via the GSC API")
+    click.echo("  3. Generate a report (indexed, not indexed, errors)")
 
 
 @indexing.command(name='bulk-diagnostic')
@@ -108,11 +108,11 @@ def scan(blog, limit):
 @click.option('--spreadsheet-id', required=True, help='Google Sheet ID')
 def bulk_diagnostic(blog, spreadsheet_id):
     """
-    Diagnostic bulk indexation.
+    Bulk indexing diagnostic.
 
-    Exécute scripts/indexing/bulk_index_diagnostic.py
+    Runs scripts/indexing/bulk_index_diagnostic.py
     """
-    click.echo(f"\n🔍 DIAGNOSTIC BULK INDEXATION")
+    click.echo(f"\n🔍 BULK INDEXING DIAGNOSTIC")
     click.echo(f"Blog: {blog}")
     click.echo()
 
@@ -120,14 +120,14 @@ def bulk_diagnostic(blog, spreadsheet_id):
         from scripts.indexing.bulk_index_diagnostic import main as bulk_diagnostic_main
 
         # Run diagnostic
-        click.echo("Exécution diagnostic...")
+        click.echo("Running diagnostic...")
         bulk_diagnostic_main()
 
-        click.echo(f"\n✅ Diagnostic terminé")
+        click.echo(f"\n✅ Diagnostic done")
 
     except ImportError:
-        click.echo(f"❌ Module bulk_index_diagnostic non trouvé", err=True)
+        click.echo(f"❌ Module bulk_index_diagnostic not found", err=True)
         raise click.Abort()
     except Exception as e:
-        click.echo(f"\n❌ ERREUR: {str(e)}", err=True)
+        click.echo(f"\n❌ ERROR: {str(e)}", err=True)
         raise click.Abort()

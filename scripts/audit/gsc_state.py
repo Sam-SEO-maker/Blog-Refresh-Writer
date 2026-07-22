@@ -174,14 +174,14 @@ def run_gsc_state(
 
     print(f"[gsc-state] {site_id}: pull GSC ({gsc_property}, {months}m, top {top_pos})")
     raw = fetch_gsc_keywords(gsc_property, months=months)
-    print(f"[gsc-state] {len(raw)} rows brutes")
+    print(f"[gsc-state] {len(raw)} raw rows")
 
     # Filtre top N + impressions min
     filtered = [
         r for r in raw
         if 0 < r["position"] <= top_pos and r["impressions"] >= min_impressions
     ]
-    print(f"[gsc-state] {len(filtered)} rows après filtre (pos<={top_pos}, impr>={min_impressions})")
+    print(f"[gsc-state] {len(filtered)} rows after filter (pos<={top_pos}, impr>={min_impressions})")
 
     if not filtered:
         return {"nb_kw": 0, "nb_categories": 0, "nb_pages": 0}
@@ -194,7 +194,7 @@ def run_gsc_state(
 
     by_cat = aggregate_by_category_gsc(rows)
     by_page = aggregate_by_page_gsc(rows)
-    print(f"[gsc-state] {len(by_cat)} catégories, {len(by_page)} pages")
+    print(f"[gsc-state] {len(by_cat)} categories, {len(by_page)} pages")
 
     raw_values = [
         [r["keyword"], r["url"], r["position"], r["clicks"], r["impressions"], r["ctr"],
@@ -217,10 +217,10 @@ def run_gsc_state(
             "nb_pages": len(by_page),
             "rows": rows,
         }, f, ensure_ascii=False, indent=2)
-    print(f"[gsc-state] dump local: {out_path}")
+    print(f"[gsc-state] local dump: {out_path}")
 
     if dry_run:
-        print("[gsc-state] DRY-RUN — pas de push Sheets")
+        print("[gsc-state] DRY-RUN - no Sheets push")
         return {"nb_kw": len(rows), "nb_categories": len(by_cat), "nb_pages": len(by_page), "output_path": str(out_path)}
 
     print(f"[gsc-state] push → spreadsheet {spreadsheet_id}")
@@ -232,7 +232,7 @@ def run_gsc_state(
     _write_tab(svc, spreadsheet_id, SHEET_GSC_RAW, GSC_RAW_HEADERS, raw_values)
     _write_tab(svc, spreadsheet_id, SHEET_GSC_BY_CAT, GSC_BY_CAT_HEADERS, by_cat)
     _write_tab(svc, spreadsheet_id, SHEET_GSC_BY_PAGE, GSC_BY_PAGE_HEADERS, by_page)
-    print(f"[gsc-state] ✓ 3 onglets GSC_* mis à jour")
+    print(f"[gsc-state] ✓ 3 GSC_* tabs updated")
 
     return {
         "nb_kw": len(rows),

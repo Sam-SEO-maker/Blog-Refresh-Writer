@@ -244,6 +244,6 @@ def run_benchmark(
     print("\n" + summary)
     print(f"\nTrace files:")
     print(f"  - {aggregate_path}")
-    print(f"  - {per_url_dir}/ ({len(report.timers)} fichiers)")
+    print(f"  - {per_url_dir}/ ({len(report.timers)} files)")
 
     return report

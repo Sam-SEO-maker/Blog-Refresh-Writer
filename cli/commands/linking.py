@@ -1,5 +1,5 @@
 """
-Commandes de maillage interne automatisé (enseigna).
+Automated internal linking commands (enseigna).
 
 Pose sur les articles avis enseigna :
   - un lien Superprof (superprof.fr) en rotation home/landing ville,
@@ -19,7 +19,7 @@ import click
 
 @click.group()
 def linking():
-    """Maillage interne automatisé."""
+    """Automated internal linking."""
     pass
 
 
@@ -31,10 +31,10 @@ def _print_results(results, linker):
         fam = linker.family_of(r.url)
         status = "OK" if r.validation_passed else "FAIL"
         click.echo(
-            f"\n{r.url}  [{fam}]  liens {r.internal_before}->{r.internal_after}  {status}"
+            f"\n{r.url}  [{fam}]  links {r.internal_before}->{r.internal_after}  {status}"
         )
         if r.error:
-            click.echo(f"    ERREUR: {r.error}")
+            click.echo(f"    ERROR: {r.error}")
         for a in r.links_added:
             kind = {
                 "superprof": "SP-new",
@@ -51,17 +51,17 @@ def _print_results(results, linker):
     resolved = sum(1 for r in results if r.file)
     click.echo("\n" + "=" * 70)
     click.echo(
-        f"Articles traités : {resolved}/{len(results)} | "
-        f"Superprof : {added + upg} ({upg} upgrades) | avis<->avis : {sib}"
+        f"Articles processed: {resolved}/{len(results)} | "
+        f"Superprof: {added + upg} ({upg} upgrades) | avis<->avis: {sib}"
     )
 
 
 @linking.command()
-@click.option("--apply", "apply_", is_flag=True, help="Écrit les fichiers (sinon dry-run).")
-@click.option("--url", "urls", multiple=True, help="Limiter à une/des URL(s) précise(s).")
-@click.option("-v", "--verbose", is_flag=True, help="Logs détaillés.")
+@click.option("--apply", "apply_", is_flag=True, help="Write the files (otherwise dry-run).")
+@click.option("--url", "urls", multiple=True, help="Restrict to one or more specific URL(s).")
+@click.option("-v", "--verbose", is_flag=True, help="Detailed logs.")
 def avis(apply_, urls, verbose):
-    """Maillage des articles avis enseigna (Superprof rotator + avis<->avis)."""
+    """Internal linking of enseigna review articles (Superprof rotator + avis<->avis)."""
     from scripts.linking.enseigna_avis_linker import EnseignaAvisLinker
 
     logging.basicConfig(
@@ -75,16 +75,16 @@ def avis(apply_, urls, verbose):
         )
 
     linker = EnseignaAvisLinker()
-    mode = "APPLY (écriture)" if apply_ else "DRY-RUN (aucune écriture)"
-    click.echo(f"Mode : {mode}")
+    mode = "APPLY (writes files)" if apply_ else "DRY-RUN (no writes)"
+    click.echo(f"Mode: {mode}")
 
     results = linker.process(urls=list(urls) or None, dry_run=not apply_)
     _print_results(results, linker)
 
     if apply_:
         click.echo(
-            "\nRapport : _shared/outputs/enseigna/json/avis_linking_report.json"
+            "\nReport: _shared/outputs/enseigna/json/avis_linking_report.json"
         )
-        click.echo("Backups : {slug}_refreshed.gutenberg.backup.html")
+        click.echo("Backups: {slug}_refreshed.gutenberg.backup.html")
     else:
-        click.echo("\n(dry-run — relancer avec --apply pour écrire)")
+        click.echo("\n(dry-run - re-run with --apply to write)")

@@ -323,7 +323,7 @@ def run_ahrefs_state(
             csv_path = REPO_ROOT / csv_path
         if not csv_path.exists():
             raise FileNotFoundError(f"CSV introuvable: {csv_path}")
-        print(f"[ahrefs-state] {site_id}: lecture CSV {csv_path}")
+        print(f"[ahrefs-state] {site_id}: reading CSV {csv_path}")
         raw = load_keywords_from_csv(csv_path)
     else:
         print(f"[ahrefs-state] {site_id}: fetch API (target={target}, mode={mode}, limit={limit})")
@@ -332,10 +332,10 @@ def run_ahrefs_state(
             raise RuntimeError("AhrefsClient non configuré (AHREFS_API_TOKEN manquant) — utilise --from-csv")
         raw = client.get_organic_keywords(target=target, country=country, mode=mode, limit=limit)
 
-    print(f"[ahrefs-state] {len(raw)} keywords récupérés")
+    print(f"[ahrefs-state] {len(raw)} keywords fetched")
 
     if not raw:
-        print("[ahrefs-state] ⚠ Aucun résultat — arrêt")
+        print("[ahrefs-state] ⚠ No results - stopping")
         return {"nb_kw": 0, "nb_categories": 0, "nb_pages": 0}
 
     # 2. Categorize
@@ -348,7 +348,7 @@ def run_ahrefs_state(
     # 3. Aggregate
     by_cat = aggregate_by_category(rows)
     by_page = aggregate_by_page(rows)
-    print(f"[ahrefs-state] {len(by_cat)} catégories, {len(by_page)} pages")
+    print(f"[ahrefs-state] {len(by_cat)} categories, {len(by_page)} pages")
 
     # 4. Build raw rows
     raw_values = [
@@ -371,10 +371,10 @@ def run_ahrefs_state(
             "nb_pages": len(by_page),
             "rows": rows,
         }, f, ensure_ascii=False, indent=2)
-    print(f"[ahrefs-state] dump local: {out_path}")
+    print(f"[ahrefs-state] local dump: {out_path}")
 
     if dry_run:
-        print("[ahrefs-state] DRY-RUN — pas de push Sheets")
+        print("[ahrefs-state] DRY-RUN - no Sheets push")
         return {"nb_kw": len(rows), "nb_categories": len(by_cat), "nb_pages": len(by_page), "output_path": str(out_path)}
 
     # 6. Push Sheets
@@ -387,7 +387,7 @@ def run_ahrefs_state(
     _write_tab(svc, spreadsheet_id, SHEET_RAW, RAW_HEADERS, raw_values)
     _write_tab(svc, spreadsheet_id, SHEET_BY_CAT, BY_CAT_HEADERS, by_cat)
     _write_tab(svc, spreadsheet_id, SHEET_BY_PAGE, BY_PAGE_HEADERS, by_page)
-    print(f"[ahrefs-state] ✓ 3 onglets mis à jour")
+    print(f"[ahrefs-state] ✓ 3 tabs updated")
 
     return {
         "nb_kw": len(rows),

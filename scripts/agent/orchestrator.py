@@ -1425,7 +1425,7 @@ class RefreshOrchestrator:
                                 keywords_set.update(result.keywords[:3])
                         secondary_keywords = list(keywords_set)[:10]
                 else:
-                    print(f"[SERP] ⚠ Résultat vide pour '{keyword}' — PAA et keywords seront vides")
+                    print(f"[SERP] ⚠ Empty result for '{keyword}' - PAA and keywords will be empty")
 
                 # Update sheet
                 paa_str = ", ".join(paa_questions[:5])
@@ -1439,9 +1439,9 @@ class RefreshOrchestrator:
                     }
                 )
                 if not update_ok:
-                    print(f"[SERP] ✗ ÉCHEC écriture spreadsheet N/O pour {row.blogpost_url[:60]}")
+                    print(f"[SERP] ✗ FAILED writing spreadsheet N/O for {row.blogpost_url[:60]}")
                 elif paa_str:
-                    print(f"[SERP] ✓ PAA écrites: {paa_str[:80]}")
+                    print(f"[SERP] ✓ PAA written: {paa_str[:80]}")
                 results["success"] += 1
 
             except Exception as e:
@@ -1581,7 +1581,7 @@ class RefreshOrchestrator:
         archive_dir.mkdir(parents=True, exist_ok=True)
         for entry in entries:
             shutil.move(str(entry), str(archive_dir / entry.name))
-        print(f"[CONTEXT] Passe précédente archivée → {archive_dir}")
+        print(f"[CONTEXT] Previous pass archived → {archive_dir}")
         return archive_dir
 
     def _prepare_context_for_claude_code(self, original_html: str, action: str, row, extraction_result: dict = None, ytg_data: dict = None) -> Path:
@@ -1600,8 +1600,8 @@ class RefreshOrchestrator:
         """
         # Log auto-process detection
         if action == "FULL_REFRESH" or action == "FULL REFRESH":
-            print(f"[AUTO-PROCESS] Action FULL_REFRESH détectée pour: {row.blogpost_url}")
-            print(f"[AUTO-PROCESS] Préparation du contexte pour génération automatique...")
+            print(f"[AUTO-PROCESS] FULL_REFRESH action detected for: {row.blogpost_url}")
+            print(f"[AUTO-PROCESS] Preparing the context for automatic generation...")
 
         # Create a slug from URL (used for the context bundle directory name)
         url_slug = re.sub(r'[^a-z0-9]+', '_', row.blogpost_url.lower()).strip('_')
@@ -1732,8 +1732,8 @@ class RefreshOrchestrator:
         with open(task_file, 'w', encoding='utf-8') as f:
             json.dump(task_data, f, indent=2, ensure_ascii=False)
 
-        print(f"[INFO] [OK] Contexte préparé dans: {context_dir}")
-        print(f"[INFO]   Fichiers créés:")
+        print(f"[INFO] [OK] Context prepared in: {context_dir}")
+        print(f"[INFO]   Files created:")
         print(f"[INFO]   - {html_file.name}")
         print(f"[INFO]   - {audit_file.name}")
         print(f"[INFO]   - {guidelines_file.name}")
@@ -1776,20 +1776,20 @@ class RefreshOrchestrator:
             metadata_file = outputs["metadata"]
 
             print(f"\n{'='*70}")
-            print(f"[CLAUDE CODE] TÂCHE PRÊTE POUR TRAITEMENT")
+            print(f"[CLAUDE CODE] TASK READY FOR PROCESSING")
             print(f"{'='*70}")
-            print(f"Contexte: {context_dir.absolute()}")
-            print(f"\nClaude Code doit maintenant:")
-            print(f"  1. Lire les fichiers du contexte")
-            print(f"  2. Générer le contenu optimisé")
-            print(f"  3. Sauvegarder dans:")
+            print(f"Context: {context_dir.absolute()}")
+            print(f"\nClaude Code must now:")
+            print(f"  1. Read the context files")
+            print(f"  2. Generate the optimized content")
+            print(f"  3. Save to:")
             print(f"     - {refreshed_file}")
             print(f"     - {metadata_file}")
             print(f"{'='*70}\n")
 
             # STEP 3: Check if output already exists (for retry/resume scenarios)
             if refreshed_file.exists() and metadata_file.exists():
-                print(f"[INFO] [OK] Fichiers de sortie trouvés, lecture des résultats...")
+                print(f"[INFO] [OK] Output files found, reading the results...")
 
                 # Read refreshed HTML
                 with open(refreshed_file, 'r', encoding='utf-8') as f:
@@ -1801,7 +1801,7 @@ class RefreshOrchestrator:
 
                 optimized_title = output_metadata.get("title_optimized", row.title)
 
-                print(f"[INFO] [OK] Contenu récupéré depuis outputs/:")
+                print(f"[INFO] [OK] Content retrieved from outputs/:")
                 print(f"      HTML: {refreshed_file}")
                 print(f"      Metadata: {metadata_file}")
 
@@ -1811,23 +1811,23 @@ class RefreshOrchestrator:
                 # Files don't exist yet - Claude Code needs to process
                 # Check if we're in auto-process mode (FULL_REFRESH detected)
                 if action == "FULL_REFRESH" or action == "FULL REFRESH":
-                    print(f"[AUTO-PROCESS] Full Refresh détecté, contexte préparé")
-                    print(f"[AUTO-PROCESS] Tâche prête dans: {context_dir}")
-                    print(f"[AUTO-PROCESS] Les fichiers seront générés par Claude Code")
-                    print(f"[AUTO-PROCESS] Workflow continue, génération en attente...")
+                    print(f"[AUTO-PROCESS] Full Refresh detected, context prepared")
+                    print(f"[AUTO-PROCESS] Task ready in: {context_dir}")
+                    print(f"[AUTO-PROCESS] The files will be generated by Claude Code")
+                    print(f"[AUTO-PROCESS] Workflow continues, generation pending...")
 
                     # Return original HTML for now - content will be generated later by Claude Code
                     # This allows the batch workflow to continue without blocking
                     return original_html, row.title
                 else:
                     # Non-FULL_REFRESH actions: raise exception to signal manual processing needed
-                    print(f"[ATTENTE] Fichiers de sortie non trouvés.")
-                    print(f"[ATTENTE] Claude Code doit traiter la tâche dans: {context_dir}")
-                    print(f"[ATTENTE] Une fois terminé, relancer le script pour continuer.")
+                    print(f"[WAITING] Output files not found.")
+                    print(f"[WAITING] Claude Code must process the task in: {context_dir}")
+                    print(f"[WAITING] Once done, re-run the script to continue.")
                     raise Exception(f"Claude Code processing required. Context prepared in: {context_dir}")
 
         except Exception as e:
-            print(f"[ERROR] Erreur génération contenu: {str(e)[:200]}")
+            print(f"[ERROR] Content generation error: {str(e)[:200]}")
             import traceback
             traceback.print_exc()
             # Fallback: return original HTML
@@ -2434,7 +2434,7 @@ class RefreshOrchestrator:
             return len(updates)
 
         except Exception as e:
-            print(f"[WARNING] Erreur lors de la préparation des statuts: {e}")
+            print(f"[WARNING] Error while preparing the statuses: {e}")
             return 0
 
     def batch_workflow_auto(self, site_slug: Optional[str] = None, auto_refresh: bool = True, post_type: Optional[str] = None) -> dict:
@@ -2480,7 +2480,7 @@ class RefreshOrchestrator:
 
         try:
             print(f"\n{'='*70}")
-            print(f"🚀 WORKFLOW AUTOMATISÉ - Démarrage")
+            print(f"🚀 AUTOMATED WORKFLOW - Starting")
             print(f"{'='*70}")
             if site_slug:
                 print(f"📌 Blog filter: {site_slug}")
@@ -2492,19 +2492,19 @@ class RefreshOrchestrator:
             # STEP 0: Préparation - Réinitialiser et initialiser les statuts
             # ================================================================
             if self.sheets_client:
-                print(f"[STEP 0/6] 🔧 Préparation workflow (reset + initialisation statuts)...")
+                print(f"[STEP 0/6] 🔧 Preparing workflow (reset + status initialization)...")
 
                 # 0.1: Reset des anciens statuts (REFONTE Feb 2026)
                 reset_stats = self.sheets_client._reset_and_prepare_statuses(site_slug, post_type=post_type)
                 if reset_stats["status_reset"] > 0:
-                    print(f"  ✓ {reset_stats['status_reset']} statut(s) réinitialisé(s) à TODO")
+                    print(f"  ✓ {reset_stats['status_reset']} status(es) reset to TODO")
 
                 # 0.2: Préparation transitions de workflow
                 # Pour les URLs avec audit_gsc=DONE mais audit_serp vide/incomplet,
                 # initialiser audit_serp à "AUDITING" pour que l'étape 3 les traite
                 prepared_count = self._prepare_workflow_statuses(site_slug, post_type=post_type)
                 if prepared_count > 0:
-                    print(f"  ✓ {prepared_count} URL(s) préparée(s) pour audit SERP")
+                    print(f"  ✓ {prepared_count} URL(s) prepared for SERP audit")
                 print()
 
             # STEP 1 (Editorial Audit / Quality Gate) RETIRÉ 2026-07 : plus de
@@ -2513,14 +2513,14 @@ class RefreshOrchestrator:
             # ================================================================
             # STEP 2: Audit GSC (H, J-L, W)
             # ================================================================
-            print(f"[STEP 2/6] 📊 Audit GSC (colonnes H, J-L, W)...")
+            print(f"[STEP 2/6] 📊 GSC audit (columns H, J-L, W)...")
             step2_result = self.batch_audit_gsc(site_slug, post_type=post_type)
             workflow_result["step2_audit_gsc"] = step2_result
 
             if step2_result["failed"] > 0:
                 workflow_result["errors"].append(f"Step 2: {step2_result['failed']} échecs GSC")
 
-            print(f"  ✅ GSC: {step2_result['success']} succès, {step2_result['failed']} échecs")
+            print(f"  ✅ GSC: {step2_result['success']} succeeded, {step2_result['failed']} failed")
             print(f"  📈 Diagnostics: URL_NOT_ON_GOOGLE={step2_result.get('url_not_on_google', 0)}, "
                   f"INDEXING_ISSUES={step2_result.get('indexing_issues', 0)}, "
                   f"DISCOVERED_NOT_INDEXED={step2_result.get('discovered_not_indexed', 0)}")
@@ -2529,27 +2529,27 @@ class RefreshOrchestrator:
             # ================================================================
             # STEP 3: Audit SERP (I, M-N)
             # ================================================================
-            print(f"[STEP 3/6] 🔍 Audit SERP (colonnes I, M-N)...")
+            print(f"[STEP 3/6] 🔍 SERP audit (columns I, M-N)...")
             step3_result = self.batch_audit_serp(site_slug, post_type=post_type)
             workflow_result["step3_audit_serp"] = step3_result
 
             if step3_result["failed"] > 0:
                 workflow_result["errors"].append(f"Step 3: {step3_result['failed']} échecs SERP")
 
-            print(f"  ✅ SERP: {step3_result['success']} succès, {step3_result['failed']} échecs")
+            print(f"  ✅ SERP: {step3_result['success']} succeeded, {step3_result['failed']} failed")
             print()
 
             # ================================================================
             # STEP 4: Decision Engine (F, Q-U)
             # ================================================================
-            print(f"[STEP 4/6] 🎯 Decision Engine (colonnes F, Q-U)...")
+            print(f"[STEP 4/6] 🎯 Decision Engine (columns F, Q-U)...")
             step4_result = self.batch_decision(site_slug, post_type=post_type)
             workflow_result["step4_decision"] = step4_result
 
             if step4_result.get("errors"):
                 workflow_result["errors"].append(f"Step 4: {len(step4_result['errors'])} erreurs")
 
-            print(f"  ✅ Décisions prises:")
+            print(f"  ✅ Decisions made:")
             print(f"     - NO ACTION: {step4_result['no_action']}")
             print(f"     - PARTIAL REFRESH: {step4_result['partial_refresh']}")
             print(f"     - REFRESH TITLES: {step4_result['refresh_titles']}")
@@ -2559,21 +2559,21 @@ class RefreshOrchestrator:
             # ================================================================
             # STEP 5: Title Optimization (O-P) - Nouveaux H1 + H2 structure
             # ================================================================
-            print(f"[STEP 5/6] 🏷️ Title Optimization (colonnes O-P)...")
+            print(f"[STEP 5/6] 🏷️ Title Optimization (columns O-P)...")
             step5_result = self.batch_title_optimization(site_slug, post_type=post_type)
             workflow_result["step5_title_optimization"] = step5_result
 
             if step5_result["failed"] > 0:
                 workflow_result["errors"].append(f"Step 5: {step5_result['failed']} échecs Title Optimization")
 
-            print(f"  ✅ Titres: {step5_result['success']} optimisés, {step5_result['failed']} échecs")
+            print(f"  ✅ Titles: {step5_result['success']} optimized, {step5_result['failed']} failed")
             print()
 
             # ================================================================
             # STEP 6: Auto Refresh (G) - Optionnel
             # ================================================================
             if auto_refresh:
-                print(f"[STEP 6/6] ✍️ Batch Refresh (colonne G)...")
+                print(f"[STEP 6/6] ✍️ Batch Refresh (column G)...")
 
                 # Execute refresh for each action type if count > 0
                 refresh_actions = [
@@ -2588,14 +2588,14 @@ class RefreshOrchestrator:
                         refresh_result = self.batch_refresh(action=action_name, site_slug=site_slug, post_type=post_type)
                         workflow_result["step6_refresh"][action_name] = refresh_result
 
-                        print(f"     ✅ {refresh_result['success']} succès, "
+                        print(f"     ✅ {refresh_result['success']} succeeded, "
                               f"{refresh_result['failed']} échecs, "
                               f"{refresh_result.get('assets_restored', 0)} assets restaurés")
 
                         if refresh_result.get('errors'):
                             workflow_result["errors"].extend(refresh_result['errors'][:3])  # Limiter les erreurs loggées
             else:
-                print(f"[STEP 6/6] ⏭️ Auto-refresh désactivé (utilisez --auto-refresh pour activer)")
+                print(f"[STEP 6/6] ⏭️ Auto-refresh disabled (use --auto-refresh to enable)")
 
             # ================================================================
             # Final Report
@@ -2605,12 +2605,12 @@ class RefreshOrchestrator:
 
             print()
             print(f"{'='*70}")
-            print(f"✅ WORKFLOW TERMINÉ")
+            print(f"✅ WORKFLOW DONE")
             print(f"{'='*70}")
-            print(f"⏱️  Durée totale: {workflow_result['total_duration_seconds']:.1f}s")
-            print(f"{'🟢 SUCCÈS' if workflow_result['success'] else '🔴 ERREURS DÉTECTÉES'}")
+            print(f"⏱️  Total duration: {workflow_result['total_duration_seconds']:.1f}s")
+            print(f"{'🟢 SUCCESS' if workflow_result['success'] else '🔴 ERRORS DETECTED'}")
             if workflow_result["errors"]:
-                print(f"⚠️  Erreurs ({len(workflow_result['errors'])}):")
+                print(f"⚠️  Errors ({len(workflow_result['errors'])}):")
                 for error in workflow_result["errors"][:5]:
                     print(f"   - {error}")
             print(f"{'='*70}\n")
@@ -2623,10 +2623,10 @@ class RefreshOrchestrator:
             workflow_result["success"] = False
 
             print(f"\n{'='*70}")
-            print(f"🔴 WORKFLOW INTERROMPU")
+            print(f"🔴 WORKFLOW INTERRUPTED")
             print(f"{'='*70}")
-            print(f"❌ Erreur: {str(e)[:200]}")
-            print(f"⏱️  Durée avant interruption: {workflow_result['total_duration_seconds']:.1f}s")
+            print(f"❌ Error: {str(e)[:200]}")
+            print(f"⏱️  Duration before interruption: {workflow_result['total_duration_seconds']:.1f}s")
             print(f"{'='*70}\n")
 
             import traceback

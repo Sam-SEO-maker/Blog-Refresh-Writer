@@ -133,7 +133,7 @@ def push_url(client: WordPressAPIClient, url: str, site: str = _DEFAULT_SITE) ->
 def main() -> int:
     load_dotenv()
     if len(sys.argv) < 2:
-        print("Usage: python -m scripts.utils.push_to_wp <fichier_urls.txt>")
+        print("Usage: python -m scripts.utils.push_to_wp <urls_file.txt>")
         return 2
     urls = [l.strip() for l in Path(sys.argv[1]).read_text(encoding="utf-8").splitlines() if l.strip()]
     client = build_client()

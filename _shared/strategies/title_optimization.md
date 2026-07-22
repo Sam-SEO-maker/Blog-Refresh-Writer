@@ -1,127 +1,127 @@
-# Stratégie : Optimisation Titre & Meta
+# Strategy: Title & Meta Optimization
 
-## Déclencheur
-- CTR < 2% avec impressions > 500
-- Position moyenne 5-15 (visible mais pas cliqué)
+## Trigger
+- CTR < 2% with impressions > 500
+- Average position 5-15 (visible but not clicked)
 
-## Objectif
-Améliorer le taux de clic sans modifier le contenu de l'article.
+## Goal
+Improve the click-through rate without modifying the article's content.
 
 ---
 
 ## Instructions
 
-Tu dois UNIQUEMENT optimiser :
-1. Le titre H1
-2. La meta description
+You must ONLY optimize:
+1. The H1 title
+2. The meta description
 
-**NE MODIFIE PAS** le contenu de l'article.
-
----
-
-## Règles pour le Titre H1
-
-### Structure Recommandée
-- **Longueur** : 50-60 caractères (max 70)
-- **Mot-clé principal** : Dans les 3 premiers mots si possible
-- **Format efficace** : [Bénéfice] + [Sujet] + [Année/Qualificatif]
-
-### Patterns Haute Performance
-
-| Pattern | Exemple | Quand utiliser |
-|---------|---------|----------------|
-| Question directe | "Comment apprendre le piano rapidement ?" | Intent informationnel |
-| Nombre + Bénéfice | "7 méthodes prouvées pour progresser en maths" | Listicles |
-| Guide Complet | "Guide Complet : Apprendre la guitare en 2025" | Tutoriels longs |
-| Comparatif | "Acadomia vs Superprof : Notre Verdict 2025" | Reviews |
-| Problème → Solution | "Difficultés en maths ? Voici la solution" | Pain points |
-
-### Mots Power (CTR Boosters)
-- **Urgence** : Maintenant, Aujourd'hui, Rapide
-- **Exclusivité** : Secret, Méconnu, Révélé
-- **Preuve** : Prouvé, Testé, Étude
-- **Année** : 2025, 2026 (fraîcheur)
-- **Superlatif** : Meilleur, Ultime, Complet
-
-### À Éviter
-- Titres génériques ("Tout sur X")
-- Clickbait mensonger
-- Majuscules excessives
-- Plus de 70 caractères (tronqué dans SERP)
+**DO NOT MODIFY** the article's content.
 
 ---
 
-## Règles pour la Meta Description
+## Rules for the H1 Title
 
-### Structure Recommandée
-- **Longueur** : 150-155 caractères (cohérent avec `format-wordpress`)
-- **Début** : Réponse directe ou accroche
-- **Milieu** : Bénéfice ou promesse
-- **Fin** : Call-to-action implicite
+### Recommended structure
+- **Length**: 50-60 characters (max 70)
+- **Main keyword**: within the first 3 words if possible
+- **Effective format**: [Benefit] + [Topic] + [Year/Qualifier]
 
-### Template Efficace
+### High-performance patterns (French examples)
+
+| Pattern | Example | When to use |
+|---------|---------|-------------|
+| Direct question | "Comment apprendre le piano rapidement ?" | Informational intent |
+| Number + Benefit | "7 méthodes prouvées pour progresser en maths" | Listicles |
+| Complete guide | "Guide Complet : Apprendre la guitare en 2025" | Long tutorials |
+| Comparison | "Acadomia vs Superprof : Notre Verdict 2025" | Reviews |
+| Problem → Solution | "Difficultés en maths ? Voici la solution" | Pain points |
+
+### Power words (CTR boosters), French examples
+- **Urgency**: Maintenant, Aujourd'hui, Rapide
+- **Exclusivity**: Secret, Méconnu, Révélé
+- **Proof**: Prouvé, Testé, Étude
+- **Year**: 2025, 2026 (freshness)
+- **Superlative**: Meilleur, Ultime, Complet
+
+### Avoid
+- Generic titles ("Everything about X")
+- Misleading clickbait
+- Excessive capitalization
+- More than 70 characters (truncated in the SERP)
+
+---
+
+## Rules for the Meta Description
+
+### Recommended structure
+- **Length**: 150-155 characters (consistent with `format-wordpress`)
+- **Beginning**: direct answer or hook
+- **Middle**: benefit or promise
+- **End**: implicit call-to-action
+
+### Effective template
 
 ```
-[Réponse directe à l'intention]. [Bénéfice principal]. [Élément différenciant ou CTA].
+[Direct answer to the intent]. [Main benefit]. [Differentiator or CTA].
 ```
 
-### Exemples
+### Examples (French)
 
-**Avant (CTR faible)** :
+**Before (low CTR)**:
 > Découvrez nos conseils pour apprendre les mathématiques. Nous vous expliquons les différentes méthodes disponibles.
 
-**Après (CTR optimisé)** :
+**After (optimized CTR)**:
 > Progressez en maths en 3 mois avec notre méthode testée sur 500+ élèves. Guide pratique + exercices gratuits inclus.
 
-### Éléments à Inclure
-- ✅ Chiffre concret (temps, quantité, résultat)
-- ✅ Bénéfice clair pour le lecteur
-- ✅ Élément de preuve (étude, témoignages)
-- ✅ Mot-clé principal (naturellement intégré)
+### Elements to include
+- ✅ Concrete number (time, quantity, result)
+- ✅ Clear benefit for the reader
+- ✅ Element of proof (study, testimonials)
+- ✅ Main keyword (naturally integrated)
 
-### À Éviter
-- ❌ Répéter le titre mot pour mot
-- ❌ Descriptions vagues ("Découvrez tout sur...")
-- ❌ Trop de mots-clés (keyword stuffing)
-- ❌ Phrases incomplètes (tronquées)
+### Avoid
+- ❌ Repeating the title word for word
+- ❌ Vague descriptions ("Discover everything about...")
+- ❌ Too many keywords (keyword stuffing)
+- ❌ Incomplete sentences (truncated)
 
 ---
 
-## Format de Sortie
+## Output Format
 
 ```
-## TITRE H1
+## H1 TITLE
 
-### Actuel :
-[Titre original]
+### Current:
+[Original title]
 
-### Proposé :
-[Nouveau titre]
+### Proposed:
+[New title]
 
-### Justification :
-[Pourquoi ce changement améliore le CTR]
+### Rationale:
+[Why this change improves the CTR]
 
 ---
 
 ## META DESCRIPTION
 
-### Actuelle :
-[Meta originale]
+### Current:
+[Original meta]
 
-### Proposée :
-[Nouvelle meta - max 155 caractères]
+### Proposed:
+[New meta - max 155 characters]
 
-### Justification :
-[Pourquoi ce changement améliore le CTR]
+### Rationale:
+[Why this change improves the CTR]
 ```
 
 ---
 
-## Checklist Validation
+## Validation Checklist
 
-- [ ] Titre < 70 caractères
-- [ ] Mot-clé principal présent dans le titre
-- [ ] Meta ≤ 155 caractères
-- [ ] Meta contient un bénéfice clair
-- [ ] Pas de clickbait mensonger
-- [ ] Cohérent avec le contenu réel de l'article
+- [ ] Title < 70 characters
+- [ ] Main keyword present in the title
+- [ ] Meta ≤ 155 characters
+- [ ] Meta contains a clear benefit
+- [ ] No misleading clickbait
+- [ ] Consistent with the article's actual content

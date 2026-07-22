@@ -1,32 +1,32 @@
-# FULL_REFRESH : Réécriture complète
+# FULL_REFRESH: Complete rewrite
 
-## Quand
-Refresh par défaut : réécriture complète du contenu avec amélioration substantielle,
-quand aucune stratégie plus ciblée (title_optimization, format_adaptation,
-semantic_reorientation) ne s'applique.
+## When
+Default refresh: complete rewrite of the content with substantial improvement,
+when no more targeted strategy (title_optimization, format_adaptation,
+semantic_reorientation) applies.
 
 ## Scope
-Réécrire **tout** le corps de l'article, section par section, en conservant l'asset
-associé à chaque section. Améliorer contenu, structure et E-E-A-T.
+Rewrite **the entire** article body, section by section, keeping the asset
+attached to each section. Improve content, structure and E-E-A-T.
 
-## Delta propre à cette stratégie
+## Delta specific to this strategy
 
-- **Introduction réécrite à partir de zéro** : ne PAS paraphraser l'intro de
-  l'original (même angle, même scène, même anecdote reformulée). Changer d'angle
-  d'entrée. Si l'intro générée pourrait s'obtenir en passant l'original dans un
-  reformulateur, elle est à refaire.
-- **Correction des duplications** : si un paragraphe est identique à un passage d'un
-  autre article du site, choisir selon le contexte :
-  1. Différenciation par angle (réécrire sous un angle propre à l'article),
-  2. Résumé contextuel (1-2 phrases + lien vers l'article source),
-  3. Suppression avec lien (si le paragraphe n'apporte rien ici).
-  Contrainte : préserver le sens, le ton, la longueur (±20%) ; ne jamais modifier
-  les liens ou images associés.
+- **Introduction rewritten from scratch**: do NOT paraphrase the original
+  intro (same angle, same scene, same anecdote reworded). Change the opening
+  angle. If the generated intro could be obtained by running the original
+  through a rephraser, it must be redone.
+- **Fixing duplications**: if a paragraph is identical to a passage in
+  another article on the site, choose based on context:
+  1. Differentiation by angle (rewrite from an angle specific to this article),
+  2. Contextual summary (1-2 sentences + link to the source article),
+  3. Removal with a link (if the paragraph adds nothing here).
+  Constraint: preserve the meaning, tone and length (±20%); never modify
+  the associated links or images.
 
-## Règles héritées (ne pas redéfinir ici)
-- **Fond** (E-E-A-T, sources, densité, réponse directe, fraîcheur, SEO/GEO) →
-  skill `edito-refresh`.
-- **Forme** (préservation des assets / Règle d'Or, HTML clean, listes, tableaux,
-  callouts colorés interdits, rédaction narrative vs annuaire) → skill `format-wordpress`.
-- **Structure d'ensemble** (intro, ordre des blocs, tableau récap éventuel) →
-  skill du site. Ne pas imposer de structure ni de couleurs codées en dur ici.
+## Inherited rules (do not redefine here)
+- **Substance** (E-E-A-T, sources, density, direct answer, freshness, SEO/GEO) →
+  `edito-refresh` skill.
+- **Form** (asset preservation / Golden Rule, clean HTML, lists, tables,
+  colored callouts forbidden, narrative writing vs directory style) → `format-wordpress` skill.
+- **Overall structure** (intro, block order, optional recap table) →
+  the site's skill. Do not impose a structure or hardcoded colors here.

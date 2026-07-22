@@ -1,5 +1,5 @@
 """
-Commande statuts — met à jour le statut éditorial d'une URL dans la feuille Growing.
+`statuts` command - updates the editorial status of a URL in the Growing sheet.
 
 Usage:
     cw statuts <url> <statuts>
@@ -28,14 +28,14 @@ from scripts.audit.superprof_gsc_audit import (
 @click.argument("url")
 @click.argument("statuts_value", metavar="STATUTS")
 def statuts(url, statuts_value):
-    """Met à jour le statut éditorial d'une URL dans la feuille Growing (Superprof Ressources).
+    """Updates the editorial status of a URL in the Growing sheet (Superprof Ressources).
 
-    STATUTS : A faire | Rédigé | Draft in WP | Publié
+    STATUTS: A faire | Rédigé | Draft in WP | Publié
     """
     if statuts_value not in STATUTS_VALUES:
         click.echo(
-            f"[ERREUR] Valeur invalide : '{statuts_value}'\n"
-            f"Valeurs acceptées : {', '.join(STATUTS_VALUES)}",
+            f"[ERROR] Invalid value: '{statuts_value}'\n"
+            f"Accepted values: {', '.join(STATUTS_VALUES)}",
             err=True,
         )
         raise SystemExit(1)
@@ -44,9 +44,9 @@ def statuts(url, statuts_value):
 
     row_index = find_growing_row_by_url(sheets, url)
     if row_index is None:
-        click.echo(f"[ERREUR] URL introuvable dans Growing : {url}", err=True)
+        click.echo(f"[ERROR] URL not found in Growing: {url}", err=True)
         raise SystemExit(1)
 
     write_growing_statuts(sheets, row_index, statuts_value)
-    click.echo(f"[OK] Ligne {row_index} → statuts = \"{statuts_value}\"")
+    click.echo(f"[OK] Row {row_index} → statuts = \"{statuts_value}\"")
     click.echo(f"     {url[:90]}")

@@ -1,5 +1,5 @@
 """
-Commandes de plan éditorial (content_plan.md).
+Editorial plan commands (content_plan.md).
 
 Usage:
     cw plan check <url> --site superprof.fr-ressources
@@ -54,7 +54,7 @@ def _find_context_dir(url: str) -> Optional[Path]:
 
 @click.group()
 def plan():
-    """Plan éditorial (content_plan.md) : scaffold + validation SEO déterministe."""
+    """Editorial plan (content_plan.md): scaffold + deterministic SEO validation."""
     pass
 
 
@@ -99,21 +99,21 @@ def _format_paa_block(paa_raw: str) -> tuple[str, int]:
 @plan.command(name="init")
 @click.argument("url")
 @blog_option(required=True)
-@click.option("--force", is_flag=True, help="Écrase un content_plan.md existant.")
+@click.option("--force", is_flag=True, help="Overwrite an existing content_plan.md.")
 def init(url: str, blog: str, force: bool):
     """
-    Scaffold déterministe de content_plan.md au bon chemin.
+    Deterministic scaffold of content_plan.md at the right path.
 
-    Crée le fichier dans le context_dir de l'URL, pré-rempli d'un template + des
-    signaux (PAA, mot-clé, intent, assets) extraits de audit_data.json. Le CLI
-    pose la STRUCTURE ; l'agent RÉDIGE ensuite l'outline via la skill seo-outline,
-    puis `cw plan check` valide. Aucune phrase rédigée par le CLI (règle : la
-    génération passe par le subagent Max, jamais l'API).
+    Creates the file in the URL's context_dir, pre-filled with a template + the
+    signals (PAA, keyword, intent, assets) extracted from audit_data.json. The CLI
+    lays out the STRUCTURE; the agent then WRITES the outline via the seo-outline
+    skill, and `cw plan check` validates. The CLI writes no prose (rule: generation
+    goes through the Max subagent, never the API).
     """
     context_dir = _find_context_dir(url)
     if context_dir is None:
         click.echo(
-            f"❌ Aucun context_dir pour {url}. Lance d'abord "
+            f"❌ No context_dir for {url}. First run "
             f"`cw refresh {url} --site {blog}`.",
             err=True,
         )
@@ -122,7 +122,7 @@ def init(url: str, blog: str, force: bool):
     plan_file = context_dir / "content_plan.md"
     if plan_file.exists() and not force:
         click.echo(
-            f"⚠️  {plan_file} existe déjà. --force pour l'écraser.", err=True)
+            f"⚠️  {plan_file} already exists. Use --force to overwrite it.", err=True)
         sys.exit(2)
 
     try:
@@ -142,10 +142,10 @@ def init(url: str, blog: str, force: bool):
     )
     plan_file.write_text(content, encoding="utf-8")
 
-    click.echo(f"✅ Squelette créé : {plan_file}")
-    click.echo(f"   {paa_count} PAA injectée(s) à couvrir.")
+    click.echo(f"✅ Skeleton created: {plan_file}")
+    click.echo(f"   {paa_count} PAA injected, to cover.")
     click.echo(
-        "   → Remplis l'outline via la skill `seo-outline`, puis "
+        "   → Fill in the outline via the `seo-outline` skill, then run "
         f"`cw plan check {url} --site {blog}`.")
 
 
@@ -155,15 +155,15 @@ def init(url: str, blog: str, force: bool):
 @click.option(
     "--plan-file",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    help="Chemin explicite du content_plan.md (sinon résolu depuis l'URL).",
+    help="Explicit path to the content_plan.md (otherwise resolved from the URL).",
 )
-@click.option("--json", "as_json", is_flag=True, help="Sortie JSON (scriptable).")
+@click.option("--json", "as_json", is_flag=True, help="JSON output (scriptable).")
 def check(url: str, blog: str, plan_file: Optional[Path], as_json: bool):
     """
-    Valide un content_plan.md contre les invariants SEO (seo-outline).
+    Validates a content_plan.md against the SEO invariants (seo-outline).
 
-    Verdict OK → passer à la génération. NEEDS_FIX → corriger le plan (bon
-    marché) avant de rédiger l'article. Code de sortie 1 si NEEDS_FIX.
+    Verdict OK → move on to generation. NEEDS_FIX → fix the plan (cheap)
+    before writing the article. Exit code 1 on NEEDS_FIX.
     """
     context_dir = _find_context_dir(url)
     paa_raw = ""
@@ -171,16 +171,16 @@ def check(url: str, blog: str, plan_file: Optional[Path], as_json: bool):
     if plan_file is None:
         if context_dir is None:
             click.echo(
-                f"❌ Aucun context_dir trouvé pour {url}. "
-                f"Lance d'abord `cw refresh {url} --site {blog}`.",
+                f"❌ No context_dir found for {url}. "
+                f"First run `cw refresh {url} --site {blog}`.",
                 err=True,
             )
             sys.exit(2)
         plan_file = context_dir / "content_plan.md"
         if not plan_file.exists():
             click.echo(
-                f"❌ Pas de content_plan.md dans {context_dir}. "
-                f"L'étape 2bis (skill seo-outline) ne l'a pas encore produit.",
+                f"❌ No content_plan.md in {context_dir}. "
+                f"Step 2bis (seo-outline skill) has not produced it yet.",
                 err=True,
             )
             sys.exit(2)
@@ -217,16 +217,16 @@ def check(url: str, blog: str, plan_file: Optional[Path], as_json: bool):
 
 def _echo_human(report, plan_file: Path):
     icon = "✅" if report.ok else "⚠️"
-    click.echo(f"{icon} Plan : {report.verdict}   ({plan_file})")
+    click.echo(f"{icon} Plan: {report.verdict}   ({plan_file})")
     click.echo(
-        f"  H2: {report.h2_count}  |  PAA couvertes: "
+        f"  H2: {report.h2_count}  |  PAA covered: "
         f"{report.paa_covered}/{report.paa_total}  |  "
         f"sources: {report.source_links}  |  stats: {report.stats_found}"
     )
     if report.violations:
-        click.echo(f"\n  {len(report.violations)} manquement(s) à corriger :")
+        click.echo(f"\n  {len(report.violations)} issue(s) to fix:")
         for v in report.violations:
             where = f" [{v.heading}]" if v.heading else ""
             click.echo(f"  • ({v.rule}){where} {v.message}")
     else:
-        click.echo("  Aucun manquement — prêt pour la génération.")
+        click.echo("  No issues - ready for generation.")

@@ -27,7 +27,7 @@ when `wp_api_config` is present; fallback to scraping the public page only when
 the REST API is blocked) → GSC/SERP/PAA/intent audit → strategy decision →
 `generation_prompt.txt`. This is step 1 of `/refresh`, run serially. For each
 URL, note: `context_dir`, `Strategy`, `Keyword` (main keyword), `YTG guide`,
-`Assets avant` (assets before), the `Output HTML`/`Output JSON` paths (and
+`Assets before`, the `Output HTML`/`Output JSON` paths (and
 `Type: avis|versus` for enseigna).
 
 URLs in `NO_ACTION`, `BLOCKED_QUALITY_ISSUES`, `ERROR` or

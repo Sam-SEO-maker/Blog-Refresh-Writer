@@ -41,9 +41,9 @@ def site_option(required=False, help=None, dest="blog"):
     """
     if help is None:
         help = (
-            "Site slug (ex: enseigna, superprof.fr-ressources). Alias : --blog."
+            "Site slug (e.g. enseigna, superprof.fr-ressources). Alias: --blog."
             if required
-            else "Filtrer par site slug. Alias : --blog."
+            else "Filter by site slug. Alias: --blog."
         )
     return click.option(
         "--site",

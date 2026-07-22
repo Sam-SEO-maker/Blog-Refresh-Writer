@@ -149,7 +149,7 @@ class SheetsClient:
                 return
             self._sheets_service = build('sheets', 'v4', credentials=credentials)
         except Exception as e:
-            print(f"Erreur init API directe: {e}")
+            print(f"Direct API init error: {e}")
             self._sheets_service = None
 
     def _ensure_audit_columns(self):
@@ -235,11 +235,11 @@ class SheetsClient:
                     ).execute()
                 except Exception as e:
                     # Si la validation de données échoue, ce n'est pas critique
-                    print(f"Attention: Validation de données non configurée: {e}")
+                    print(f"Warning: data validation not configured: {e}")
 
         except Exception as e:
             # Les erreurs ici ne doivent pas bloquer l'initialisation
-            print(f"Attention: Impossible de vérifier/ajouter les colonnes: {e}")
+            print(f"Warning: could not check/add the columns: {e}")
 
     # =========================================================================
     # URLs_Input Operations
@@ -298,7 +298,7 @@ class SheetsClient:
             return tasks
 
         except Exception as e:
-            print(f"Erreur lecture URLs: {e}")
+            print(f"Error reading URLs: {e}")
             return []
 
     def add_url(self, url: str, site_slug: str,
@@ -339,7 +339,7 @@ class SheetsClient:
             return True
 
         except Exception as e:
-            print(f"Erreur ajout URL: {e}")
+            print(f"Error adding URL: {e}")
             return False
 
     def update_status(self, url: str, status: TaskStatus,
@@ -386,7 +386,7 @@ class SheetsClient:
             return True
 
         except Exception as e:
-            print(f"Erreur mise à jour statut: {e}")
+            print(f"Error updating status: {e}")
             return False
 
     # =========================================================================
@@ -437,7 +437,7 @@ class SheetsClient:
             return True
 
         except Exception as e:
-            print(f"Erreur log audit: {e}")
+            print(f"Error logging audit: {e}")
             return False
 
     # =========================================================================
@@ -484,7 +484,7 @@ class SheetsClient:
             return True
 
         except Exception as e:
-            print(f"Erreur log refresh: {e}")
+            print(f"Error logging refresh: {e}")
             return False
 
     def queue_for_publish(self, url: str) -> bool:
@@ -550,7 +550,7 @@ class SheetsClient:
             return True
 
         except Exception as e:
-            print(f"Erreur log décision: {e}")
+            print(f"Error logging decision: {e}")
             return False
 
     def set_action_required(self, url: str, action: str) -> bool:
@@ -590,7 +590,7 @@ class SheetsClient:
                 ).execute()
                 return result.get("values", [])
             except Exception as e:
-                print(f"Erreur lecture sheet {sheet_name}: {e}")
+                print(f"Error reading sheet {sheet_name}: {e}")
                 return []
 
         return []
@@ -608,7 +608,7 @@ class SheetsClient:
                 ).execute()
                 return True
             except Exception as e:
-                print(f"Erreur append row: {e}")
+                print(f"Error appending row: {e}")
                 return False
 
         return False
@@ -659,12 +659,12 @@ class SheetsClient:
             updated = result.get("totalUpdatedCells", 0)
             if updated < len(updates):
                 cells_list = [u.get("cell", "?") for u in updates]
-                print(f"[SHEETS] ⚠ Batch update partiel: {updated}/{len(updates)} cellules écrites. Cellules: {cells_list}")
+                print(f"[SHEETS] ⚠ Partial batch update: {updated}/{len(updates)} cells written. Cells: {cells_list}")
             return True
 
         except Exception as e:
             cells_list = [u.get("cell", "?") for u in updates]
-            print(f"[SHEETS] ✗ ERREUR batch update cells {cells_list}: {e}")
+            print(f"[SHEETS] ✗ ERROR batch update cells {cells_list}: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -721,12 +721,12 @@ class SheetsClient:
             # Apply batch update if there are changes
             if updates:
                 self._batch_update_cells(updates)
-                print(f"[STATUS RESET] {stats['status_reset']} statuts réinitialisés à TODO")
+                print(f"[STATUS RESET] {stats['status_reset']} statuses reset to TODO")
 
             return stats
 
         except Exception as e:
-            print(f"Erreur reset_and_prepare_statuses: {e}")
+            print(f"Error in reset_and_prepare_statuses: {e}")
             return {"status_reset": 0, "urls_prepared": 0}
 
     def _update_cell(self, sheet_name: str, cell: str, value: str) -> bool:
@@ -742,7 +742,7 @@ class SheetsClient:
                 ).execute()
                 return True
             except Exception as e:
-                print(f"Erreur update cell: {e}")
+                print(f"Error updating cell: {e}")
                 return False
 
         return False
@@ -784,7 +784,7 @@ class SheetsClient:
                                 rows.append(audit_row)
                         except Exception as e:
                             # Fallback: créer une row minimale avec les champs essentiels
-                            print(f"[WARNING] Impossible de parser ligne {i} pour GSC audit: {e}. Création d'une row minimale...")
+                            print(f"[WARNING] Could not parse row {i} for GSC audit: {e}. Creating a minimal row...")
                             try:
                                 # Créer une row minimale
                                 try:
@@ -998,7 +998,7 @@ class SheetsClient:
                         if not site_slug or audit_row.site_slug == site_slug:
                             rows.append(audit_row)
                     except Exception as e:
-                        print(f"[WARNING] Impossible de parser ligne {i} pour editorial audit: {e}")
+                        print(f"[WARNING] Could not parse row {i} for editorial audit: {e}")
                         continue
             return rows
         except Exception as e:
@@ -1082,7 +1082,7 @@ class SheetsClient:
                                 rows.append(audit_row)
                         except Exception as e:
                             # Fallback: créer une row minimale avec les champs essentiels
-                            print(f"[WARNING] Impossible de parser ligne {i} pour décision: {e}. Création d'une row minimale...")
+                            print(f"[WARNING] Could not parse row {i} for decision: {e}. Creating a minimal row...")
                             try:
                                 # Créer une row minimale
                                 try:
@@ -1195,10 +1195,10 @@ class SheetsClient:
             # dans les Google Sheets réels (HTTP 400). Ce log rend visible toute
             # erreur d'onglet au lieu de retourner 0 ligne sans explication.
             print(
-                f"[ERROR] read_pending_for_refresh({action!r}, blog={site_slug!r}) a échoué "
-                f"sur l'onglet '{self.SHEET_REFRESHS_AUDIT}': {e}. "
-                "Cet onglet est obsolète — le pipeline Superprof passe par 'New Growing List' "
-                "(prepare_weekly_batch.py) et Enseigna par 'Avis'/'Versus'."
+                f"[ERROR] read_pending_for_refresh({action!r}, blog={site_slug!r}) failed "
+                f"on tab '{self.SHEET_REFRESHS_AUDIT}': {e}. "
+                "This tab is obsolete - the Superprof pipeline goes through 'New Growing List' "
+                "(prepare_weekly_batch.py) and Enseigna through 'Avis'/'Versus'."
             )
             return []
 
@@ -1284,9 +1284,9 @@ class SheetsClient:
                     # Batch update all cells in one API call
                     ok = self._batch_update_cells(updates)
                     if not ok:
-                        print(f"[SHEETS] ✗ update_audit_serp: _batch_update_cells a échoué pour {url[:60]}")
+                        print(f"[SHEETS] ✗ update_audit_serp: _batch_update_cells failed for {url[:60]}")
                     return ok
-            print(f"[SHEETS] ✗ update_audit_serp: URL introuvable dans la spreadsheet: {url[:80]}")
+            print(f"[SHEETS] ✗ update_audit_serp: URL not found in the spreadsheet: {url[:80]}")
             return False
         except Exception as e:
             logger.error(f"update_audit_serp error for URL {url}: {e}")
@@ -1358,9 +1358,9 @@ class SheetsClient:
                     # Batch update all cells in one API call
                     ok = self._batch_update_cells(updates)
                     if not ok:
-                        print(f"[SHEETS] ✗ update_refresh_status: _batch_update_cells a échoué pour {url[:60]}")
+                        print(f"[SHEETS] ✗ update_refresh_status: _batch_update_cells failed for {url[:60]}")
                     return ok
-            print(f"[SHEETS] ✗ update_refresh_status: URL introuvable dans la spreadsheet: {url[:80]}")
+            print(f"[SHEETS] ✗ update_refresh_status: URL not found in the spreadsheet: {url[:80]}")
             return False
         except Exception as e:
             logger.error(f"update_refresh_status error for URL {url}: {e}")

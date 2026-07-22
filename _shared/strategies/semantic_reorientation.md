@@ -1,44 +1,44 @@
-# SEMANTIC_REORIENTATION : Réorientation sémantique
+# SEMANTIC_REORIENTATION: Semantic reorientation
 
-## Quand
-- Mot-clé principal en déclin (-20% ou plus),
-- Variantes sémantiques en hausse (+10% ou plus),
-- Shift d'intention détecté (informationnel ↔ transactionnel ↔ navigationnel).
+## When
+- Main keyword in decline (-20% or more),
+- Semantic variants on the rise (+10% or more),
+- Intent shift detected (informational ↔ transactional ↔ navigational).
 
 ## Scope
-Réécriture complète, réorientée vers les nouvelles intentions/variantes, tout en
-préservant le positionnement existant.
+Complete rewrite, reoriented towards the new intents/variants, while
+preserving the existing rankings.
 
-## Delta propre à cette stratégie
+## Delta specific to this strategy
 
-### Analyse du shift d'intention
+### Intent shift analysis
 
-| De → Vers | Adaptation |
+| From → To | Adaptation |
 |-----------|------------|
-| Informationnel → Transactionnel | Ajouter comparatifs, prix, CTA, témoignages avec résultats |
-| Informationnel → Navigationnel | Renforcer la marque, guides pratiques |
-| Transactionnel → Informationnel | Développer l'éducatif (définitions, FAQ étendue, sources), réduire le commercial |
+| Informational → Transactional | Add comparisons, prices, CTAs, testimonials with results |
+| Informational → Navigational | Strengthen the brand, practical guides |
+| Transactional → Informational | Expand the educational side (definitions, extended FAQ, sources), reduce the commercial side |
 
-Le H1 et le premier H2 sont orientés vers la **variante montante**.
+The H1 and the first H2 are oriented towards the **rising variant**.
 
-### Tissage des variantes sémantiques
+### Weaving in the semantic variants
 
-1. **H1** : variante principale montante · 2. **Premier H2** : variante secondaire ·
-3. **Intro** : mix mot-clé original + variante · 4. **Corps** : alterner naturellement ·
-5. **FAQ** : questions avec variantes.
+1. **H1**: main rising variant · 2. **First H2**: secondary variant ·
+3. **Intro**: mix of original keyword + variant · 4. **Body**: alternate naturally ·
+5. **FAQ**: questions using the variants.
 
-Chaque variante : 2-4 occurrences distribuées. Mieux vaut 25 termes à 2× que 10 à 5×.
-(Règles de densité complètes : skill `edito-refresh`, `references/semantic-density.md`.)
+Each variant: 2-4 occurrences, distributed. Better 25 terms at 2× than 10 at 5×.
+(Full density rules: `edito-refresh` skill, `references/semantic-density.md`.)
 
-Exemple, original en déclin « cours de maths particulier », variantes montantes
-« soutien scolaire maths », « aide aux devoirs maths » :
+French example: declining original "cours de maths particulier", rising variants
+"soutien scolaire maths", "aide aux devoirs maths":
 > Le **soutien scolaire en maths** est devenu essentiel. Que vous cherchiez une
 > **aide aux devoirs en maths** régulière ou des **cours de maths particuliers**
 > intensifs, plusieurs options s'offrent à vous…
 
-## Règles héritées (ne pas redéfinir ici)
-- **Fond** (E-E-A-T, sources, densité, réponse directe, FAQ, fraîcheur) → skill `edito-refresh`.
-- **Forme** (préservation des assets, HTML clean, métadonnées, callouts colorés
-  interdits) → skill `format-wordpress`.
-- **Structure d'ensemble** (intro, ordre des blocs, tableau récap éventuel) →
-  skill du site. Ne pas imposer de structure ni de couleurs codées en dur ici.
+## Inherited rules (do not redefine here)
+- **Substance** (E-E-A-T, sources, density, direct answer, FAQ, freshness) → `edito-refresh` skill.
+- **Form** (asset preservation, clean HTML, metadata, colored callouts
+  forbidden) → `format-wordpress` skill.
+- **Overall structure** (intro, block order, optional recap table) →
+  the site's skill. Do not impose a structure or hardcoded colors here.

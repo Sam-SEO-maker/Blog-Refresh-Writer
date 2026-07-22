@@ -1,5 +1,5 @@
 """
-Commandes de refresh pour une URL unique.
+Refresh commands for a single URL.
 
 Usage:
     cw refresh <url> --site enseigna.fr [--strategy FULL_REFRESH]
@@ -32,7 +32,7 @@ class MinimalRow:
 @click.command()
 @click.argument('url')
 @blog_option(required=True)
-@click.option('--spreadsheet-id', default=lambda: os.environ.get('SPREADSHEET_ID'), help='Google Sheet ID (auto depuis .env)')
+@click.option('--spreadsheet-id', default=lambda: os.environ.get('SPREADSHEET_ID'), help='Google Sheet ID (auto from .env)')
 @click.option('--strategy',
               type=click.Choice([
                   'TITLE_OPTIMIZATION',
@@ -42,20 +42,20 @@ class MinimalRow:
                   'FORMAT_ADAPTATION',
                   'EEAT_REWRITE'
               ]),
-              help='Force une stratégie spécifique')
+              help='Force a specific strategy')
 @click.option('--main-keyword', '--keyword', 'keyword',
               help='Main keyword (forces SERP analysis). --keyword = legacy alias.')
-@click.option('--debug', is_flag=True, help='Mode debug avec traceback complet')
+@click.option('--debug', is_flag=True, help='Debug mode with full traceback')
 def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
     """
-    Refresh une URL unique.
+    Refresh a single URL.
 
-    Exécute le workflow complet :
-    - Scraping HTML
-    - Audit éditorial
-    - Analyse GSC/SERP
-    - Décision stratégie
-    - Préparation contexte + prompt de génération
+    Runs the full workflow:
+    - HTML scraping
+    - Editorial audit
+    - GSC/SERP analysis
+    - Strategy decision
+    - Context preparation + generation prompt
     """
     import traceback
     from datetime import datetime
@@ -68,29 +68,29 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
     click.echo(f"URL:      {url}")
     click.echo(f"Blog:     {blog}")
     if strategy:
-        click.echo(f"Stratégie: {strategy} (forcée)")
+        click.echo(f"Strategy:  {strategy} (forced)")
     if keyword:
         click.echo(f"Keyword:  {keyword}")
     click.echo()
 
     # Init orchestrator
-    click.echo("[1/6] Initialisation orchestrator...")
+    click.echo("[1/6] Initializing orchestrator...")
     orchestrator = RefreshOrchestrator(
         base_path=Path.cwd(),
         spreadsheet_id=spreadsheet_id
     )
 
     # Fetch content via WP API (ou HTTP scraping fallback)
-    click.echo("[2/6] Récupération contenu...")
+    click.echo("[2/6] Fetching content...")
     fetch_result = orchestrator._fetch_html(url, site_slug=blog)
     if not fetch_result.get("clean_body"):
-        click.echo("  ✗ Impossible de récupérer le contenu", err=True)
+        click.echo("  ✗ Could not fetch the content", err=True)
         raise click.Abort()
     method = fetch_result["extraction_metadata"].get("method_used", "unknown")
-    click.echo(f"  ✓ Contenu récupéré via {method} ({len(fetch_result['clean_body'])} chars)")
+    click.echo(f"  ✓ Content fetched via {method} ({len(fetch_result['clean_body'])} chars)")
 
     # Process URL (audit + decision)
-    click.echo("[3/6] Audit + décision stratégie...")
+    click.echo("[3/6] Audit + strategy decision...")
     try:
         result = orchestrator.process_url(
             url=url,
@@ -105,21 +105,21 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
         click.echo(f"  Audit score: {result.audit_score}")
 
         if result.errors:
-            click.echo(f"  ⚠ Erreurs ({len(result.errors)}):")
+            click.echo(f"  ⚠ Errors ({len(result.errors)}):")
             for error in result.errors[:3]:
                 click.echo(f"    - {error[:100]}")
 
         if result.action_taken == "BLOCKED_QUALITY_ISSUES":
-            click.echo("\n❌ Quality Gate a bloqué le refresh")
-            click.echo("Consultez le rapport éditorial pour détails")
+            click.echo("\n❌ Quality Gate blocked the refresh")
+            click.echo("See the editorial audit report for details")
             return
 
         if result.action_taken in ("NO_ACTION", "ERROR", "REDIRECT_301_SUGGESTED"):
-            click.echo(f"\n⚠ Action '{result.action_taken}' - pas de génération nécessaire")
+            click.echo(f"\n⚠ Action '{result.action_taken}' - no generation needed")
             return
 
         # Assets déjà extraits par _fetch_html()
-        click.echo("[4/6] Extraction contenu + assets...")
+        click.echo("[4/6] Extracting content + assets...")
         clean_body = fetch_result["clean_body"]
         asset_counts = fetch_result["assets_baseline"].get("counts", {})
         click.echo(f"  ✓ Body: {len(clean_body)} chars")
@@ -134,7 +134,7 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
         title = h1_tag.get_text(strip=True) if h1_tag else ""
 
         # Prepare context directory
-        click.echo("[5/6] Préparation contexte pour génération...")
+        click.echo("[5/6] Preparing generation context...")
         row = MinimalRow(
             site_slug=blog,
             blogpost_url=url,
@@ -158,7 +158,7 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
                 "ytg_term_colors": result.ytg_term_colors,
             }
             click.echo(f"  YTG: guide {result.ytg_guide_id}, "
-                       f"{len(result.ytg_semantic_field)} termes → prompt")
+                       f"{len(result.ytg_semantic_field)} terms → prompt")
 
         context_dir = orchestrator._prepare_context_for_claude_code(
             original_html=clean_body,
@@ -178,7 +178,7 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
         )
 
         # Compose generation prompt via ghostwriter
-        click.echo("[6/6] Composition prompt de génération...")
+        click.echo("[6/6] Composing generation prompt...")
         from _shared.core.site_paths import SitePaths
         output_dir = SitePaths(base_path=Path.cwd()).output_dir(blog)
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -198,7 +198,7 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
                 f.write(generation_info["generation_prompt"])
 
             click.echo(f"\n{'='*70}")
-            click.echo(f"✅ CONTEXTE PRÊT POUR GÉNÉRATION")
+            click.echo(f"✅ CONTEXT READY FOR GENERATION")
             click.echo(f"{'='*70}")
             click.echo(f"  Context dir:  {context_dir}")
             click.echo(f"  Prompt:       {prompt_file}")
@@ -208,7 +208,7 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
             _art = generation_info['metadata'].get('article_type')
             if _art:
                 click.echo(f"  Type:         {_art}  (finalize --type {_art} → html/{_art}/)")
-            click.echo(f"  Assets avant: {generation_info['metadata'].get('assets_before', {})}")
+            click.echo(f"  Assets before: {generation_info['metadata'].get('assets_before', {})}")
             # Keyword + YTG guide: carry over into `finalize --main-keyword/--guide-id`
             # pour que le QC post-génération score sur le bon guide (pas le slug).
             _kw = keyword or result.main_keyword or ""
@@ -216,7 +216,7 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
                 click.echo(f"  Keyword:      {_kw}")
             if result.ytg_guide_id:
                 click.echo(f"  YTG guide:    {result.ytg_guide_id}")
-            click.echo(f"  Temps total:  {result.execution_time_seconds:.1f}s")
+            click.echo(f"  Total time:   {result.execution_time_seconds:.1f}s")
 
             # QC sémantique YTG : le HTML n'est pas encore généré à ce stade
             # (génération LLM déléguée hors process). On lance le QC seulement si
@@ -228,15 +228,15 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
                 guide_id=result.ytg_guide_id,
             )
         else:
-            click.echo(f"\n⚠ Erreur composition prompt: {generation_info.get('error', 'unknown')}")
+            click.echo(f"\n⚠ Prompt composition error: {generation_info.get('error', 'unknown')}")
 
     except Exception as e:
         if debug:
-            click.echo(f"\n❌ ERREUR:", err=True)
+            click.echo(f"\n❌ ERROR:", err=True)
             click.echo(traceback.format_exc(), err=True)
         else:
-            click.echo(f"\n❌ ERREUR: {str(e)[:200]}", err=True)
-            click.echo("(Utilisez --debug pour le traceback complet)")
+            click.echo(f"\n❌ ERROR: {str(e)[:200]}", err=True)
+            click.echo("(Use --debug for the full traceback)")
         raise click.Abort()
 
 
@@ -262,7 +262,7 @@ def _maybe_run_ytg_qc(site_slug: str, url: str,
     slug = url.strip("/").split("/")[-1]
     files = discover_generated_html(site_slug, slug_filter=slug)
     if not files:
-        click.echo("\n[YTG QC] HTML pas encore généré — lancer APRÈS génération :")
+        click.echo("\n[YTG QC] HTML not generated yet - run AFTER generation:")
         click.echo(f"         cw ytg qc --site {site_slug} --slug {slug}")
         return
 
@@ -279,7 +279,7 @@ def _maybe_run_ytg_qc(site_slug: str, url: str,
     if ytg_cfg.get("enabled") is False:
         return
 
-    click.echo("\n[YTG QC] HTML généré détecté — analyse sémantique…")
+    click.echo("\n[YTG QC] Generated HTML detected - running semantic analysis...")
     try:
         engine = YTGQualityCheck()
         html = files[0].read_text(encoding="utf-8")
@@ -289,10 +289,10 @@ def _maybe_run_ytg_qc(site_slug: str, url: str,
         )
         res.html_path = str(files[0])
         engine.persist(res)
-        click.echo(f"[YTG QC] Verdict: {res.verdict} — {res.message}")
+        click.echo(f"[YTG QC] Verdict: {res.verdict} - {res.message}")
         if res.verdict == VERDICT_NEEDS_FIX and res.under_optimized_terms:
-            click.echo(f"[YTG QC] À enrichir : {', '.join(res.under_optimized_terms[:8])}")
+            click.echo(f"[YTG QC] Terms to enrich: {', '.join(res.under_optimized_terms[:8])}")
         if ytg_cfg.get("gate") and res.verdict in (VERDICT_NEEDS_FIX, VERDICT_BLOCKED):
-            click.echo("[YTG QC] ⚠ GATE actif : article à revoir avant push WP.")
+            click.echo("[YTG QC] ⚠ GATE active: article must be reviewed before WP push.")
     except Exception as e:
-        click.echo(f"[YTG QC] Non-bloquant, erreur ignorée: {str(e)[:120]}")
+        click.echo(f"[YTG QC] Non-blocking, error ignored: {str(e)[:120]}")

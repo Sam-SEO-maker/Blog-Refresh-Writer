@@ -169,11 +169,11 @@ def _print_summary(buckets: dict[str, list[list]]) -> None:
 
 def run(months: int = 6, dry_run: bool = False) -> dict:
     gsc_property = _site_gsc_property("enseigna")
-    print(f"[enseigna-refresh-list] pull GSC 30j ({gsc_property})")
+    print(f"[enseigna-refresh-list] pull GSC 30d ({gsc_property})")
     raw_30d = fetch_gsc_keywords(gsc_property, months=1)
     print(f"[enseigna-refresh-list] pull GSC {months}m ({gsc_property})")
     raw_3m = fetch_gsc_keywords(gsc_property, months=months)
-    print(f"[enseigna-refresh-list] {len(raw_30d)} rows 30j, {len(raw_3m)} rows {months}m")
+    print(f"[enseigna-refresh-list] {len(raw_30d)} rows 30d, {len(raw_3m)} rows {months}m")
 
     snapshot = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     buckets = _aggregate(raw_30d, raw_3m, snapshot)
@@ -196,7 +196,7 @@ def run(months: int = 6, dry_run: bool = False) -> dict:
     svc = sheets._sheets_service
     _write_avis_versus_preserving_manual_cols(svc, SPREADSHEET_ID, "Avis", buckets["Avis"])
     _write_avis_versus_preserving_manual_cols(svc, SPREADSHEET_ID, "Versus", buckets["Versus"])
-    print("[enseigna-refresh-list] ✓ 2 onglets mis à jour (colonnes K-N préservées)")
+    print("[enseigna-refresh-list] ✓ 2 tabs updated (columns K-N preserved)")
 
     return {
         "avis": len(buckets["Avis"]),

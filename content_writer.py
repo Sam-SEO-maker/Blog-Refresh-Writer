@@ -2,7 +2,7 @@
 """
 Content Writer CLI
 
-CLI unifié pour le workflow de refresh SEO (Enseigna + Superprof Ressources FR).
+Unified CLI for the multi-site SEO refresh workflow.
 
 Usage:
     cw refresh <url> --site enseigna.fr
@@ -32,11 +32,14 @@ load_dotenv()
 @click.pass_context
 def cli(ctx):
     """
-    Content Writer - CLI unifié pour le refresh SEO
+    Content Writer - multi-site SEO refresh engine.
 
-    Agent autonome de rafraîchissement de contenus SEO pour Enseigna
-    et Superprof Ressources FR. Piloté par Google Sheets avec
-    détection de cannibalisation, audit qualité, et mode Ghostwriter.
+    Refreshes existing articles from data signals (GSC + DataForSEO),
+    driven by Google Sheets batches. Sites live under sites/<site-slug>/,
+    onboarded on demand from the ~96-site catalog (`site list` / `site init`).
+    Content generation runs through the Claude Code subagent (Max plan),
+    never the paid API. The Golden Rule applies to every refresh:
+    never reduce the assets (images, tables, videos, links).
     """
     ctx.ensure_object(dict)
 

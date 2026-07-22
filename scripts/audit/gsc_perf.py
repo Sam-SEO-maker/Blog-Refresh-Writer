@@ -91,7 +91,7 @@ def run_gsc_page(url: str, days: int = 28, dry_run: bool = False) -> dict:
             rows = GSCMCPClient().search_by_page_query(gsc_property, url, days=days)
             source = "mcp"
         except Exception as e:  # GSCMCPError ou réseau → fallback SA
-            print(f"[GSC] MCP indisponible ({str(e)[:80]}) — fallback service account.")
+            print(f"[GSC] MCP unavailable ({str(e)[:80]}) - falling back to service account.")
     if rows is None:
         rows = analyzer._fetch_current_period_rows_via_sa(url) or []
 

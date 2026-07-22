@@ -1,5 +1,5 @@
 """
-Commandes Notion.
+Notion commands.
 
 Usage:
     cw notion sync [--site moments-yoga]
@@ -37,21 +37,21 @@ def _load_db_id(site_slug: str, db_type: str) -> str:
 
 @click.group()
 def notion():
-    """Intégration Notion — commandes et sujets."""
+    """Notion integration - orders and topics."""
     pass
 
 
 @notion.command(name='sync')
 @blog_option()
-@click.option('--db-id', help='ID de la base Notion Commandes (override sites.json)')
+@click.option('--db-id', help='Notion Commandes database ID (overrides sites.json)')
 def sync(blog, db_id):
     """
-    Affiche un résumé des commandes Notion par blog.
+    Shows a summary of the Notion orders per site.
 
-    Lit la base "Commandes" Notion et affiche le nombre d'articles
-    par statut et par blog.
+    Reads the Notion "Commandes" database and shows the number of
+    articles per status and per site.
     """
-    click.echo(f"\n[Notion] Synchronisation commandes")
+    click.echo(f"\n[Notion] Syncing orders")
     if blog:
         click.echo(f"Blog: {blog}")
     click.echo()
@@ -59,7 +59,7 @@ def sync(blog, db_id):
     client = NotionClient()
     if not client.is_configured:
         click.echo(
-            "[ERREUR] NOTION_TOKEN manquant. Ajouter dans .env ou "
+            "[ERROR] NOTION_TOKEN missing. Add it to .env or "
             "~/.credentials/notion/credentials.json",
             err=True
         )
@@ -72,8 +72,8 @@ def sync(blog, db_id):
 
     if not database_id:
         click.echo(
-            "[ERREUR] DB ID manquant. Fournir --db-id ou configurer "
-            "notion_commandes_db_id dans _shared/config/sites.json",
+            "[ERROR] DB ID missing. Provide --db-id or configure "
+            "notion_commandes_db_id in _shared/config/sites.json",
             err=True
         )
         sys.exit(1)
@@ -87,83 +87,83 @@ def sync(blog, db_id):
         by_status[c.status or "inconnu"] = by_status.get(c.status or "inconnu", 0) + 1
         by_blog[c.site_slug or "inconnu"] = by_blog.get(c.site_slug or "inconnu", 0) + 1
 
-    click.echo(f"Total articles : {len(commandes)}")
+    click.echo(f"Total articles: {len(commandes)}")
     click.echo()
-    click.echo("Par statut :")
+    click.echo("By status:")
     for status, count in sorted(by_status.items()):
         click.echo(f"  {status:<20} {count}")
     click.echo()
-    click.echo("Par blog :")
+    click.echo("By site:")
     for b, count in sorted(by_blog.items()):
         click.echo(f"  {b:<25} {count}")
 
 
 @notion.command(name='check-title')
 @blog_option(required=True)
-@click.option('--title', required=True, help='Titre à vérifier')
-@click.option('--db-id', help='ID de la base Notion Commandes (override sites.json)')
+@click.option('--title', required=True, help='Title to check')
+@click.option('--db-id', help='Notion Commandes database ID (overrides sites.json)')
 @click.option('--threshold', default=0.85, show_default=True,
-              help='Seuil de similarité Jaccard (0.0-1.0)')
+              help='Jaccard similarity threshold (0.0-1.0)')
 def check_title(blog, title, db_id, threshold):
     """
-    Vérifie si un titre existe déjà dans les commandes Notion.
+    Checks whether a title already exists in the Notion orders.
 
-    Utilise un match exact puis un match normalisé (sans accents) puis
-    la similarité Jaccard sur les mots.
+    Uses an exact match, then a normalized match (accents stripped),
+    then Jaccard similarity on the words.
     """
-    click.echo(f"\n[Notion] Vérification titre : '{title}'")
-    click.echo(f"Blog: {blog} | Seuil: {threshold}\n")
+    click.echo(f"\n[Notion] Checking title: '{title}'")
+    click.echo(f"Blog: {blog} | Threshold: {threshold}\n")
 
     client = NotionClient()
     if not client.is_configured:
-        click.echo("[ERREUR] NOTION_TOKEN manquant.", err=True)
+        click.echo("[ERROR] NOTION_TOKEN missing.", err=True)
         sys.exit(1)
 
     database_id = db_id or _load_db_id(blog, "commandes")
     if not database_id:
-        click.echo("[ERREUR] DB ID manquant (notion_commandes_db_id dans sites.json).", err=True)
+        click.echo("[ERROR] DB ID missing (notion_commandes_db_id in sites.json).", err=True)
         sys.exit(1)
 
     commandes = client.get_commandes(database_id, site_slug=blog)
     match = client.find_title_match(commandes, title, threshold=threshold)
 
     if match:
-        click.echo(f"[MATCH TROUVE]")
-        click.echo(f"  Titre existant : {match.title}")
+        click.echo(f"[MATCH FOUND]")
+        click.echo(f"  Existing title : {match.title}")
         click.echo(f"  URL            : {match.url or 'N/A'}")
-        click.echo(f"  Statut         : {match.status or 'N/A'}")
+        click.echo(f"  Status         : {match.status or 'N/A'}")
         click.echo(f"  Date           : {match.date or 'N/A'}")
-        click.echo(f"\n  → Attention : cannibalisation potentielle avec cet article.")
+        click.echo(f"\n  → Warning: potential cannibalization with this article.")
     else:
-        click.echo(f"[OK] Aucun article similaire trouvé dans les {len(commandes)} commandes.")
+        click.echo(f"[OK] No similar article found among the {len(commandes)} orders.")
 
 
 @notion.command(name='list-sujets')
 @blog_option()
-@click.option('--db-id', required=True, help='ID de la base Notion Sujets')
+@click.option('--db-id', required=True, help='Notion Sujets database ID')
 def list_sujets(blog, db_id):
     """
-    Liste les sujets à traiter depuis la base Notion.
+    Lists the topics to process from the Notion database.
 
-    Affiche les topics non encore traités avec leur priorité.
+    Shows the not-yet-processed topics with their priority.
     """
-    click.echo(f"\n[Notion] Sujets à traiter")
+    click.echo(f"\n[Notion] Topics to process")
     if blog:
         click.echo(f"Blog: {blog}")
     click.echo()
 
     client = NotionClient()
     if not client.is_configured:
-        click.echo("[ERREUR] NOTION_TOKEN manquant.", err=True)
+        click.echo("[ERROR] NOTION_TOKEN missing.", err=True)
         sys.exit(1)
 
     sujets = client.get_sujets(db_id, site_slug=blog)
 
     if not sujets:
-        click.echo("Aucun sujet trouvé.")
+        click.echo("No topic found.")
         return
 
-    click.echo(f"{len(sujets)} sujets trouvés :\n")
+    click.echo(f"{len(sujets)} topics found:\n")
     for s in sujets:
         priority_icon = {"high": "!!!", "medium": " ! ", "low": "   "}.get(
             (s.priority or "").lower(), "   "
@@ -176,25 +176,25 @@ def list_sujets(blog, db_id):
 
 @notion.command(name='create-sujet')
 @blog_option(required=True)
-@click.option('--title', required=True, help='Titre du sujet')
-@click.option('--db-id', required=True, help='ID de la base Notion Sujets')
-@click.option('--category', default='', help='Catégorie thématique')
+@click.option('--title', required=True, help='Topic title')
+@click.option('--db-id', required=True, help='Notion Sujets database ID')
+@click.option('--category', default='', help='Thematic category')
 @click.option('--priority', default='medium',
               type=click.Choice(['high', 'medium', 'low']),
-              show_default=True, help='Priorité')
+              show_default=True, help='Priority')
 def create_sujet(blog, title, db_id, category, priority):
     """
-    Crée un nouveau sujet dans la base Notion.
+    Creates a new topic in the Notion database.
 
-    Utile pour enregistrer manuellement un topic découvert
-    lors d'une analyse de contenu ou de recherche de mots-clés.
+    Useful to manually record a topic discovered during a content
+    analysis or keyword research.
     """
-    click.echo(f"\n[Notion] Création sujet : '{title}'")
-    click.echo(f"Blog: {blog} | Priorité: {priority}\n")
+    click.echo(f"\n[Notion] Creating topic: '{title}'")
+    click.echo(f"Blog: {blog} | Priority: {priority}\n")
 
     client = NotionClient()
     if not client.is_configured:
-        click.echo("[ERREUR] NOTION_TOKEN manquant.", err=True)
+        click.echo("[ERROR] NOTION_TOKEN missing.", err=True)
         sys.exit(1)
 
     page = client.create_sujet(
@@ -207,23 +207,23 @@ def create_sujet(blog, title, db_id, category, priority):
 
     if page:
         page_id = page.get("id", "?")
-        click.echo(f"[OK] Sujet créé — page_id: {page_id}")
+        click.echo(f"[OK] Topic created - page_id: {page_id}")
     else:
-        click.echo("[ERREUR] Création échouée.", err=True)
+        click.echo("[ERROR] Creation failed.", err=True)
         sys.exit(1)
 
 
 @notion.command(name='sync-sites')
 @click.option('--apply', 'do_apply', is_flag=True, default=False,
-              help='Écrit sites.json (sinon dry-run diff).')
+              help='Write sites.json (otherwise dry-run diff).')
 @click.option('--dump-schema', 'dump_schema', is_flag=True, default=False,
-              help='Affiche les propriétés réelles de la base Notion « config pays ».')
+              help='Show the real properties of the Notion "config pays" database.')
 def sync_sites(do_apply, dump_schema):
-    """Sync unidirectionnel : page Notion « config pays » → sites.json.
+    """One-way sync: Notion "config pays" page → sites.json.
 
-    Notion (édité par les humains) est la source ; sites.json en est la projection
-    machine. Le moteur ne lit jamais Notion au runtime. Merge additif, dry-run par
-    défaut. Nécessite un NOTION_TOKEN valide dans .env.
+    Notion (edited by humans) is the source; sites.json is its machine
+    projection. The engine never reads Notion at runtime. Additive merge,
+    dry-run by default. Requires a valid NOTION_TOKEN in .env.
     """
     from scripts.notion.sync_sites_from_notion import main as sync_main
     argv = []

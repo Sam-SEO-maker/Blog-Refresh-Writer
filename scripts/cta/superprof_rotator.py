@@ -73,7 +73,7 @@ class SuperprofRotator:
             with open(self.config_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except (FileNotFoundError, json.JSONDecodeError) as e:
-            print(f"[SuperprofRotator] Erreur chargement config: {e}")
+            print(f"[SuperprofRotator] Config load error: {e}")
             return {}
 
     def select_landing(

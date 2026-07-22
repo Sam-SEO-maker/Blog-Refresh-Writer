@@ -1,49 +1,49 @@
-# FORMAT_ADAPTATION : Adaptation au format SERP
+# FORMAT_ADAPTATION: Adapting to the SERP format
 
-## Quand
-Le format de l'article ≠ format dominant de la SERP (ex. guide long → listicle,
-article → FAQ, texte → tableau).
+## When
+The article's format ≠ the dominant SERP format (e.g. long guide → listicle,
+article → FAQ, text → table).
 
 ## Scope
-**Restructurer** vers le format SERP dominant : changer la STRUCTURE, pas le fond.
-Conserver toutes les informations et tous les assets (aucune perte, aucune réduction).
+**Restructure** towards the dominant SERP format: change the STRUCTURE, not the substance.
+Keep all the information and all the assets (no loss, no reduction).
 
-## Delta propre : les 5 gabarits de format
+## Strategy-specific delta: the 5 format templates
 
-### 1. Listicle (« X méthodes », « Top Y »)
-H1 `[Nombre] [Sujet] [Année]` → résumé rapide → un H2 numéroté par élément
-(description 100-150 mots + puces) → tableau récapitulatif → FAQ.
+### 1. Listicle ("X methods", "Top Y")
+H1 `[Number] [Topic] [Year]` → quick summary → one numbered H2 per item
+(100-150 word description + bullets) → recap table → FAQ.
 
-### 2. Guide / How-to (« Comment », « Tutoriel »)
-H1 `Comment [Action] : Guide [Année]` → prérequis (temps, difficulté, matériel) →
-un H2 par étape séquentielle (+ image d'étape) → H2 « Erreurs courantes à éviter »
-(erreur → solution) → FAQ.
+### 2. Guide / How-to ("How to", "Tutorial")
+H1 `How to [Action]: [Year] Guide` → prerequisites (time, difficulty, materials) →
+one H2 per sequential step (+ step image) → H2 "Common mistakes to avoid"
+(mistake → solution) → FAQ.
 
-### 3. Comparatif / Versus (« vs », « meilleur »)
-H1 `[A] vs [B] : Comparatif [Année]` → verdict direct (1-2 phrases) → tableau
-comparatif par critère → « [A] en détail » (H3 avantages/inconvénients) → idem [B] →
-« Lequel choisir ? » (conditions par option) → FAQ.
+### 3. Comparison / Versus ("vs", "best")
+H1 `[A] vs [B]: [Year] Comparison` → direct verdict (1-2 sentences) → comparison
+table by criterion → "[A] in detail" (H3 pros/cons) → same for [B] →
+"Which one to choose?" (conditions per option) → FAQ.
 
-### 4. FAQ étendue (SERP dominée par les PAA)
-H1 `[Sujet] : réponses à vos questions` → intro courte → H2 « Questions fréquentes »
-→ un H3 par question (formulée comme une recherche Google) : réponse directe en gras
-+ développement 50-100 mots → ressources complémentaires. FAQ étendue = plus de
-questions que le défaut (le nb par défaut vit dans `edito-refresh`).
+### 4. Extended FAQ (SERP dominated by PAA)
+H1 `[Topic]: answers to your questions` → short intro → H2 "Frequently asked questions"
+→ one H3 per question (phrased like a Google search): direct answer in bold
++ 50-100 word development → complementary resources. Extended FAQ = more
+questions than the default (the default count lives in `edito-refresh`).
 
-### 5. Définition / Explication (« Qu'est-ce que »)
-H1 `Qu'est-ce que [Sujet] ?` → définition en 1-2 phrases (featured snippet) →
-« Définition complète » → « Comment ça fonctionne ? » → exemples concrets →
-avantages/inconvénients (tableau) → FAQ.
+### 5. Definition / Explanation ("What is")
+H1 `What is [Topic]?` → definition in 1-2 sentences (featured snippet) →
+"Full definition" → "How does it work?" → concrete examples →
+pros/cons (table) → FAQ.
 
-## Règles de conversion
+## Conversion rules
 
-- **Guide → Listicle** : extraire les points clés, les numéroter, ajouter un tableau récap, garder le détail par point.
-- **Listicle → Guide** : transformer les points en étapes séquentielles, ajouter transitions + prérequis + « erreurs à éviter ».
-- **Vers FAQ** : extraire l'info en Q&A, formuler les questions comme des recherches Google, réponse directe en gras + développement, compléter avec les PAA manquants.
+- **Guide → Listicle**: extract the key points, number them, add a recap table, keep the detail per point.
+- **Listicle → Guide**: turn the points into sequential steps, add transitions + prerequisites + "mistakes to avoid".
+- **To FAQ**: extract the information as Q&A, phrase the questions like Google searches, direct answer in bold + development, fill in the missing PAA.
 
-## Règles héritées (ne pas redéfinir ici)
-- **Fond** (réponse directe, FAQ, sources, E-E-A-T) → skill `edito-refresh`.
-- **Forme** (préservation des assets, HTML clean, tableaux, métadonnées, callouts
-  colorés interdits) → skill `format-wordpress`.
-- **Structure d'ensemble et couleurs** → skill du site. Ne pas coder de couleurs
-  en dur ici. Les gabarits ci-dessus décrivent l'ORDRE des sections, pas leur style.
+## Inherited rules (do not redefine here)
+- **Substance** (direct answer, FAQ, sources, E-E-A-T) → `edito-refresh` skill.
+- **Form** (asset preservation, clean HTML, tables, metadata, colored callouts
+  forbidden) → `format-wordpress` skill.
+- **Overall structure and colors** → the site's skill. Do not hardcode colors
+  here. The templates above describe the ORDER of the sections, not their style.

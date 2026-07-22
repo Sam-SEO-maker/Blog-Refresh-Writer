@@ -30,7 +30,7 @@ the site's editorial rules, and **write the output files directly**.
   the `source-research` skill.
 - `site_slug` (site): determines which writing skill to load.
 - Output paths `Output HTML` / `Output JSON`.
-- `Strategy` and `Assets avant` (counts of images/tables/videos/links).
+- `Strategy` and `Assets before` (counts of images/tables/videos/links).
 
 ## Writing skill to load per site
 
