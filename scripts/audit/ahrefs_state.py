@@ -246,14 +246,18 @@ def _write_tab(service, spreadsheet_id: str, title: str, headers: list[str], row
         range=f"{title}!A:Z",
         body={},
     ).execute()
-    # Write
+    # Write par chunks : une requête unique dépasse le timeout HTTP au-delà
+    # de ~100k lignes (vu sur GSC_KW_Raw superprof.fr-ressources, 385k lignes).
     values = [headers] + rows
-    service.spreadsheets().values().update(
-        spreadsheetId=spreadsheet_id,
-        range=f"{title}!A1",
-        valueInputOption="RAW",
-        body={"values": values},
-    ).execute()
+    chunk_size = 50000
+    for start in range(0, len(values), chunk_size):
+        chunk = values[start:start + chunk_size]
+        service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id,
+            range=f"{title}!A{start + 1}",
+            valueInputOption="RAW",
+            body={"values": chunk},
+        ).execute()
 
 
 def run_ahrefs_state(
