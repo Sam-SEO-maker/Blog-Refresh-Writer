@@ -24,7 +24,7 @@ porte la **méthode** (transverse, tous sites) ; le détail vit dans `references
   exceptions (Règle d'Or, article avis dont le sujet EST la plateforme) et substituts.
 
 L'**annuaire** des domaines d'autorité (donnée, par site) vit côté site, ex.
-`sites/superprof-ressources/sources/authority-map.md` : la skill le consomme au
+`sites/superprof.fr-ressources/sources/authority-map.md` : la skill le consomme au
 tier 1, elle ne le remplace pas.
 
 > **Statut : chantier en cours.** Le socle se construit « par le haut » (un annuaire
@@ -53,7 +53,7 @@ plateforme) sont définies dans `references/blacklisted-domains.md` et prévalen
 
 ### Tier 1 — Annuaire des domaines d'autorité (prioritaire)
 Piocher d'abord dans `sites/<site-slug>/sources/` : l'**annuaire** validé par un
-humain, réutilisable d'un article à l'autre. Pour `superprof-ressources`,
+humain, réutilisable d'un article à l'autre. Pour `superprof.fr-ressources`,
 `authority-map.md` donne les domaines d'autorité **par matière**. Démarche :
 
 1. Identifier la **matière** de l'article (histoire, maths, SES…).
@@ -140,7 +140,7 @@ rempli et flux d'injection** : `references/brief-schema.md`.
 ## Dépendances à construire (backlog, ne pas bloquer dessus)
 
 1. Étendre l'annuaire `sites/<site-slug>/sources/authority-map.md` aux autres sites
-   (existe pour `superprof-ressources`).
+   (existe pour `superprof.fr-ressources`).
 2. Script de constitution semi-auto (agent propose → humain valide).
 3. Câblage déterministe du brief vers le générateur : aujourd'hui il circule en
    argument au subagent (voir `references/brief-schema.md`) ; un câblage à la PAA

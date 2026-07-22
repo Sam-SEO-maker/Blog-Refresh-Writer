@@ -11,7 +11,7 @@ Architecture:
   - sites/{site_slug}/outputs/editorial_audits/ (editorial audit markdown files)
 
 Multi-site support : dossiers indexés par `site_slug` (clé de sites.json),
-p.ex. `enseigna`, `superprof-ressources`. Registre ouvert (tout site présent
+p.ex. `enseigna`, `superprof.fr-ressources`. Registre ouvert (tout site présent
 dans sites.json est valide) — plus de whitelist de domaines codée en dur.
 """
 
@@ -145,12 +145,9 @@ class OutputManager:
 
         return stats
 
-    # Domaines historiques tolérés en ENTRÉE (rétrocompat appelants), remappés
-    # vers le site_slug canonique. Les sorties sont toujours écrites par id.
-    _DOMAIN_TO_SITE_SLUG = {
-        "enseigna.fr": "enseigna",
-        "superprof.fr": "superprof-ressources",
-    }
+    # Identifiants historiques tolérés en ENTRÉE (rétrocompat appelants et vieux
+    # artefacts), remappés vers le site_slug canonique (convention domaine).
+    # La table vit dans _shared/core/constants.LEGACY_SITE_SLUGS.
 
     def _known_site_slugs(self) -> set:
         """IDs de sites connus, lus directement depuis sites.json (registre plat).
@@ -168,7 +165,8 @@ class OutputManager:
 
     def _normalize_site_id(self, site_id: str) -> str:
         """Normalise vers le site_slug canonique (remappe un domaine hérité)."""
-        return self._DOMAIN_TO_SITE_SLUG.get(site_id, site_id)
+        from _shared.core.constants import canonical_site_slug
+        return canonical_site_slug(site_id)
 
     def _validate_site_id(self, site_id: str) -> str:
         """Valide et retourne le site_slug canonique (id-based, ouvert au registre)."""

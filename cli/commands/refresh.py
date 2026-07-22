@@ -2,7 +2,7 @@
 Commandes de refresh pour une URL unique.
 
 Usage:
-    cw refresh <url> --site enseigna [--strategy FULL_REFRESH]
+    cw refresh <url> --site enseigna.fr [--strategy FULL_REFRESH]
 """
 
 import os

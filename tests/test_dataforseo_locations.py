@@ -122,8 +122,8 @@ def test_suisse_deux_langues_meme_location():
     """CH sert un blog fr (www) et un blog de (de.) : même location, langues distinctes."""
     from scripts.utils.site_onboard import load_catalog_entry
 
-    fr = build_site_config(load_catalog_entry("fr-ch-blog"))
-    de = build_site_config(load_catalog_entry("de-ch-blog"))
+    fr = build_site_config(load_catalog_entry("superprof.ch"))
+    de = build_site_config(load_catalog_entry("de.superprof.ch"))
 
     assert fr["serp_location"] == de["serp_location"] == "Switzerland"
     assert (fr["language"], de["language"]) == ("fr", "de")

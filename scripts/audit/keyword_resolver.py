@@ -12,7 +12,7 @@ Sources supportées (dans l'ordre de priorité par défaut) :
     2. sheet   — mot-clé lu dans l'onglet réel du blog (service account) :
                    * enseigna              → onglets "Avis"/"Versus" (col B top_keyword)
                                              + "A ajouter" (col D main_keyword)
-                   * superprof-ressources  → onglet "New Growing List" (col B main_keyword)
+                   * superprof.fr-ressources  → onglet "New Growing List" (col B main_keyword)
     3. gsc     — top query par impressions/clicks sur 12 mois (API GSC directe).
     4. slug    — slug de l'URL normalisé (dernier recours, jamais None).
 
@@ -48,7 +48,7 @@ _SHEET_LAYOUT = {
             ("A ajouter", 0, 3),   # A=url, D=main_keyword (nouveaux articles)
         ],
     },
-    "superprof-ressources": {
+    "superprof.fr-ressources": {
         "spreadsheet_env": "SPREADSHEET_ID_SUPERPROF",
         "tabs": [
             ("New Growing List", 0, 1),  # A=url, B=main_keyword

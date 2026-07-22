@@ -5,7 +5,7 @@ site**, with Python ready to run. No prior developer experience required — fol
 steps in order.
 
 > Throughout, `<site-slug>` means your site's **`site_slug`** — the exact identifier
-> shown in the catalog (e.g. `en-ae-blog`, `es-es-ressources`, `en-uk-ressources`). It's
+> shown in the catalog (e.g. `superprof.ae`, `superprof.es-apuntes`). It's
 > one thing under three names you'll see: the `site_slug` field in the catalog, the
 > `<site-slug>` placeholder in this guide, and the name of your folder `sites/<site-slug>/`.
 > Wherever a command says `<site-slug>`, type your `site_slug` verbatim. Don't know it yet?

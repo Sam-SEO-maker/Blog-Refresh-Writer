@@ -25,9 +25,9 @@ applicable sur le fichier `{slug}_refreshed.gutenberg.html`.
 
 ## Cible
 
-- Fichier : `sites/superprof-ressources/outputs/html/{batch}/{slug}_refreshed.gutenberg.html`
+- Fichier : `sites/superprof.fr-ressources/outputs/html/{batch}/{slug}_refreshed.gutenberg.html`
   (le `.gutenberg.html`, pas le HTML nu de debug qui est supprimé après génération).
-- Blog : `superprof-ressources` uniquement.
+- Blog : `superprof.fr-ressources` uniquement.
 
 ## Checklist (6 défauts récurrents + rappels transverses)
 
@@ -71,7 +71,7 @@ Quand un contenu est une suite de dates/événements (« dates clés », « gran
 étapes »), coder un `wp:superprof/timeline-block` — **pas** une infobox, une
 liste ou un tableau.
 
-- **Format canonique** : `sites/superprof-ressources/prompts/site.md`
+- **Format canonique** : `sites/superprof.fr-ressources/prompts/site.md`
   (bloc `wp:superprof/timeline-block`, ~l. 298).
 - **Règle des infobox** : si un timeline **remplace** une infobox, conserver
   **1 infobox bleue + 1 jaune** (ajouter une infobox de remplacement ou recolorer
@@ -94,7 +94,7 @@ max 3 tableaux/article), les rédacteurs l'intègrent en mode code depuis le CSV
 - **Ton « tu » + emojis** dans les H2/H3 — [[feedback-sp-ressources-gutenberg-house-format]].
 - **Blocs AdvGB au format exact** (commentaires `<!-- wp:advgb/* -->`, HTML sur
   une seule ligne, `{uuid}` cohérent JSON↔classe CSS) — [[feedback-advgb-block-format]] ;
-  référence canonique `sites/superprof-ressources/prompts/reference.md`.
+  référence canonique `sites/superprof.fr-ressources/prompts/reference.md`.
 - **5 blocs obligatoires** : 2 infobox (1 bleue + 1 jaune), 1 count-up, 1 citation,
   1 bloc sources — [[feedback-sp-ressources-gutenberg-house-format]],
   [[feedback-sp-sources-block-format]].
@@ -116,5 +116,5 @@ cette skill.
 - Format maison : [[feedback-sp-ressources-gutenberg-house-format]].
 - Blocs AdvGB : [[feedback-advgb-block-format]].
 - FAQ emoji : [[feedback-faq-question-emoji]].
-- Prompt principal : `sites/superprof-ressources/prompts/site.md`.
-- Référence HTML canonique : `sites/superprof-ressources/prompts/reference.md`.
+- Prompt principal : `sites/superprof.fr-ressources/prompts/site.md`.
+- Référence HTML canonique : `sites/superprof.fr-ressources/prompts/reference.md`.

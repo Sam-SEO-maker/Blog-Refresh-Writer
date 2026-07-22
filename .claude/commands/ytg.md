@@ -16,7 +16,7 @@ le résolveur retombe souvent sur le slug (titre de l'article ≠ vrai mot-clé 
 À partir de l'URL, déduis :
 
 1. **`--site`** depuis le domaine / chemin de l'URL :
-   - `superprof.fr/ressources/...` → `superprof-ressources`
+   - `superprof.fr/ressources/...` → `superprof.fr-ressources`
    - `enseigna.fr/...` → `enseigna`
    - (autres sites : voir `_shared/config/sites.json`)
 2. **`--slug`** = dernier segment de path, sans extension ni slash final

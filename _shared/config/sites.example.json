@@ -2,7 +2,7 @@
   "notion_refresh_tracker_db_id": "YOUR_NOTION_DB_ID",
   "sites": [
     {
-      "site_slug": "enseigna",
+      "site_slug": "enseigna.fr",
       "name": "Enseigna",
       "domain": "enseigna.fr",
       "gsc_property": "https://enseigna.fr/",
@@ -31,7 +31,7 @@
       "notion_sujets_db_id": ""
     },
     {
-      "site_slug": "superprof-ressources",
+      "site_slug": "superprof.fr-ressources",
       "name": "Superprof Ressources FR",
       "domain": "superprof.fr",
       "url_base": "https://www.superprof.fr/ressources/",
@@ -45,9 +45,9 @@
       "registre": "TODO_a_confirmer_PO",
       "language": "fr",
       "editorial_guides": [
-        "sites/superprof-ressources/prompts/guides/guide-1-blog-writing-foundations.md",
-        "sites/superprof-ressources/prompts/guides/guide-2-blog-writing-reference.md",
-        "sites/superprof-ressources/prompts/guides/guide-3-working-with-refreshes.md"
+        "sites/superprof.fr-ressources/prompts/guides/guide-1-blog-writing-foundations.md",
+        "sites/superprof.fr-ressources/prompts/guides/guide-2-blog-writing-reference.md",
+        "sites/superprof.fr-ressources/prompts/guides/guide-3-working-with-refreshes.md"
       ],
       "notion_commandes_db_id": "",
       "notion_sujets_db_id": ""

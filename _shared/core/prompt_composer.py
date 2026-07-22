@@ -30,7 +30,7 @@ class PromptComposer:
         prompt = composer.compose(
             strategy="semantic_reorientation",
             subject="education_reviews",
-            site_id="enseigna",
+            site_id="enseigna.fr",
             content_type="review"
         )
 
@@ -68,7 +68,7 @@ class PromptComposer:
         Args:
             strategy: Stratégie de refresh (ex: "refresh_full", "refresh_diff")
             subject: Sujet optionnel (ex: "education_reviews", "music_lessons")
-            site_id: ID du site (ex: "enseigna") pour prompts site-specific
+            site_id: ID du site (ex: "enseigna.fr") pour prompts site-specific
             content_type: Type de contenu optionnel (ex: "review", "guide") pour template
             article_type: sous-type d'article du site (ex. enseigna : "avis" |
                 "versus"). "versus" ajoute le prompt vs_concurrent.md (niveau 4bis).
@@ -163,7 +163,7 @@ class PromptComposer:
         Charge le prompt site override depuis sites/{site_id}.md (Niveau 4).
 
         Args:
-            site_id: ID du site (ex: "enseigna", "moments-yoga")
+            site_id: ID du site (ex: "enseigna.fr", "moments-yoga")
 
         Returns:
             Contenu du prompt ou None

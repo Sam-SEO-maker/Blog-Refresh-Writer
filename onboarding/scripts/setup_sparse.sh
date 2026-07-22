@@ -5,7 +5,7 @@
 #
 # Usage (from an empty working directory):
 #     bash setup_sparse.sh <site-slug>
-#     # example:  bash setup_sparse.sh es-es-ressources
+#     # example:  bash setup_sparse.sh superprof.es-apuntes
 #
 # Result on disk: the engine (_shared, cli, scripts, ...) + sites/<site-slug>/.
 # The other markets stay on GitHub and are NOT written to your computer.

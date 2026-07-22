@@ -1,6 +1,6 @@
 ---
 description: Refresh SEO complet d'une URL (fetch WP REST/scrape → GSC/SERP/PAA/intent → décision → recherche sources → génération via subagent).
-argument-hint: <url> --site <enseigna|superprof-ressources> [--strategy X] [--keyword K]
+argument-hint: <url> --site <enseigna|superprof.fr-ressources> [--strategy X] [--keyword K]
 allowed-tools: Bash(python3 content_writer.py refresh:*), Bash(python3 content_writer.py finalize:*), Task, Read, Write, WebSearch, WebFetch, Skill
 ---
 

@@ -385,7 +385,7 @@ def main() -> None:
         targets = [Path(a) for a in path_args]
     else:
         from _shared.core.site_paths import SitePaths
-        targets = [SitePaths().output_dir("superprof-ressources") / "html"]
+        targets = [SitePaths().output_dir("superprof.fr-ressources") / "html"]
 
     reports = lint_paths(targets, apply_fix=apply_fix)
     if not reports:

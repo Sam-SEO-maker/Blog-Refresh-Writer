@@ -44,7 +44,7 @@ NOTION_CREDENTIALS_PATH = Path(
 # Mapping domaine Notion (NDD) → site_slug interne
 _DOMAIN_TO_BLOG_ID: dict[str, str] = {
     "enseigna.fr": "enseigna",
-    "superprof.fr": "superprof-ressources",
+    "superprof.fr": "superprof.fr-ressources",
 }
 
 # Mapping inverse site_slug → domaine Notion (pour les filtres API)

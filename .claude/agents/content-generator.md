@@ -46,7 +46,7 @@ config du site (§4bis-C levé). Déroulé :
 Exemples (valeurs lues dans la config, pas câblées) :
 
 - `enseigna` : `generation_skill = generate-enseigna-avis`.
-- `superprof-ressources` : `generation_skill = sp-ressources-gutenberg`,
+- `superprof.fr-ressources` : `generation_skill = sp-ressources-gutenberg`,
   `qc_skill = qc-sp-ressources`.
 
 Les skills métier vivent sous **`sites/{site_slug}/.claude/skills/`** (discovery
@@ -100,7 +100,7 @@ mémoires de feedback.
 3. Rédige le HTML en injectant les sources vérifiées dans le contenu et
    `eeat_sources`.
 4. Valide les assets (après ≥ avant) ; si un asset manque, restaure-le.
-5. Pour superprof-ressources : passe qc-sp-ressources, corrige les écarts.
+5. Pour superprof.fr-ressources : passe qc-sp-ressources, corrige les écarts.
 6. Écris `Output HTML` (HTML brut) et `Output JSON`.
 7. Renvoie un compte-rendu court (pas de HTML), **incluant le chemin exact du
    `Output HTML` écrit** : l'orchestrateur `/refresh` le passe à `cw finalize`
@@ -109,7 +109,7 @@ mémoires de feedback.
 
 > Répartition avec `cw finalize` (post-génération) :
 > - **Toi** : le contenu correct et complet, **y compris les blocs Gutenberg
->   maison** quand la skill du site les exige (superprof-ressources : les 5
+>   maison** quand la skill du site les exige (superprof.fr-ressources : les 5
 >   blocs AdvGB obligatoires — le convertisseur mécanique de finalize ne les
 >   ajoute PAS, cf. skill sp-ressources-gutenberg). Écris ce contenu dans
 >   `Output HTML`.

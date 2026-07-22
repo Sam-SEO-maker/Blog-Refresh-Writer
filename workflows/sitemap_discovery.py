@@ -12,13 +12,13 @@ Fonctionnalités :
 
 Usage:
     # Découvrir les nouvelles URLs pour un blog
-    python sitemap_discovery.py --site enseigna.fr --detect-new
+    python sitemap_discovery.py --site enseigna.fr.fr --detect-new
 
     # Trouver le contenu obsolète (> 6 mois)
-    python sitemap_discovery.py --site enseigna.fr --find-stale --months 6
+    python sitemap_discovery.py --site enseigna.fr.fr --find-stale --months 6
 
     # Exporter vers Google Sheets
-    python sitemap_discovery.py --site enseigna.fr --find-stale --export-to-sheets
+    python sitemap_discovery.py --site enseigna.fr.fr --find-stale --export-to-sheets
 
     # Tous les blogs d'un coup
     python sitemap_discovery.py --all-blogs --find-stale --months 12
@@ -219,13 +219,13 @@ def main():
         epilog="""
 Exemples:
   # Découvrir nouvelles URLs
-  python sitemap_discovery.py --site enseigna.fr --detect-new
+  python sitemap_discovery.py --site enseigna.fr.fr --detect-new
 
   # Trouver contenu obsolète (> 6 mois)
-  python sitemap_discovery.py --site enseigna.fr --find-stale --months 6
+  python sitemap_discovery.py --site enseigna.fr.fr --find-stale --months 6
 
   # Avec priorité haute uniquement
-  python sitemap_discovery.py --site enseigna.fr --find-stale --min-priority 4
+  python sitemap_discovery.py --site enseigna.fr.fr --find-stale --min-priority 4
 
   # Exporter vers Google Sheets (dry-run)
   python sitemap_discovery.py --site superprof.fr --find-stale --export-to-sheets --dry-run

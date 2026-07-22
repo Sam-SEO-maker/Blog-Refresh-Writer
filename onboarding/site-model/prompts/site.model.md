@@ -2,7 +2,7 @@
 
 > This is a skeleton, not content. It lists the sections a `site.md` should cover.
 > Replace every section with the real editorial rules of **your** language and country.
-> The reference site (`superprof-ressources`) has a full, mature `site.md` (~800 lines)
+> The reference site (`superprof.fr-ressources`) has a full, mature `site.md` (~800 lines)
 > — you don't need that much to start; fill the mandatory sections first.
 
 ## Article Output Structure

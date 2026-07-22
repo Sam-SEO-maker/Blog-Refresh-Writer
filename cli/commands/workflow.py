@@ -2,7 +2,7 @@
 Commandes de workflow complet.
 
 Usage:
-    cw workflow run <url> --site enseigna [--row 3]
+    cw workflow run <url> --site enseigna.fr [--row 3]
 """
 
 import os

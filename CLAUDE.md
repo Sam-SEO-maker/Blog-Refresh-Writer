@@ -24,7 +24,7 @@ internal links — including links to competitors). Details + validation JSON: `
 
 ## Multi-site architecture
 
-Each site (any client: a Superprof country blog, `enseigna`, `apuntes`, a future client)
+Each site (any client: a Superprof country blog, `enseigna.fr`, a future client)
 is grouped under **`sites/<site-slug>/`**:
 
 ```
@@ -32,8 +32,8 @@ sites/<site-slug>/
 ├── .claude/skills/        writing skills scoped to the site (native discovery)
 ├── prompts/
 │   ├── site.md            tone, blacklist, WP format (master source, loaded)
-│   ├── vs_concurrent.md   override for "versus" articles (enseigna)
-│   ├── reference.md       HTML example to imitate (superprof-ressources)
+│   ├── vs_concurrent.md   override for "versus" articles (enseigna.fr)
+│   ├── reference.md       HTML example to imitate (superprof.fr-ressources)
 │   └── blocks/ | guides/  annexes loaded on demand
 ├── config/site.json       generation_skill/qc_skill, language, auth_mode, ytg…
 ├── linking_maps/          internal linking maps
@@ -59,8 +59,12 @@ sites/<site-slug>/
   the `sites.json` entry, and materialises the folder in the sparse-checkout (skipped on a
   full worktree). The editorial part (`site.md`, generation skill) is still to be written. `site list`
   browses the catalog.
-- **Naming**: Superprof country = `lang-country-type` (`es-es-ressources`, `en-uk-ressources`);
-  standalone client = brand slug (`enseigna`). `superprof-ressources` = historical exception.
+- **Naming**: the site slug is **the domain as you type it** (`superprof.de`,
+  `superprof.mx`, `enseigna.fr`). When one domain hosts two sites (blog + ressources,
+  6 markets), the ressources site appends its real URL segment: `superprof.fr-ressources`,
+  `superprof.es-apuntes`, `superprof.de-lernplattform`. Legacy slugs (`enseigna`,
+  `superprof-ressources`, `es-es-ressources`…) are still accepted on input
+  (`canonical_site_slug`, `_shared/core/constants.py`).
 - **Per-site skills**: a site's own writing skills live under
   `sites/<site-slug>/.claude/skills/` (native scoped discovery, **already in place**);
   `edito-refresh`, `format-wordpress`, `recherche-sources` are cross-cutting at the root.
@@ -107,9 +111,9 @@ Up-to-date list of groups/commands: `python3 content_writer.py --help` (and
 | `seo-outline` | root (cross-cutting) | build the SEO/GEO editorial outline (content_plan.md) before writing — /refresh step 2bis |
 | `format-wordpress` | root (cross-cutting) | cross-cutting HTML/WP rules (accents, dash, anchors, lists) |
 | `recherche-sources <topic\|url>` | root (cross-cutting) | document a topic with verified sources (E-E-A-T brief) |
-| `generate-enseigna-avis` | `sites/enseigna/` | write an Enseigna review article (ACF JSON, verdict at the end) |
-| `sp-ressources-gutenberg` | `sites/superprof-ressources/` | write a Superprof Ressources article (in-house Gutenberg, 5 blocks) |
-| `qc-sp-ressources` | `sites/superprof-ressources/` | post-generation QC checklist for Superprof Ressources |
+| `generate-enseigna-avis` | `sites/enseigna.fr/` | write an Enseigna review article (ACF JSON, verdict at the end) |
+| `sp-ressources-gutenberg` | `sites/superprof.fr-ressources/` | write a Superprof Ressources article (in-house Gutenberg, 5 blocks) |
+| `qc-sp-ressources` | `sites/superprof.fr-ressources/` | post-generation QC checklist for Superprof Ressources |
 
 > The business skills are **scoped per site** (`sites/<site-slug>/.claude/skills/`) and
 > resolved via `generation_skill`/`qc_skill` from the config. Cross-cutting at the root:

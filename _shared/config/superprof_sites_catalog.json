@@ -2,7 +2,7 @@
   "_comment": "Catalogue des sites Superprof (généré depuis GSC list_properties). NE PAS confondre avec sites.json (sites onboardés, lu au runtime). Régénérer : python -m scripts.utils.build_superprof_catalog --from-file <props>.",
   "sites": [
     {
-      "site_slug": "de-de-ressources",
+      "site_slug": "superprof.de-lernplattform",
       "type": "ressources",
       "country": "DE",
       "language": "de",
@@ -11,7 +11,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-uk-ressources",
+      "site_slug": "superprof.co.uk-resources",
       "type": "ressources",
       "country": "UK",
       "language": "en",
@@ -20,7 +20,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-us-ressources",
+      "site_slug": "superprof.com-resources",
       "type": "ressources",
       "country": "US",
       "language": "en",
@@ -29,7 +29,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-es-ressources",
+      "site_slug": "superprof.es-apuntes",
       "type": "ressources",
       "country": "ES",
       "language": "es",
@@ -38,7 +38,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "pt-br-ressources",
+      "site_slug": "superprof.com.br-recursos",
       "type": "ressources",
       "country": "BR",
       "language": "pt",
@@ -47,7 +47,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "superprof-ressources",
+      "site_slug": "superprof.fr-ressources",
       "type": "ressources",
       "country": "FR",
       "language": "fr",
@@ -56,7 +56,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "ar-om-blog",
+      "site_slug": "superprof.com.om",
       "type": "blog",
       "country": "OM",
       "language": "ar",
@@ -65,7 +65,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "ar-qa-blog",
+      "site_slug": "superprof.qa",
       "type": "blog",
       "country": "QA",
       "language": "ar",
@@ -74,7 +74,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "ar-tn-blog",
+      "site_slug": "superprof.com.tn",
       "type": "blog",
       "country": "TN",
       "language": "ar",
@@ -83,7 +83,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "bg-bg-blog",
+      "site_slug": "superprof.bg",
       "type": "blog",
       "country": "BG",
       "language": "bg",
@@ -92,7 +92,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "bs-ba-blog",
+      "site_slug": "superprof.ba",
       "type": "blog",
       "country": "BA",
       "language": "bs",
@@ -101,7 +101,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "cs-cz-blog",
+      "site_slug": "superprof.cz",
       "type": "blog",
       "country": "CZ",
       "language": "cs",
@@ -110,7 +110,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "da-dk-blog",
+      "site_slug": "superprof.dk",
       "type": "blog",
       "country": "DK",
       "language": "da",
@@ -119,7 +119,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "de-at-blog",
+      "site_slug": "superprof.at",
       "type": "blog",
       "country": "AT",
       "language": "de",
@@ -128,7 +128,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "de-ch-blog",
+      "site_slug": "de.superprof.ch",
       "type": "blog",
       "country": "CH",
       "language": "de",
@@ -137,7 +137,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "de-de-blog",
+      "site_slug": "superprof.de",
       "type": "blog",
       "country": "DE",
       "language": "de",
@@ -146,7 +146,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "el-cy-blog",
+      "site_slug": "superprof.com.cy",
       "type": "blog",
       "country": "CY",
       "language": "el",
@@ -155,7 +155,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "el-gr-blog",
+      "site_slug": "superprof.gr",
       "type": "blog",
       "country": "GR",
       "language": "el",
@@ -164,7 +164,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-ae-blog",
+      "site_slug": "superprof.ae",
       "type": "blog",
       "country": "AE",
       "language": "en",
@@ -173,7 +173,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-au-blog",
+      "site_slug": "superprof.com.au",
       "type": "blog",
       "country": "AU",
       "language": "en",
@@ -182,7 +182,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-bw-blog",
+      "site_slug": "superprof.co.bw",
       "type": "blog",
       "country": "BW",
       "language": "en",
@@ -191,7 +191,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-bz-blog",
+      "site_slug": "superprof.bz",
       "type": "blog",
       "country": "BZ",
       "language": "en",
@@ -200,7 +200,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-ca-blog",
+      "site_slug": "superprof.ca",
       "type": "blog",
       "country": "CA",
       "language": "en",
@@ -209,7 +209,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-gb-blog",
+      "site_slug": "superprof.co.uk",
       "type": "blog",
       "country": "GB",
       "language": "en",
@@ -218,7 +218,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-gh-blog",
+      "site_slug": "superprof.com.gh",
       "type": "blog",
       "country": "GH",
       "language": "en",
@@ -227,7 +227,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-ie-blog",
+      "site_slug": "superprof.ie",
       "type": "blog",
       "country": "IE",
       "language": "en",
@@ -236,7 +236,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-in-blog",
+      "site_slug": "superprof.co.in",
       "type": "blog",
       "country": "IN",
       "language": "en",
@@ -245,7 +245,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-is-blog",
+      "site_slug": "superprof.is",
       "type": "blog",
       "country": "IS",
       "language": "en",
@@ -254,7 +254,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-ke-blog",
+      "site_slug": "superprof.co.ke",
       "type": "blog",
       "country": "KE",
       "language": "en",
@@ -263,7 +263,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-ls-blog",
+      "site_slug": "superprof.ls",
       "type": "blog",
       "country": "LS",
       "language": "en",
@@ -272,7 +272,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-mt-blog",
+      "site_slug": "superprof.com.mt",
       "type": "blog",
       "country": "MT",
       "language": "en",
@@ -281,7 +281,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-mu-blog",
+      "site_slug": "superprof.mu",
       "type": "blog",
       "country": "MU",
       "language": "en",
@@ -290,7 +290,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-my-blog",
+      "site_slug": "superprof.com.my",
       "type": "blog",
       "country": "MY",
       "language": "en",
@@ -299,7 +299,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-na-blog",
+      "site_slug": "superprof.com.na",
       "type": "blog",
       "country": "NA",
       "language": "en",
@@ -308,7 +308,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-ng-blog",
+      "site_slug": "superprof.ng",
       "type": "blog",
       "country": "NG",
       "language": "en",
@@ -317,7 +317,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-nz-blog",
+      "site_slug": "superprof.co.nz",
       "type": "blog",
       "country": "NZ",
       "language": "en",
@@ -326,7 +326,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-ph-blog",
+      "site_slug": "superprof.com.ph",
       "type": "blog",
       "country": "PH",
       "language": "en",
@@ -335,7 +335,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-pk-blog",
+      "site_slug": "superprof.pk",
       "type": "blog",
       "country": "PK",
       "language": "en",
@@ -344,7 +344,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-rw-blog",
+      "site_slug": "superprof.rw",
       "type": "blog",
       "country": "RW",
       "language": "en",
@@ -353,7 +353,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-sg-blog",
+      "site_slug": "superprof.sg",
       "type": "blog",
       "country": "SG",
       "language": "en",
@@ -362,7 +362,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-tz-blog",
+      "site_slug": "superprof.co.tz",
       "type": "blog",
       "country": "TZ",
       "language": "en",
@@ -371,7 +371,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-us-blog",
+      "site_slug": "superprof.com",
       "type": "blog",
       "country": "US",
       "language": "en",
@@ -380,7 +380,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "en-za-blog",
+      "site_slug": "superprof.co.za",
       "type": "blog",
       "country": "ZA",
       "language": "en",
@@ -389,7 +389,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-ar-blog",
+      "site_slug": "superprof.com.ar",
       "type": "blog",
       "country": "AR",
       "language": "es",
@@ -398,7 +398,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-bo-blog",
+      "site_slug": "superprof.com.bo",
       "type": "blog",
       "country": "BO",
       "language": "es",
@@ -407,7 +407,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-cl-blog",
+      "site_slug": "superprof.cl",
       "type": "blog",
       "country": "CL",
       "language": "es",
@@ -416,7 +416,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-co-blog",
+      "site_slug": "superprof.co",
       "type": "blog",
       "country": "CO",
       "language": "es",
@@ -425,7 +425,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-cr-blog",
+      "site_slug": "superprof.cr",
       "type": "blog",
       "country": "CR",
       "language": "es",
@@ -434,7 +434,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-do-blog",
+      "site_slug": "superprof.com.do",
       "type": "blog",
       "country": "DO",
       "language": "es",
@@ -443,7 +443,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-ec-blog",
+      "site_slug": "superprof.com.ec",
       "type": "blog",
       "country": "EC",
       "language": "es",
@@ -452,7 +452,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-es-blog",
+      "site_slug": "superprof.es",
       "type": "blog",
       "country": "ES",
       "language": "es",
@@ -461,7 +461,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-gt-blog",
+      "site_slug": "superprof.com.gt",
       "type": "blog",
       "country": "GT",
       "language": "es",
@@ -470,7 +470,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-hn-blog",
+      "site_slug": "superprof.hn",
       "type": "blog",
       "country": "HN",
       "language": "es",
@@ -479,7 +479,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-mx-blog",
+      "site_slug": "superprof.mx",
       "type": "blog",
       "country": "MX",
       "language": "es",
@@ -488,7 +488,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-ni-blog",
+      "site_slug": "superprof.com.ni",
       "type": "blog",
       "country": "NI",
       "language": "es",
@@ -497,7 +497,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-pa-blog",
+      "site_slug": "superprof.com.pa",
       "type": "blog",
       "country": "PA",
       "language": "es",
@@ -506,7 +506,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-pe-blog",
+      "site_slug": "superprof.pe",
       "type": "blog",
       "country": "PE",
       "language": "es",
@@ -515,7 +515,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-pr-blog",
+      "site_slug": "superprof.com.pr",
       "type": "blog",
       "country": "PR",
       "language": "es",
@@ -524,7 +524,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-py-blog",
+      "site_slug": "superprof.com.py",
       "type": "blog",
       "country": "PY",
       "language": "es",
@@ -533,7 +533,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-sv-blog",
+      "site_slug": "superprof.com.sv",
       "type": "blog",
       "country": "SV",
       "language": "es",
@@ -542,7 +542,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "es-uy-blog",
+      "site_slug": "superprof.uy",
       "type": "blog",
       "country": "UY",
       "language": "es",
@@ -551,7 +551,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "et-ee-blog",
+      "site_slug": "superprof.ee",
       "type": "blog",
       "country": "EE",
       "language": "et",
@@ -560,7 +560,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "fi-fi-blog",
+      "site_slug": "superprof.fi",
       "type": "blog",
       "country": "FI",
       "language": "fi",
@@ -569,7 +569,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "fr-be-blog",
+      "site_slug": "superprof.be",
       "type": "blog",
       "country": "BE",
       "language": "fr",
@@ -578,7 +578,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "fr-ch-blog",
+      "site_slug": "superprof.ch",
       "type": "blog",
       "country": "CH",
       "language": "fr",
@@ -587,7 +587,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "fr-cm-blog",
+      "site_slug": "superprof.cm",
       "type": "blog",
       "country": "CM",
       "language": "fr",
@@ -596,7 +596,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "fr-fr-blog",
+      "site_slug": "superprof.fr",
       "type": "blog",
       "country": "FR",
       "language": "fr",
@@ -605,7 +605,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "fr-lu-blog",
+      "site_slug": "superprof.lu",
       "type": "blog",
       "country": "LU",
       "language": "fr",
@@ -614,7 +614,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "fr-ma-blog",
+      "site_slug": "superprof.ma",
       "type": "blog",
       "country": "MA",
       "language": "fr",
@@ -623,7 +623,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "fr-sn-blog",
+      "site_slug": "superprof.com.sn",
       "type": "blog",
       "country": "SN",
       "language": "fr",
@@ -632,7 +632,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "he-il-blog",
+      "site_slug": "superprof.co.il",
       "type": "blog",
       "country": "IL",
       "language": "he",
@@ -641,7 +641,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "hr-hr-blog",
+      "site_slug": "superprof.hr",
       "type": "blog",
       "country": "HR",
       "language": "hr",
@@ -650,7 +650,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "hu-hu-blog",
+      "site_slug": "superprof.hu",
       "type": "blog",
       "country": "HU",
       "language": "hu",
@@ -659,7 +659,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "id-id-blog",
+      "site_slug": "superprof.co.id",
       "type": "blog",
       "country": "ID",
       "language": "id",
@@ -668,7 +668,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "it-it-blog",
+      "site_slug": "superprof.it",
       "type": "blog",
       "country": "IT",
       "language": "it",
@@ -677,7 +677,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "ja-jp-blog",
+      "site_slug": "superprof.jp",
       "type": "blog",
       "country": "JP",
       "language": "ja",
@@ -686,7 +686,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "ko-kr-blog",
+      "site_slug": "superprof.co.kr",
       "type": "blog",
       "country": "KR",
       "language": "ko",
@@ -695,7 +695,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "lt-lt-blog",
+      "site_slug": "superprof.lt",
       "type": "blog",
       "country": "LT",
       "language": "lt",
@@ -704,7 +704,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "lv-lv-blog",
+      "site_slug": "superprof.lv",
       "type": "blog",
       "country": "LV",
       "language": "lv",
@@ -713,7 +713,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "nl-be-blog",
+      "site_slug": "nl.superprof.be",
       "type": "blog",
       "country": "BE",
       "language": "nl",
@@ -722,7 +722,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "nl-nl-blog",
+      "site_slug": "super-prof.nl",
       "type": "blog",
       "country": "NL",
       "language": "nl",
@@ -731,7 +731,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "no-no-blog",
+      "site_slug": "superprof.no",
       "type": "blog",
       "country": "NO",
       "language": "no",
@@ -740,7 +740,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "pl-pl-blog",
+      "site_slug": "superprof.pl",
       "type": "blog",
       "country": "PL",
       "language": "pl",
@@ -749,7 +749,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "pt-br-blog",
+      "site_slug": "superprof.com.br",
       "type": "blog",
       "country": "BR",
       "language": "pt",
@@ -758,7 +758,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "pt-mz-blog",
+      "site_slug": "superprof.co.mz",
       "type": "blog",
       "country": "MZ",
       "language": "pt",
@@ -767,7 +767,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "pt-pt-blog",
+      "site_slug": "superprof.pt",
       "type": "blog",
       "country": "PT",
       "language": "pt",
@@ -776,7 +776,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "ro-md-blog",
+      "site_slug": "superprof.md",
       "type": "blog",
       "country": "MD",
       "language": "ro",
@@ -785,7 +785,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "ro-ro-blog",
+      "site_slug": "superprof.com.ro",
       "type": "blog",
       "country": "RO",
       "language": "ro",
@@ -794,7 +794,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "sk-sk-blog",
+      "site_slug": "superprof.sk",
       "type": "blog",
       "country": "SK",
       "language": "sk",
@@ -803,7 +803,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "sl-si-blog",
+      "site_slug": "superprof.si",
       "type": "blog",
       "country": "SI",
       "language": "sl",
@@ -812,7 +812,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "sq-al-blog",
+      "site_slug": "superprof.al",
       "type": "blog",
       "country": "AL",
       "language": "sq",
@@ -821,7 +821,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "sr-me-blog",
+      "site_slug": "super-prof.me",
       "type": "blog",
       "country": "ME",
       "language": "sr",
@@ -830,7 +830,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "sr-rs-blog",
+      "site_slug": "superprof.rs",
       "type": "blog",
       "country": "RS",
       "language": "sr",
@@ -839,7 +839,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "sv-se-blog",
+      "site_slug": "superprof.se",
       "type": "blog",
       "country": "SE",
       "language": "sv",
@@ -848,7 +848,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "tr-tr-blog",
+      "site_slug": "superprof.com.tr",
       "type": "blog",
       "country": "TR",
       "language": "tr",
@@ -857,7 +857,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "uk-ua-blog",
+      "site_slug": "superprof.com.ua",
       "type": "blog",
       "country": "UA",
       "language": "uk",
@@ -866,7 +866,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "vi-vn-blog",
+      "site_slug": "superprof.vn",
       "type": "blog",
       "country": "VN",
       "language": "vi",
@@ -875,7 +875,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "zh-hk-blog",
+      "site_slug": "superprof.hk",
       "type": "blog",
       "country": "HK",
       "language": "zh",
@@ -884,7 +884,7 @@
       "onboardable": true
     },
     {
-      "site_slug": "zh-tw-blog",
+      "site_slug": "superprof.com.tw",
       "type": "blog",
       "country": "TW",
       "language": "zh",

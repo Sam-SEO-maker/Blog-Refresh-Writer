@@ -1,6 +1,6 @@
 ---
 description: État des lieux SEO d'un site via GSC (KW positionnés top-N, perfs) → Sheet dédiée.
-argument-hint: --site <enseigna|superprof-ressources> [--months 3] [--top-pos 30] [--dry-run]
+argument-hint: --site <enseigna|superprof.fr-ressources> [--months 3] [--top-pos 30] [--dry-run]
 allowed-tools: Bash(python3 content_writer.py audit gsc-state:*), Read
 ---
 

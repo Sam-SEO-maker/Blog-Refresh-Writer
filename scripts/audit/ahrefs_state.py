@@ -7,7 +7,7 @@ dans une Google Sheet dédiée par site.
 
 Usage:
     from scripts.audit.ahrefs_state import run_ahrefs_state
-    run_ahrefs_state("superprof-ressources", dry_run=False)
+    run_ahrefs_state("superprof.fr-ressources", dry_run=False)
 """
 
 import csv

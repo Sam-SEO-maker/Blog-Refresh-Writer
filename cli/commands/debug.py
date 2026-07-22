@@ -2,8 +2,8 @@
 Commandes de debug.
 
 Usage:
-    cw debug workflow <url> --site enseigna
-    cw debug config [--site enseigna]
+    cw debug workflow <url> --site enseigna.fr
+    cw debug config [--site enseigna.fr]
     cw debug extract-structures --spreadsheet-id <ID>
 """
 

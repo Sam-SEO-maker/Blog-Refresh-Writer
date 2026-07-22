@@ -14,9 +14,10 @@ python3 content_writer.py site list
 ```
 
 This prints the catalog. The value you want is the **`site_slug`** column — that string
-*is* your `<site-slug>` everywhere in these guides. Ressources sites use
-`lang-country-ressources` (e.g. `es-es-ressources`, `en-uk-ressources`); country blogs
-use `lang-country-blog` (e.g. `en-ae-blog`, `es-mx-blog`). A `[x]` means the site is
+*is* your `<site-slug>` everywhere in these guides. The slug is **your site's domain as
+you type it** (e.g. `superprof.mx`, `superprof.ae`). When one domain hosts both a blog
+and a ressources site, the ressources slug appends its real URL segment
+(e.g. `superprof.es-apuntes`, `superprof.de-lernplattform`). A `[x]` means the site is
 already onboarded.
 
 ## 2. Scaffold your site
@@ -37,7 +38,7 @@ This does three things:
    lines, not the rich hundred-line file a mature site ends up with. You'll flesh it
    out in steps 3–4, using the model files in
    [`site-model/`](site-model/README.md) as your starting point (that folder is on
-   your disk; the reference site `superprof-ressources` is **not**).
+   your disk; the reference site `superprof.fr-ressources` is **not**).
 3. Adds your folder to the sparse-checkout (so it shows up in your working tree) and
    registers your site in `_shared/config/sites.json`.
 
@@ -157,7 +158,7 @@ maintainer.
 > part of the shared engine — they're already on your disk and working, **you don't
 > install or recreate them**. The only skill you create is **your own** writing (and
 > optional QC) skill under `sites/<site-slug>/.claude/skills/`. You never see other
-> sites' skills (e.g. `superprof-ressources`'s) because their site folders aren't on
+> sites' skills (e.g. `superprof.fr-ressources`'s) because their site folders aren't on
 > your disk — and you don't need them.
 
 ## 7. Ask for your CODEOWNERS line

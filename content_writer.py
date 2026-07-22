@@ -5,12 +5,12 @@ Content Writer CLI
 CLI unifié pour le workflow de refresh SEO (Enseigna + Superprof Ressources FR).
 
 Usage:
-    cw refresh <url> --site enseigna
-    cw refresh <url> --site superprof-ressources
-    cw workflow run <url> --site enseigna [--row 3]
-    cw audit editorial <url> --site superprof-ressources
-    cw batch audit-gsc --site enseigna
-    cw debug workflow <url> --site enseigna
+    cw refresh <url> --site enseigna.fr
+    cw refresh <url> --site superprof.fr-ressources
+    cw workflow run <url> --site enseigna.fr [--row 3]
+    cw audit editorial <url> --site superprof.fr-ressources
+    cw batch audit-gsc --site enseigna.fr
+    cw debug workflow <url> --site enseigna.fr
     cw statuts <url> "Rédigé"
 """
 

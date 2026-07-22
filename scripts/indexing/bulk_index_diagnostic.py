@@ -8,7 +8,7 @@ et inscrit les URLs à problème dans le spreadsheet Refreshs_Audit.
 Usage:
     # Dry-run pour tester (10 URLs)
     python scripts/indexing/bulk_index_diagnostic.py \
-        --site enseigna.fr \
+        --site enseigna.fr.fr \
         --spreadsheet-id <SHEET_ID> \
         --limit 10 \
         --dry-run \
@@ -16,12 +16,12 @@ Usage:
 
     # Production (scan complet)
     python scripts/indexing/bulk_index_diagnostic.py \
-        --site enseigna.fr \
+        --site enseigna.fr.fr \
         --spreadsheet-id <SHEET_ID>
 
     # Update-only (URLs existantes seulement)
     python scripts/indexing/bulk_index_diagnostic.py \
-        --site enseigna.fr \
+        --site enseigna.fr.fr \
         --spreadsheet-id <SHEET_ID> \
         --update-only
 """
@@ -353,7 +353,7 @@ def main():
 Exemples:
   # Dry-run pour tester (10 URLs)
   python scripts/indexing/bulk_index_diagnostic.py \\
-    --site enseigna.fr \\
+    --site enseigna.fr.fr \\
     --spreadsheet-id <SHEET_ID> \\
     --limit 10 \\
     --dry-run \\
@@ -361,12 +361,12 @@ Exemples:
 
   # Production (scan complet)
   python scripts/indexing/bulk_index_diagnostic.py \\
-    --site enseigna.fr \\
+    --site enseigna.fr.fr \\
     --spreadsheet-id <SHEET_ID>
 
   # Update-only (URLs existantes seulement)
   python scripts/indexing/bulk_index_diagnostic.py \\
-    --site enseigna.fr \\
+    --site enseigna.fr.fr \\
     --spreadsheet-id <SHEET_ID> \\
     --update-only
         """

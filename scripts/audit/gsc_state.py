@@ -6,8 +6,8 @@ catégorise via les règles ahrefs_state.json (slug-based), agrège, et push
 3 onglets `GSC_*` dans la même Sheet dédiée que l'état Ahrefs.
 
 Usage:
-    python content_writer.py audit gsc-state --site superprof-ressources
-    python content_writer.py audit gsc-state --site enseigna --top-pos 20 --months 6
+    python content_writer.py audit gsc-state --site superprof.fr-ressources
+    python content_writer.py audit gsc-state --site enseigna.fr --top-pos 20 --months 6
 """
 
 import json

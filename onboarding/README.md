@@ -1,14 +1,13 @@
 # Onboarding — Content Writer (Superprof SEO)
 
-Welcome! This repo is the **multi-site SEO refresh agent** used across Superprof
-countries. Every country blog is a **site** (a folder under `sites/`). You are the
+Welcome! This repo is the **multi-site SEO refresh agent** created for Superprof blogs. Every country blog is a **site** (a folder under `sites/`). You are the
 SEO Manager for one country (ES, UK, US, MX, ID, JP, …) and you work on **your site only**.
 
 ## How this works in one picture
 
 - **One shared repo.** Everyone clones the same repository.
 - **You only see your own site.** Thanks to a git *sparse-checkout*, your computer
-  materialises the shared engine (`_shared/`, `cli/`, `scripts/`, …) **plus your single
+  materialises the shared engine (`_shared/`, `cli/`, `scripts/`, …) **and your single
   `sites/{site-slug}/` folder**. The other sites stay on GitHub but are **not** written
   to your disk — no clutter, no risk of editing someone else's site. Note that the
   sparse-checkout is a *disk convenience*: the engine files it does materialise are

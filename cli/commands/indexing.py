@@ -2,9 +2,9 @@
 Commandes d'indexation.
 
 Usage:
-    cw indexing request --site enseigna [--spreadsheet-id <ID>]
-    cw indexing scan --site enseigna
-    cw indexing bulk-diagnostic --site enseigna
+    cw indexing request --site enseigna.fr [--spreadsheet-id <ID>]
+    cw indexing scan --site enseigna.fr
+    cw indexing bulk-diagnostic --site enseigna.fr
 """
 
 import click

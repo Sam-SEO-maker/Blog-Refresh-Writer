@@ -2,7 +2,7 @@
 Commandes d'audit.
 
 Usage:
-    cw audit editorial <url> --site enseigna
+    cw audit editorial <url> --site enseigna.fr
     cw audit gsc <url>
     cw audit serp <url> --keyword "parcoursup"
     cw audit cannibalization <url>
@@ -83,7 +83,7 @@ def serp(url, keyword):
 
 
 @audit.command("ahrefs-state")
-@click.option('--site', required=True, type=click.Choice(['superprof-ressources', 'enseigna']), help='Site cible')
+@click.option('--site', required=True, type=click.Choice(['superprof.fr-ressources', 'enseigna']), help='Site cible')
 @click.option('--months', type=int, default=None, help='Période en mois (défaut: config)')
 @click.option('--limit', type=int, default=None, help='Nb max de KW (défaut: config)')
 @click.option('--from-csv', type=str, default=None, help='Lire un export CSV Ahrefs au lieu de l\'API')
@@ -197,7 +197,7 @@ def gsc_page(url, days, dry_run):
 
 
 @audit.command("gsc-state")
-@click.option('--site', required=True, type=click.Choice(['superprof-ressources', 'enseigna']), help='Site cible')
+@click.option('--site', required=True, type=click.Choice(['superprof.fr-ressources', 'enseigna']), help='Site cible')
 @click.option('--months', type=int, default=3, help='Période en mois (défaut: 3)')
 @click.option('--top-pos', type=int, default=30, help='Position max à conserver (défaut: 30)')
 @click.option('--min-impressions', type=int, default=0, help='Impressions min à conserver')

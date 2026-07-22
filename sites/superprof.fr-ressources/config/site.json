@@ -1,5 +1,5 @@
 {
-  "site_slug": "superprof-ressources",
+  "site_slug": "superprof.fr-ressources",
   "display_name": "Superprof Ressources FR",
   "domain": "superprof.fr",
   "url_base": "https://www.superprof.fr/ressources/",
@@ -60,8 +60,8 @@
     "position_decline_alert": 5
   },
   "editorial_guides": [
-    "sites/superprof-ressources/prompts/site.md",
-    "sites/superprof-ressources/prompts/reference.md"
+    "sites/superprof.fr-ressources/prompts/site.md",
+    "sites/superprof.fr-ressources/prompts/reference.md"
   ],
   "brand_rules": {
     "name": "Superprof",

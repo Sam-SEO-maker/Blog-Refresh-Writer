@@ -3,7 +3,7 @@
 Le **catalogue** (`_shared/config/superprof_sites_catalog.json`) liste TOUS les
 blogs Superprof actifs (éditoriaux `/blog/` + sites Ressources), qu'ils soient
 onboardés ou non comme sites Content Writer. C'est le « menu » qu'un responsable
-pays consulte pour découvrir ce qu'il peut onboarder (`cw site init <id>`).
+pays consulte pour découvrir ce qu'il peut onboarder (`cw site init <site-slug>`).
 
 À NE PAS confondre avec le **registre** `sites.json` (sites réellement onboardés,
 chargés par le moteur au runtime). Catalogue = carte ; registre = commande.
@@ -32,14 +32,16 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 CATALOG_PATH = _PROJECT_ROOT / "_shared" / "config" / "superprof_sites_catalog.json"
 
 # Les 6 sites Ressources confirmés (cf. RECENSEMENT_BLOGS_SUPERPROF.md).
-# gsc_property → (site_slug conventionnel, country, language, url_base)
+# gsc_property → (site_slug, country, language, url_base)
+# Slug = domaine + segment d'URL réel (le domaine seul serait ambigu : ces 6
+# domaines portent aussi un blog).
 RESSOURCES_SITES = {
-    "https://www.superprof.fr/ressources/":   ("superprof-ressources", "FR", "fr", "/ressources/"),
-    "https://www.superprof.es/apuntes/":      ("es-es-ressources", "ES", "es", "/apuntes/"),
-    "https://www.superprof.de/lernplattform/": ("de-de-ressources", "DE", "de", "/lernplattform/"),
-    "https://www.superprof.co.uk/resources/": ("en-uk-ressources", "UK", "en", "/resources/"),
-    "https://www.superprof.com/resources/":   ("en-us-ressources", "US", "en", "/resources/"),
-    "https://www.superprof.com.br/recursos/": ("pt-br-ressources", "BR", "pt", "/recursos/"),
+    "https://www.superprof.fr/ressources/":   ("superprof.fr-ressources", "FR", "fr", "/ressources/"),
+    "https://www.superprof.es/apuntes/":      ("superprof.es-apuntes", "ES", "es", "/apuntes/"),
+    "https://www.superprof.de/lernplattform/": ("superprof.de-lernplattform", "DE", "de", "/lernplattform/"),
+    "https://www.superprof.co.uk/resources/": ("superprof.co.uk-resources", "UK", "en", "/resources/"),
+    "https://www.superprof.com/resources/":   ("superprof.com-resources", "US", "en", "/resources/"),
+    "https://www.superprof.com.br/recursos/": ("superprof.com.br-recursos", "BR", "pt", "/recursos/"),
 }
 
 # Mapping exhaustif TLD Superprof → (country ISO-2, langue de contenu du marché).
@@ -175,16 +177,16 @@ def build_catalog(urls: list[str]) -> dict:
             if not _host_of(u):
                 continue
             country, lang = resolve_meta(u)
-            # id conventionnel : {lang}-{country}-blog (country ISO-2 en minuscules).
-            country_slug = country.lower() if len(country) <= 3 else country.lower().replace("-", "")
+            # Slug = le domaine tel qu'on le tape (host sans www). Un éventuel
+            # sous-domaine de marché reste dans le slug (de.superprof.ch).
             blogs.append({
-                "site_slug": f"{lang or 'xx'}-{country_slug}-blog",
+                "site_slug": _host_of(u),
                 "type": "blog", "country": country, "language": lang,
                 "gsc_property": u, "url_base": "/blog/", "onboardable": True,
             })
 
     # Dédup par site_slug : plusieurs propriétés GSC peuvent viser le même marché
-    # (ex. www.superprof.ch/blog/ et de.superprof.ch/blog/ → de-ch-blog). On garde
+    # (même host vu deux fois). On garde
     # la 1re rencontrée (ordre stable) et on liste les doublons dans le rapport.
     dedup, dup_ids = {}, []
     for b in blogs:

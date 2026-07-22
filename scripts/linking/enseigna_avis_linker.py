@@ -240,7 +240,7 @@ class EnseignaAvisLinker:
         sp_hrefs = [h for h in existing if "superprof.fr" in h]
         subject = self.rotator_subject_for(url, family)
         sel = self.rotator.select_landing(
-            site_id="superprof-ressources",
+            site_id="superprof.fr-ressources",
             article_subject=subject,
             article_url=url,
         )

@@ -7,7 +7,7 @@ Pour chaque URL fournie :
 
 Deux usages :
 - CLI batch (rétro-compat) : `python -m scripts.utils.push_to_wp <fichier_urls.txt>`
-  (site historique `superprof-ressources`).
+  (site historique `superprof.fr-ressources`).
 - Programmatique, multi-site (Phase 6b, appelé par `cw finalize --publish`) :
   `build_client(site)` + `publish_article(client, site, url, gutenberg_path, metadata_path)`.
 """
@@ -25,7 +25,7 @@ from scripts.scraping.wordpress_api_client import WordPressAPIClient
 
 from _shared.core.site_paths import SitePaths
 
-_DEFAULT_SITE = "superprof-ressources"
+_DEFAULT_SITE = "superprof.fr-ressources"
 
 
 def _slug(url: str) -> str:

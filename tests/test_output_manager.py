@@ -21,8 +21,8 @@ def temp_base_path(tmp_path):
     config_dir.mkdir(parents=True, exist_ok=True)
     (config_dir / "sites.json").write_text(
         json.dumps({"sites": [
-            {"id": "enseigna", "name": "Enseigna", "domain": "enseigna.fr"},
-            {"id": "superprof-ressources", "name": "Superprof Ressources", "domain": "superprof.fr"},
+            {"id": "enseigna.fr", "name": "Enseigna", "domain": "enseigna.fr"},
+            {"id": "superprof.fr-ressources", "name": "Superprof Ressources", "domain": "superprof.fr"},
         ]}),
         encoding="utf-8",
     )
@@ -46,10 +46,10 @@ class TestOutputManagerInit:
 
     def test_scrape_cache_dir_resolved(self, output_mgr, temp_base_path):
         """Le cache de HTML scrapé vit sous sites/{id}/outputs/_scrape_cache/."""
-        expected = temp_base_path / "sites" / "enseigna" / "outputs" / "_scrape_cache"
-        assert output_mgr._temp_dir("enseigna") == expected
-        # domaine hérité en entrée → même dossier (site_id normalisé)
+        expected = temp_base_path / "sites" / "enseigna.fr" / "outputs" / "_scrape_cache"
         assert output_mgr._temp_dir("enseigna.fr") == expected
+        # slug legacy en entrée → même dossier (site_id normalisé)
+        assert output_mgr._temp_dir("enseigna") == expected
 
     def test_site_dir_is_site_slug_based(self, output_mgr):
         """Les site_id sont désormais des site_slug (sites.json), plus des domaines.
@@ -59,10 +59,10 @@ class TestOutputManagerInit:
         """
         assert not hasattr(output_mgr, "VALID_SITE_IDS")
         # Domaine hérité → site_slug canonique
-        assert output_mgr._normalize_site_id("enseigna.fr") == "enseigna"
-        assert output_mgr._normalize_site_id("superprof.fr") == "superprof-ressources"
+        assert output_mgr._normalize_site_id("enseigna") == "enseigna.fr"
+        assert output_mgr._normalize_site_id("superprof.fr") == "superprof.fr-ressources"
         # Un id déjà canonique reste inchangé
-        assert output_mgr._normalize_site_id("enseigna") == "enseigna"
+        assert output_mgr._normalize_site_id("enseigna.fr") == "enseigna.fr"
 
 
 class TestInitWorkspace:
@@ -73,7 +73,7 @@ class TestInitWorkspace:
         output_mgr.init_workspace(purge_temp=False)
 
         known = output_mgr._known_site_slugs()
-        assert known  # le fixture fournit enseigna + superprof-ressources
+        assert known  # le fixture fournit enseigna.fr + superprof.fr-ressources
         for site_id in known:
             site_dir = output_mgr._site_paths.output_dir(site_id)
             assert site_dir.exists(), f"Missing output dir for {site_id}"
@@ -90,7 +90,7 @@ class TestInitWorkspace:
     def test_init_workspace_purges_temp_cache(self, output_mgr):
         """Test that init_workspace purges temp cache"""
         # Create some temp files
-        temp_site_dir = output_mgr._temp_dir("enseigna")
+        temp_site_dir = output_mgr._temp_dir("enseigna.fr")
         temp_site_dir.mkdir(parents=True, exist_ok=True)
         (temp_site_dir / "test1.html").write_text("test")
         (temp_site_dir / "test2.html").write_text("test")
@@ -106,7 +106,7 @@ class TestInitWorkspace:
     def test_init_workspace_no_purge(self, output_mgr):
         """Test that init_workspace can skip purging temp cache"""
         # Create temp file
-        temp_site_dir = output_mgr._temp_dir("enseigna")
+        temp_site_dir = output_mgr._temp_dir("enseigna.fr")
         temp_site_dir.mkdir(parents=True, exist_ok=True)
         test_file = temp_site_dir / "test.html"
         test_file.write_text("test")
@@ -125,9 +125,9 @@ class TestSiteValidation:
     def test_validate_valid_site_id(self, output_mgr):
         """Test that valid site IDs pass validation"""
         # Should not raise : site_slug canonique OU domaine hérité (remappé)
-        output_mgr._validate_site_id("enseigna")
-        output_mgr._validate_site_id("superprof-ressources")
-        output_mgr._validate_site_id("enseigna.fr")  # domaine hérité → enseigna
+        output_mgr._validate_site_id("enseigna.fr")
+        output_mgr._validate_site_id("superprof.fr-ressources")
+        output_mgr._validate_site_id("enseigna.fr")  # domaine hérité → enseigna.fr
         output_mgr._validate_site_id("superprof.fr")
 
     def test_validate_invalid_site_id(self, output_mgr):
@@ -147,7 +147,7 @@ class TestTempCacheMethods:
         html = "<html><body>Test content</body></html>"
 
         saved_path = output_mgr.save_temp_html(
-            site_id="enseigna",
+            site_id="enseigna.fr",
             url_slug="test-article",
             html_content=html
         )
@@ -155,7 +155,7 @@ class TestTempCacheMethods:
         assert saved_path.exists()
         assert saved_path.read_text(encoding="utf-8") == html
         assert saved_path.name == "test-article.html"
-        assert "enseigna" in str(saved_path)
+        assert "enseigna.fr" in str(saved_path)
 
     def test_get_temp_html_exists(self, output_mgr):
         """Test retrieving existing temp HTML"""
@@ -205,14 +205,14 @@ class TestOutputMethods:
 
     def test_get_site_output_dir(self, output_mgr):
         """Test getting site output directory"""
-        output_dir = output_mgr.get_site_output_dir("enseigna")
+        output_dir = output_mgr.get_site_output_dir("enseigna.fr")
 
         assert output_dir.exists()
         # Layout monorepo : sites/{id}/outputs/ (le dossier feuille = "outputs",
         # le site_slug est le dossier parent).
         assert output_dir.name == "outputs"
-        assert output_dir.parent.name == "enseigna"
-        assert "enseigna" in str(output_dir)
+        assert output_dir.parent.name == "enseigna.fr"
+        assert "enseigna.fr" in str(output_dir)
 
         # html/, metadata/, editorial_audits/ subdirectories should exist
         # (le dossier de métadonnées s'appelle "metadata", pas "json").
@@ -393,9 +393,9 @@ class TestValidationMethods:
     def test_get_workspace_stats(self, output_mgr):
         """Test getting workspace statistics"""
         # Create some files (site_id canonique — les stats sont keyées par id)
-        output_mgr.save_temp_html("enseigna", "test1", "html content")
-        output_mgr.save_refreshed_html("enseigna", "test2", "<html/>")
-        output_mgr.save_metadata("superprof-ressources", "test3", {"title": "Test"})
+        output_mgr.save_temp_html("enseigna.fr", "test1", "html content")
+        output_mgr.save_refreshed_html("enseigna.fr", "test2", "<html/>")
+        output_mgr.save_metadata("superprof.fr-ressources", "test3", {"title": "Test"})
 
         stats = output_mgr.get_workspace_stats()
 
@@ -404,9 +404,9 @@ class TestValidationMethods:
         assert "total_temp_size_mb" in stats
         assert "total_output_size_mb" in stats
 
-        assert stats["temp_cache"]["enseigna"] == 1
-        assert stats["outputs"]["enseigna"] >= 1
-        assert stats["outputs"]["superprof-ressources"] >= 1
+        assert stats["temp_cache"]["enseigna.fr"] == 1
+        assert stats["outputs"]["enseigna.fr"] >= 1
+        assert stats["outputs"]["superprof.fr-ressources"] >= 1
 
 
 class TestURLToSlug:

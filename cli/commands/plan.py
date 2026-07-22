@@ -2,7 +2,7 @@
 Commandes de plan éditorial (content_plan.md).
 
 Usage:
-    cw plan check <url> --site superprof-ressources
+    cw plan check <url> --site superprof.fr-ressources
 
 `plan check` valide *mécaniquement* le plan produit à l'étape 2bis de /refresh
 (skill seo-outline) : hiérarchie des titres, couverture PAA, preuves. 100%

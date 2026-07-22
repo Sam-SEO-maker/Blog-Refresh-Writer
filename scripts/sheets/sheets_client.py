@@ -21,6 +21,7 @@ from _shared.core.models import (
     EnseignaAvisRow,
 )
 from _shared.core.models.sheets_models import _safe_int, _safe_float
+from _shared.core.constants import canonical_site_slug
 
 # Google API (optionnel, pour mode direct)
 try:
@@ -267,7 +268,7 @@ class SheetsClient:
                     row.extend([""] * (len(self.COLS_URLS_INPUT) - len(row)))
 
                 # Indices (NEW STRUCTURE): site_slug(0), url(1), main_keyword(2), title(3), post_type(4), status(5), triggered_by(6), ...
-                site_slug_val = row[0] if len(row) > 0 else ""
+                site_slug_val = canonical_site_slug(row[0]) if len(row) > 0 else ""
                 status = row[5] if len(row) > 5 else "PENDING"
                 main_keyword = row[2] if len(row) > 2 else ""
 
@@ -792,7 +793,7 @@ class SheetsClient:
                                     post_type = ""
 
                                 audit_row = RefreshAuditRow(
-                                    site_slug=row[0] if len(row) > 0 else "",
+                                    site_slug=canonical_site_slug(row[0]) if len(row) > 0 else "",
                                     blogpost_url=row[1] if len(row) > 1 else "",
                                     main_keyword=row[2] if len(row) > 2 else "",
                                     title=row[3] if len(row) > 3 else "",
@@ -860,7 +861,7 @@ class SheetsClient:
                     # Fallback minimal
                     try:
                         audit_row = RefreshAuditRow(
-                            site_slug=row[0] if len(row) > 0 else "",
+                            site_slug=canonical_site_slug(row[0]) if len(row) > 0 else "",
                             blogpost_url=url,
                             main_keyword="",
                             title=row[3] if len(row) > 3 else "",
@@ -946,7 +947,7 @@ class SheetsClient:
                 except Exception:
                     try:
                         audit_row = RefreshAuditRow(
-                            site_slug=row[0] if len(row) > 0 else "",
+                            site_slug=canonical_site_slug(row[0]) if len(row) > 0 else "",
                             blogpost_url=url,
                             main_keyword=main_kw,
                             title=row[3] if len(row) > 3 else "",
@@ -1032,7 +1033,7 @@ class SheetsClient:
                                     post_type = ""
 
                                 audit_row = RefreshAuditRow(
-                                    site_slug=row[0] if len(row) > 0 else "",
+                                    site_slug=canonical_site_slug(row[0]) if len(row) > 0 else "",
                                     blogpost_url=row[1] if len(row) > 1 else "",
                                     main_keyword=row[2] if len(row) > 2 else "",
                                     title=row[3] if len(row) > 3 else "",
@@ -1090,7 +1091,7 @@ class SheetsClient:
                                     post_type = ""
 
                                 audit_row = RefreshAuditRow(
-                                    site_slug=row[0] if len(row) > 0 else "",
+                                    site_slug=canonical_site_slug(row[0]) if len(row) > 0 else "",
                                     blogpost_url=row[1] if len(row) > 1 else "",
                                     main_keyword=row[2] if len(row) > 2 else "",
                                     title=row[3] if len(row) > 3 else "",
@@ -1158,7 +1159,7 @@ class SheetsClient:
                                     post_type = ""
 
                                 audit_row = RefreshAuditRow(
-                                    site_slug=row[0] if len(row) > 0 else "",
+                                    site_slug=canonical_site_slug(row[0]) if len(row) > 0 else "",
                                     blogpost_url=row[1] if len(row) > 1 else "",
                                     main_keyword=row[2] if len(row) > 2 else "",
                                     title=row[3] if len(row) > 3 else "",

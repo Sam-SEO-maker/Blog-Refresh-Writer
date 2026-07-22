@@ -15,7 +15,7 @@ passent par lui (Phase 4.0/4.0c), donc la bascule `_shared/…` → `sites/{id}/
 ne se fait qu'ici.
 
 Clés :
-- `site_slug` = identifiant logique (`enseigna`, `superprof-ressources`) — la clé
+- `site_slug` = identifiant logique (`enseigna`, `superprof.fr-ressources`) — la clé
   UNIQUE des configs (`sites.json`) ET du dossier site. Les sorties sont
   indexées par `site_slug` (Phase 4.0b), plus par domaine.
 """

@@ -1,7 +1,7 @@
 """Routing locale (serp_location / language) du SERPAnalyzer par site.
 
 Garde-fou de non-régression : les sites historiques (enseigna,
-superprof-ressources) ne déclarent pas `serp_location`/`language` et doivent
+superprof.fr-ressources) ne déclarent pas `serp_location`/`language` et doivent
 continuer à cibler France/fr. Les nouveaux marchés (US, AU...) déclarent les
 deux champs et doivent les voir appliqués.
 
@@ -49,7 +49,7 @@ def _resolve(configs, site_slug):
 
 # --- Non-régression France --------------------------------------------------
 
-@pytest.mark.parametrize("site_slug", ["enseigna", "superprof-ressources"])
+@pytest.mark.parametrize("site_slug", ["enseigna", "superprof.fr-ressources"])
 def test_site_sans_locale_reste_france_fr(site_slug):
     """Config sans serp_location/language → France/fr (comportement historique)."""
     analyzer = _resolve({site_slug: {"gsc_property": "https://example.test/"}}, site_slug)

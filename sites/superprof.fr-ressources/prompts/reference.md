@@ -2,13 +2,13 @@
 
 **Objectif** : ce fichier contient le HTML propre, formaté Gutenberg, que le LLM doit suivre comme **référence canonique** pour structurer ses outputs dans `_shared/outputs/{site}/html/`.
 
-**Usage** : chargé dynamiquement par le pipeline en complément de `sites/superprof-ressources.md`. Le LLM doit reproduire à l'identique :
+**Usage** : chargé dynamiquement par le pipeline en complément de `sites/superprof.fr-ressources.md`. Le LLM doit reproduire à l'identique :
 - la structure des blocs Gutenberg (commentaires `<!-- wp:* -->`)
 - les classes CSS WordPress (`wp-block-*`, `advgb-*`, `superprof-*`)
 - les attributs JSON dans les commentaires d'ouverture de bloc
 - l'ordre et l'imbrication des balises
 
-**Règle** : si un détail de format diverge entre cette référence et `superprof-ressources.md`, **cette référence prévaut** (elle reflète la réalité WordPress backoffice).
+**Règle** : si un détail de format diverge entre cette référence et `superprof.fr-ressources.md`, **cette référence prévaut** (elle reflète la réalité WordPress backoffice).
 
 ---
 

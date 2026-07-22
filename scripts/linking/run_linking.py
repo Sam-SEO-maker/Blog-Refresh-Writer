@@ -2,9 +2,9 @@
 Run Linking - CLI Entry Point
 
 Usage:
-    python -m scripts.linking.run_linking --site enseigna.fr
-    python -m scripts.linking.run_linking --site enseigna.fr --csv path/to/custom.csv
-    python -m scripts.linking.run_linking --site enseigna.fr --dry-run
+    python -m scripts.linking.run_linking --site enseigna.fr.fr
+    python -m scripts.linking.run_linking --site enseigna.fr.fr --csv path/to/custom.csv
+    python -m scripts.linking.run_linking --site enseigna.fr.fr --dry-run
 """
 
 import argparse

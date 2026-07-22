@@ -2,12 +2,12 @@
 Commandes de traitement batch.
 
 Usage:
-    cw batch keyword-discovery [--site enseigna]
-    cw batch audit-gsc [--site enseigna] [--limit 10]
-    cw batch audit-serp [--site enseigna]
-    cw batch decision [--site enseigna]
-    cw batch refresh --action FULL_REFRESH [--site enseigna]
-    cw batch workflow-auto [--site enseigna] [--no-auto-refresh]
+    cw batch keyword-discovery [--site enseigna.fr]
+    cw batch audit-gsc [--site enseigna.fr] [--limit 10]
+    cw batch audit-serp [--site enseigna.fr]
+    cw batch decision [--site enseigna.fr]
+    cw batch refresh --action FULL_REFRESH [--site enseigna.fr]
+    cw batch workflow-auto [--site enseigna.fr] [--no-auto-refresh]
 """
 
 import click
@@ -375,7 +375,7 @@ def benchmark(blog, source_sheet, rows, spreadsheet_id):
     Ce benchmark couvre uniquement la partie automatisée.
 
     Exemple:
-      cw batch benchmark --site superprof-ressources --source-sheet GSC_Perfs --rows 2:16
+      cw batch benchmark --site superprof.fr-ressources --source-sheet GSC_Perfs --rows 2:16
     """
     import logging
     logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -404,8 +404,8 @@ def benchmark(blog, source_sheet, rows, spreadsheet_id):
 
 
 @batch.command(name='extract-tables')
-@click.option('--site-id', default='superprof-ressources', show_default=True,
-              help='Identifiant du blog (ex: superprof-ressources, enseigna.fr)')
+@click.option('--site-id', default='superprof.fr-ressources', show_default=True,
+              help='Identifiant du blog (ex: superprof.fr-ressources, enseigna.fr)')
 @click.option('--input-dir', type=click.Path(exists=True, file_okay=False, path_type=Path),
               default=None, help='Dossier HTML source (défaut: _shared/outputs/{site_id}/html/)')
 @click.option('--output-dir', type=click.Path(file_okay=False, path_type=Path),
@@ -423,8 +423,8 @@ def extract_tables(site_id, input_dir, output_dir, single_file):
     dépendre d'un scan global).
 
     Exemple:
-      cw batch extract-tables --site-id superprof-ressources
-      cw batch extract-tables --site-id superprof-ressources --file _shared/outputs/superprof-ressources/html/mon-article_refreshed.html
+      cw batch extract-tables --site-id superprof.fr-ressources
+      cw batch extract-tables --site-id superprof.fr-ressources --file _shared/outputs/superprof.fr-ressources/html/mon-article_refreshed.html
     """
     import logging
     logging.basicConfig(level=logging.WARNING, format="%(message)s")

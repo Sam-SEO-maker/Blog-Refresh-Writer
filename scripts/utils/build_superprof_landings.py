@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CSV_PATH = ROOT / "_local" / "landings-superprof-fr.csv"
 OUT_PATH = ROOT / "_shared" / "config" / "superprof_landings.json"
 
-# Matières du blog superprof-ressources sans page nationale exacte -> équivalent Superprof
+# Matières du blog superprof.fr-ressources sans page nationale exacte -> équivalent Superprof
 SUBJECT_ALIASES = {
     "informatique": "initiation-informatique",
     "arts-appliques": "arts-plastiques",
@@ -142,7 +142,7 @@ def weight_from_ads(ads: int, *, national: bool) -> int:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--cities", type=int, default=30, help="nb de top villes FR à inclure")
-    ap.add_argument("--site", default="superprof-ressources", help="site_id cible")
+    ap.add_argument("--site", default="superprof.fr-ressources", help="site_id cible")
     args = ap.parse_args()
 
     if not CSV_PATH.exists():

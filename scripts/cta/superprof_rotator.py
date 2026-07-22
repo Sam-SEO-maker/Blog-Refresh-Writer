@@ -423,7 +423,7 @@ class SuperprofRotator:
         """Fallback sûr : ne JAMAIS deviner une landing /cours/{matiere}/{ville}/.
 
         L'ancienne version dérivait la matière du site_id
-        ("superprof-ressources".split()[0] -> "superprof"), produisant
+        ("superprof.fr-ressources".split()[0] -> "superprof"), produisant
         https://www.superprof.fr/cours/superprof/france/ qui renvoie une 404,
         toujours avec la même ancre "professeur particulier". On pointe désormais
         vers la home Superprof (toujours valide) avec une ancre de marque.

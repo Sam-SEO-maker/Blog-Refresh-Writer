@@ -159,7 +159,7 @@ class YTGQualityCheck:
         Analyse un HTML généré contre son guide YTG et rend un verdict.
 
         Args:
-            site_slug: identifiant du blog (enseigna, superprof-ressources, …).
+            site_slug: identifiant du blog (enseigna, superprof.fr-ressources, …).
             url: URL de l'article (pour résoudre le mot-clé et le slug de contexte).
             html: contenu HTML généré à analyser.
             main_keyword: mot-clé déjà connu (sinon résolu via KeywordResolver).

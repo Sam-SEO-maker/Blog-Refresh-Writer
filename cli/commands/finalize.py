@@ -327,7 +327,7 @@ def _run_ytg_qc(base: Path, site_slug: str, url: str, saved: Path,
 
 def _run_linking(base: Path, site_slug: str, url: str, apply_linking: bool):
     """Applique le maillage selon le site."""
-    if site_slug == "enseigna":
+    if site_slug == "enseigna.fr":
         from scripts.linking.enseigna_avis_linker import EnseignaAvisLinker
 
         linker = EnseignaAvisLinker(base_path=base)
@@ -340,7 +340,7 @@ def _run_linking(base: Path, site_slug: str, url: str, apply_linking: bool):
                            f"{'appliqué(s)' if apply_linking else 'planifié(s) (dry-run)'}")
         if not apply_linking:
             click.echo("  (dry-run — relancer avec --apply-linking pour écrire)")
-    elif site_slug == "superprof-ressources":
+    elif site_slug == "superprof.fr-ressources":
         click.echo("  Superprof : les liens de landing sont injectés par "
                    "SuperprofRotator.get_prompt_directive() AVANT la génération. "
                    "Vérifier leur présence dans le HTML généré.")

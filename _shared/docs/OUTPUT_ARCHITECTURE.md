@@ -33,7 +33,7 @@ _shared/temp/
 │   ├── avis-acadomia.html
 │   └── cours-maths-primaire.html
 ├── enseigna-vs-concurrent/
-└── superprof-ressources/
+└── superprof.fr-ressources/
 ```
 
 **Méthodes OutputManager**:
@@ -78,7 +78,7 @@ _shared/outputs/enseigna/
 └── editorial_audits/
     └── preply-avis_editorial_audit.md
 
-_shared/outputs/superprof-ressources/
+_shared/outputs/superprof.fr-ressources/
 ├── html/
 │   └── apprendre-piano_refreshed.html
 ├── metadata/
@@ -105,7 +105,7 @@ _shared/outputs/superprof-ressources/
 |---------|--------|------|
 | `enseigna.fr` | enseigna.fr | Reviews soutien scolaire |
 | `enseigna-vs-concurrent` | enseigna.fr | Comparatifs Enseigna vs concurrents |
-| `superprof-ressources` | superprof.fr/ressources/ | Blog éducatif Superprof FR |
+| `superprof.fr-ressources` | superprof.fr/ressources/ | Blog éducatif Superprof FR |
 
 **Validation stricte**:
 ```python
@@ -186,8 +186,8 @@ if not all_exist:
 ```python
 stats = output_mgr.get_workspace_stats()
 # {
-#   "temp_cache": {"enseigna.fr": 12, "superprof-ressources": 8},
-#   "outputs": {"enseigna.fr": 45, "superprof-ressources": 32},
+#   "temp_cache": {"enseigna.fr": 12, "superprof.fr-ressources": 8},
+#   "outputs": {"enseigna.fr": 45, "superprof.fr-ressources": 32},
 #   "total_temp_size_mb": 2.4,
 #   "total_output_size_mb": 18.7
 # }

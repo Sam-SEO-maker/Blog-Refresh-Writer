@@ -27,7 +27,7 @@ L'ossature du E-E-A-T pour les sujets éducatifs et YMYL.
 - ❌ Page d'accueil ou de catégorie de l'organisme, sans la donnée précise.
 
 Whitelist de référence : `edito-refresh/references/eeat-framework.md`. Annuaire par
-matière (site Ressources FR) : `sites/superprof-ressources/sources/authority-map.md`.
+matière (site Ressources FR) : `sites/superprof.fr-ressources/sources/authority-map.md`.
 
 ## 3. Presse de référence
 
@@ -63,7 +63,7 @@ obsolète par les moteurs.
 - ❌ **Forums, réseaux sociaux, blogs perso non crédités** (sauf compte officiel d'une
   institution, utilisé comme tel).
 - ❌ **Homepage / page de catégorie** au lieu de la page précise portant l'information
-  (cf. deep-link obligatoire, `sites/superprof-ressources/prompts/site.md`).
+  (cf. deep-link obligatoire, `sites/superprof.fr-ressources/prompts/site.md`).
 
 ## Restitution
 

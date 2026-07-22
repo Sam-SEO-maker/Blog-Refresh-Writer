@@ -41,7 +41,7 @@ class ContentWriterRow:
     """
     Modèle unifié Content Writer (20 colonnes A-T).
 
-    Utilisé pour les 2 blogs : enseigna + superprof-ressources.
+    Utilisé pour les 2 blogs : enseigna + superprof.fr-ressources.
     Remplace RefreshAuditRow dans la nouvelle architecture.
 
     Structure spreadsheet "Articles Ressources" :
@@ -460,7 +460,7 @@ class SuperprofAuditRow:
 
     Cette dataclass sert :
     - de structure de travail pour le pipeline (audit GSC, decision tree, refresh)
-    - de schéma pour les fichiers JSON dans `_shared/outputs/superprof-ressources/audit/`
+    - de schéma pour les fichiers JSON dans `_shared/outputs/superprof.fr-ressources/audit/`
 
     Elle n'est PAS mappée sur les colonnes de l'onglet `Growing` (lecture seule).
     Elle alimente l'onglet séparé `GSC_Perfs` via `to_gsc_perfs_row()`.

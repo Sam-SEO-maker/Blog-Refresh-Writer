@@ -21,9 +21,9 @@ dans les H2/H3. YMYL low.
 > pour cette raison. Réf. [[feedback-sp-ressources-gutenberg-house-format]].
 >
 > **Source de vérité canonique** :
-> `sites/superprof-ressources/prompts/site.md` (règles maîtresses, prompt principal) +
-> `sites/superprof-ressources/prompts/reference.md` (exemple HTML Gutenberg à imiter) +
-> `sites/superprof-ressources/outputs/batches/REGEN_BRIEF.md` (brief réutilisable).
+> `sites/superprof.fr-ressources/prompts/site.md` (règles maîtresses, prompt principal) +
+> `sites/superprof.fr-ressources/prompts/reference.md` (exemple HTML Gutenberg à imiter) +
+> `sites/superprof.fr-ressources/outputs/batches/REGEN_BRIEF.md` (brief réutilisable).
 
 **Connaissance pays FR** : `references/connaissance-fr.md` (à consulter au besoin) —
 système éducatif post-réforme 2021 (piège « Bac S/L/ES »), vocabulaire opérationnel,
@@ -33,7 +33,7 @@ mots-clés à écarter.
 
 ## Livrable
 
-`sites/superprof-ressources/outputs/html/{batch}/{slug}_refreshed.gutenberg.html` —
+`sites/superprof.fr-ressources/outputs/html/{batch}/{slug}_refreshed.gutenberg.html` —
 liste **plate** de blocs Gutenberg (pas de wrapper `<article>`/`<section>`).
 Le fichier nu `{slug}_refreshed.html` de debug est supprimé après génération
 ([[feedback-delete-nu-html-keep-gutenberg]]).
@@ -71,7 +71,7 @@ ces blocs. Réf. [[feedback-advgb-block-format]].
 ## Contenu spécifique
 
 - **Chronologies → bloc Timeline** (`wp:superprof/timeline-block`,
-  `superprof-ressources.md` ~l. 298), pas infobox/liste/tableau. Si un timeline
+  `superprof.fr-ressources.md` ~l. 298), pas infobox/liste/tableau. Si un timeline
   remplace une infobox, garder 1 bleue + 1 jaune.
 - **FAQ** : chaque question (H3) commence par un **emoji** (palette 🤔💡🔍📌🧐📖❓💬)
   et finit par « ?». Réf. [[feedback-faq-question-emoji]].

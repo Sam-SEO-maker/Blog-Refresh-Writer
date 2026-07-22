@@ -69,7 +69,7 @@ Quand la seule source disponible est blacklistée, chercher dans (par ordre) :
 6. **Livres publiés** (avec ISBN).
 
 Grille de qualité détaillée : `source-quality.md`. Sources préférées par pays :
-fichier de connaissance du site (ex. `sites/superprof-ressources/.claude/skills/sp-ressources-gutenberg/references/connaissance-fr.md` §9).
+fichier de connaissance du site (ex. `sites/superprof.fr-ressources/.claude/skills/sp-ressources-gutenberg/references/connaissance-fr.md` §9).
 
 ## Liste complète (alphabétique — autoritaire)
 

@@ -5,7 +5,7 @@ Pour chaque URL fournie :
 1. Appelle GSC API (fenêtre 30j + 12 mois)
 2. Récupère impressions / clicks / CTR / position + top 3 queries
 3. Upsert dans l'onglet `GSC_Perfs` de la spreadsheet "Articles Ressources"
-4. Dump JSON local dans `_shared/outputs/superprof-ressources/audit/`
+4. Dump JSON local dans `_shared/outputs/superprof.fr-ressources/audit/`
 
 Onglet `⬆️ Growing` :
 - Lecture : URL (col A), main_keyword (col B), statuts (col F)
@@ -38,7 +38,7 @@ from _shared.core.models.sheets_models import SuperprofAuditRow
 # spreadsheet_id lu depuis la config du site (§4bis-A), repli littéral. Les
 # onglets ci-dessous sont spécifiques à cet audit (hors bloc `sheets` autoritatif).
 from _shared.core.sheets_config import get_spreadsheet_id
-SPREADSHEET_ID = get_spreadsheet_id("superprof-ressources", default="1Vutb06Fcm3awnANPbtLkI1EvhbE9d-TXrZRLTrmmLlQ")
+SPREADSHEET_ID = get_spreadsheet_id("superprof.fr-ressources", default="1Vutb06Fcm3awnANPbtLkI1EvhbE9d-TXrZRLTrmmLlQ")
 GROWING_SHEET = "⬆️ Growing"
 GSC_PERFS_SHEET = "GSC_Perfs"
 
@@ -53,7 +53,7 @@ SA_PATH = Path(
 ).expanduser()
 
 from _shared.core.site_paths import SitePaths
-OUTPUT_DIR = SitePaths(base_path=Path(__file__).resolve().parents[2]).output_dir("superprof-ressources") / "audit"
+OUTPUT_DIR = SitePaths(base_path=Path(__file__).resolve().parents[2]).output_dir("superprof.fr-ressources") / "audit"
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -371,7 +371,7 @@ def audit_url(gsc, row_index: int, url: str, main_keyword: str) -> SuperprofAudi
 
 
 def dump_json(audit: SuperprofAuditRow) -> Path:
-    """Dump l'audit dans `outputs/superprof-ressources/audit/{slug}_audit.json`."""
+    """Dump l'audit dans `outputs/superprof.fr-ressources/audit/{slug}_audit.json`."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     slug = slugify_url(audit.url)
     path = OUTPUT_DIR / f"{slug}_audit.json"

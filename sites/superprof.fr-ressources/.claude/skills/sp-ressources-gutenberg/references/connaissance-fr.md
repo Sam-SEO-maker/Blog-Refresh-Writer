@@ -205,7 +205,7 @@ utile quand l'article a un ancrage régional.)
 
 ## 9. Sources françaises préférées (bloc Sources)
 
-Complète l'annuaire par matière `sites/superprof-ressources/sources/authority-map.md`
+Complète l'annuaire par matière `sites/superprof.fr-ressources/sources/authority-map.md`
 et la blacklist `.claude/skills/recherche-sources/references/blacklisted-domains.md`.
 
 **Officiel** : education.gouv.fr · impots.gouv.fr · insee.fr · legifrance.gouv.fr ·
@@ -280,5 +280,5 @@ oraux LV mai-juin.
 
 - Typographie française → `.claude/skills/format-wordpress/references/typographie-fr.md`
 - Blacklist de domaines → `.claude/skills/recherche-sources/references/blacklisted-domains.md`
-- Annuaire d'autorité par matière → `sites/superprof-ressources/sources/authority-map.md`
+- Annuaire d'autorité par matière → `sites/superprof.fr-ressources/sources/authority-map.md`
 - Ton, structure, blocs → `prompts/site.md` + [[sp-ressources-gutenberg]]

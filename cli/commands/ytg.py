@@ -507,8 +507,8 @@ def _infer_url_from_html_path(site_slug: str, path) -> str:
             break
     slug = name.replace("_refreshed", "").replace("_", "-")
     domain_map = {
-        "enseigna": "https://enseigna.fr/{slug}/",
-        "superprof-ressources": "https://www.superprof.fr/ressources/{slug}/",
+        "enseigna.fr": "https://enseigna.fr/{slug}/",
+        "superprof.fr-ressources": "https://www.superprof.fr/ressources/{slug}/",
     }
     tpl = domain_map.get(site_slug, "https://example.com/{slug}/")
     return tpl.format(slug=slug)

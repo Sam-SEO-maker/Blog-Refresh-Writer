@@ -112,7 +112,7 @@
   },
   "blog_to_category_mapping": {
     "enseigna": "education_reviews",
-    "superprof-ressources": "education_general"
+    "superprof.fr-ressources": "education_general"
   },
   "eeat_levels": {
     "very_high": {

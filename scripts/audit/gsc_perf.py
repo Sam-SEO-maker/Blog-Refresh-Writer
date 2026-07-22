@@ -9,8 +9,8 @@ Complémentaire de `gsc_state` (qui, lui, catégorise + pousse vers Sheet) : ici
 affiche dans le chat et on dump un JSON local léger, sans dépendance Sheet.
 
 Usage :
-    python content_writer.py audit gsc-perf --site superprof-ressources
-    python content_writer.py audit gsc-perf --site enseigna --days 90 --dry-run
+    python content_writer.py audit gsc-perf --site superprof.fr-ressources
+    python content_writer.py audit gsc-perf --site enseigna.fr --days 90 --dry-run
 """
 
 import json

@@ -124,8 +124,8 @@ def run_benchmark(
     per_url_dir = output_dir / "runs" / report.run_id
     per_url_dir.mkdir(parents=True, exist_ok=True)
 
-    # Pre-build shared clients for GSC_Perfs upserts (superprof-ressources only)
-    gsc_perfs_enabled = site_slug == "superprof-ressources"
+    # Pre-build shared clients for GSC_Perfs upserts (superprof.fr-ressources only)
+    gsc_perfs_enabled = site_slug == "superprof.fr-ressources"
     gsc_perfs_clients = None
     if gsc_perfs_enabled:
         try:
@@ -172,7 +172,7 @@ def run_benchmark(
                     if result.errors:
                         timer.errors.extend(str(e)[:200] for e in result.errors[:3])
 
-            # GSC fetch for GSC_Perfs sink (superprof-ressources only).
+            # GSC fetch for GSC_Perfs sink (superprof.fr-ressources only).
             # Upsert is deferred to after context delivery so we can stamp
             # process_ended_at in the same row.
             if gsc_perfs_clients is not None:

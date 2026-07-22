@@ -20,7 +20,7 @@ Non-negotiable constraints (everything else is up to you):
 - Front-matter: `name:` + `description:` (the description tells the engine WHEN to apply it).
 - `name:` MUST match `generation_skill` in your site.json — that's the link between them.
 
-A fully worked example exists (the superprof-ressources site's skill) but it isn't on
+A fully worked example exists (the superprof.fr-ressources site's skill) but it isn't on
 your disk and carries no normative weight; ask the maintainer only if you want to see one
 concrete implementation.
 -->

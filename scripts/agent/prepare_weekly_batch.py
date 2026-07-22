@@ -31,7 +31,7 @@ logger = logging.getLogger("prepare_weekly_batch")
 for noisy in ("googleapiclient", "google", "urllib3", "scripts.scraping.content_extractor"):
     logging.getLogger(noisy).setLevel(logging.WARNING)
 
-BLOG_ID = "superprof-ressources"
+BLOG_ID = "superprof.fr-ressources"
 # Onglet + colonne de statut lus depuis la config du site (§4bis-A) ; repli sur
 # les littéraux historiques si le bloc `sheets` est absent.
 from _shared.core.sheets_config import get_primary_tab_name, get_status_col

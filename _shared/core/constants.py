@@ -21,6 +21,31 @@ BLACKLIST_DOMAINS = [
 
 SUPERPROF_DOMAIN = "superprof.fr"
 
+# =========================================================================
+# Site slugs — alias legacy
+# =========================================================================
+
+# Anciens identifiants (pré-convention domaine, 2026-07) encore présents dans
+# les Sheets, les vieux artefacts et les habitudes CLI. Toujours normaliser via
+# canonical_site_slug() avant de comparer ou de résoudre un chemin.
+LEGACY_SITE_SLUGS = {
+    "enseigna": "enseigna.fr",
+    "superprof-ressources": "superprof.fr-ressources",
+    "superprof.fr": "superprof.fr-ressources",  # domaine hérité (bug output_manager)
+    "es-es-ressources": "superprof.es-apuntes",
+    "de-de-ressources": "superprof.de-lernplattform",
+    "en-uk-ressources": "superprof.co.uk-resources",
+    "en-us-ressources": "superprof.com-resources",
+    "pt-br-ressources": "superprof.com.br-recursos",
+}
+
+
+def canonical_site_slug(slug):
+    """Normalise un site slug vers sa forme canonique (convention domaine)."""
+    if not slug:
+        return slug
+    return LEGACY_SITE_SLUGS.get(slug, slug)
+
 
 # =========================================================================
 # Thresholds GSC (Google Search Console)

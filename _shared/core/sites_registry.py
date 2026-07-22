@@ -26,7 +26,7 @@ class SitesRegistry:
         sites = registry.list_active_sites()
 
         # Récupérer un site spécifique
-        site = registry.get_site("enseigna")
+        site = registry.get_site("enseigna.fr")
 
         # Ajouter un nouveau site
         registry.add_site(SiteConfig(
@@ -74,7 +74,7 @@ class SitesRegistry:
         Récupère la configuration d'un site.
 
         Args:
-            site_id: ID du site (ex: "enseigna")
+            site_id: ID du site (ex: "enseigna.fr")
 
         Returns:
             SiteConfig ou None si non trouvé

@@ -36,7 +36,7 @@ class LinkMappingLoader:
         Load linking map CSV for a specific site.
 
         Args:
-            site_id: identifiant site (ex: "superprof-ressources")
+            site_id: identifiant site (ex: "superprof.fr-ressources")
 
         Returns:
             List of validated LinkMapping objects

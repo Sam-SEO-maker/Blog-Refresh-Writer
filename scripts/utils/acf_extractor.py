@@ -10,7 +10,7 @@ Stratégie de détection (AND) :
   2. Présence d'un auteur littéraire nommé (prénom + nom reconnu, ou Maupassant/Zola/etc.)
   3. OU présence explicite d'un titre entre guillemets associé à un auteur
 
-Sortie : _shared/outputs/superprof-ressources/acf/{slug}_acf.json
+Sortie : _shared/outputs/superprof.fr-ressources/acf/{slug}_acf.json
 Champs : book_name, author_name, genre, date_published (AAAA ou "")
 """
 from __future__ import annotations
@@ -186,13 +186,13 @@ def save_acf_if_literary(
     Détecte si l'article traite d'une œuvre littéraire.
     Si oui, écrit le JSON ACF et retourne son chemin. Sinon retourne None.
 
-    Actif uniquement pour superprof-ressources.
+    Actif uniquement pour superprof.fr-ressources.
     Ne remplace pas un fichier ACF existant (pour ne pas écraser les corrections manuelles).
 
     Args:
         site_output_dir: dossier de sortie du site (sites/{id}/outputs/).
     """
-    if site_id != 'superprof-ressources':
+    if site_id != 'superprof.fr-ressources':
         return None
 
     acf_dir = site_output_dir / 'acf'

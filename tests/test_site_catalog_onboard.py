@@ -35,7 +35,7 @@ def test_catalog_keeps_only_blog_and_known_ressources():
     blog_props = {b["gsc_property"] for b in cat["sites"] if b["type"] == "blog"}
 
     # 3 ressources connus présents
-    assert res_ids == {"superprof-ressources", "es-es-ressources", "en-uk-ressources"}
+    assert res_ids == {"superprof.fr-ressources", "superprof.es-apuntes", "superprof.co.uk-resources"}
     # diccionario / laromedel / homepage nue écartés
     assert not any("diccionario" in b or "laromedel" in b for b in blog_props)
     assert "https://www.superprof.de/" not in blog_props  # homepage nue
@@ -47,8 +47,8 @@ def test_catalog_keeps_only_blog_and_known_ressources():
 def test_catalog_site_slug_convention():
     cat = build_catalog(parse_properties(_SAMPLE))
     by_prop = {b["gsc_property"]: b for b in cat["sites"] if b["type"] == "blog"}
-    assert by_prop["https://www.superprof.fr/blog/"]["site_slug"] == "fr-fr-blog"
-    assert by_prop["https://www.superprof.com.br/blog/"]["site_slug"] == "pt-br-blog"
+    assert by_prop["https://www.superprof.fr/blog/"]["site_slug"] == "superprof.fr"
+    assert by_prop["https://www.superprof.com.br/blog/"]["site_slug"] == "superprof.com.br"
 
 
 def test_suisse_deux_blogs_non_dedupliques():
@@ -65,8 +65,8 @@ def test_suisse_deux_blogs_non_dedupliques():
     by_prop = {b["gsc_property"]: b for b in cat["sites"] if b["type"] == "blog"}
 
     assert sum(1 for b in cat["sites"] if b["type"] == "blog") == 2, "un des deux blogs suisses a été dédupliqué"
-    assert by_prop["https://www.superprof.ch/blog/"]["site_slug"] == "fr-ch-blog"
-    assert by_prop["https://de.superprof.ch/blog/"]["site_slug"] == "de-ch-blog"
+    assert by_prop["https://www.superprof.ch/blog/"]["site_slug"] == "superprof.ch"
+    assert by_prop["https://de.superprof.ch/blog/"]["site_slug"] == "de.superprof.ch"
     assert cat["counts"]["blog_duplicates_dropped"] == 0
 
 
@@ -100,7 +100,7 @@ def fake_root(monkeypatch):
         (root / "_shared" / "config").mkdir(parents=True)
         catalog = {
             "sites": [
-                {"site_slug": "es-es-ressources", "type": "ressources", "country": "ES",
+                {"site_slug": "superprof.es-apuntes", "type": "ressources", "country": "ES",
                  "language": "es", "gsc_property": "https://www.superprof.es/apuntes/",
                  "url_base": "/apuntes/", "onboardable": True},
             ],
@@ -118,39 +118,39 @@ def fake_root(monkeypatch):
 
 
 def test_onboard_creates_skeleton_and_prefills(fake_root):
-    rep = T.onboard_site("es-es-ressources", base_path=fake_root, no_sparse=True)
-    cfg = json.loads((fake_root / "sites" / "es-es-ressources" / "config" / "site.json").read_text())
+    rep = T.onboard_site("superprof.es-apuntes", base_path=fake_root, no_sparse=True)
+    cfg = json.loads((fake_root / "sites" / "superprof.es-apuntes" / "config" / "site.json").read_text())
     assert cfg["gsc_property"] == "https://www.superprof.es/apuntes/"
     assert cfg["domain"] == "superprof.es"
     assert cfg["language"] == "es"
     assert "_TODO" in cfg
-    assert (fake_root / "sites" / "es-es-ressources" / "prompts" / "site.md").exists()
-    assert (fake_root / "sites" / "es-es-ressources" / "outputs").is_dir()
+    assert (fake_root / "sites" / "superprof.es-apuntes" / "prompts" / "site.md").exists()
+    assert (fake_root / "sites" / "superprof.es-apuntes" / "outputs").is_dir()
     assert rep["registry_updated"] is True
     assert rep["sparse_added"] is False  # --no-sparse honoured
 
 
 def test_onboard_merges_sites_json_without_loss(fake_root):
-    T.onboard_site("es-es-ressources", base_path=fake_root, no_sparse=True)
+    T.onboard_site("superprof.es-apuntes", base_path=fake_root, no_sparse=True)
     sites = json.loads((fake_root / "_shared" / "config" / "sites.json").read_text())
     assert sites["notion_refresh_tracker_db_id"] == "KEEP"
     ens = next(s for s in sites["sites"] if (s.get("site_slug") or s.get("id")) == "enseigna")
     assert ens["blacklist"] == ["a.fr"]
-    assert {(s.get("site_slug") or s.get("id")) for s in sites["sites"]} == {"enseigna", "es-es-ressources"}
+    assert {(s.get("site_slug") or s.get("id")) for s in sites["sites"]} == {"enseigna", "superprof.es-apuntes"}
 
 
 def test_onboard_refuses_existing_without_force(fake_root):
-    T.onboard_site("es-es-ressources", base_path=fake_root, no_sparse=True)
+    T.onboard_site("superprof.es-apuntes", base_path=fake_root, no_sparse=True)
     with pytest.raises(ValueError):
-        T.onboard_site("es-es-ressources", base_path=fake_root, no_sparse=True)
+        T.onboard_site("superprof.es-apuntes", base_path=fake_root, no_sparse=True)
 
 
 def test_onboard_force_no_duplicate_registry(fake_root):
-    T.onboard_site("es-es-ressources", base_path=fake_root, no_sparse=True)
-    rep2 = T.onboard_site("es-es-ressources", base_path=fake_root, force=True, no_sparse=True)
+    T.onboard_site("superprof.es-apuntes", base_path=fake_root, no_sparse=True)
+    rep2 = T.onboard_site("superprof.es-apuntes", base_path=fake_root, force=True, no_sparse=True)
     assert rep2["registry_updated"] is False
     sites = json.loads((fake_root / "_shared" / "config" / "sites.json").read_text())
-    assert sum(1 for s in sites["sites"] if (s.get("site_slug") or s.get("id")) == "es-es-ressources") == 1
+    assert sum(1 for s in sites["sites"] if (s.get("site_slug") or s.get("id")) == "superprof.es-apuntes") == 1
 
 
 def test_onboard_rejects_unknown_id(fake_root):
@@ -160,5 +160,5 @@ def test_onboard_rejects_unknown_id(fake_root):
 
 def test_onboard_skips_sparse_on_non_git_root(fake_root):
     """A non-git temp dir is not sparse → sparse_added stays False, no crash."""
-    rep = T.onboard_site("es-es-ressources", base_path=fake_root)
+    rep = T.onboard_site("superprof.es-apuntes", base_path=fake_root)
     assert rep["sparse_added"] is False

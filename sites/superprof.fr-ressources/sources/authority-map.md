@@ -1,6 +1,6 @@
 # Sources d'autorité par matière — Superprof Ressources FR
 
-Référence chargée à la demande depuis `recherche-sources` (site `superprof-ressources`).
+Référence chargée à la demande depuis `recherche-sources` (site `superprof.fr-ressources`).
 Tier 1 de la recherche en cascade : identifier la **matière** de l'article, puis viser en
 priorité ces domaines d'autorité au tier 2 (web), au lieu de chercher à l'aveugle.
 
@@ -10,7 +10,7 @@ priorité ces domaines d'autorité au tier 2 (web), au lieu de chercher à l'ave
   celle-ci. Voir `edito-refresh/references/eeat-framework.md`.
 - **Deep-link spécifique, jamais la homepage** : la source citée pointe la page précise qui
   porte l'information, pas l'accueil du domaine ni une page de catégorie
-  (cf. `sites/superprof-ressources/prompts/site.md`, « Specific URLs ONLY »).
+  (cf. `sites/superprof.fr-ressources/prompts/site.md`, « Specific URLs ONLY »).
 - Source **datée et vérifiable** (auteur/organisme identifiable) ; toute donnée chiffrée
   porte son année.
 - Ce fichier donne **où chercher** (domaines), jamais une URL de page figée : ne pas

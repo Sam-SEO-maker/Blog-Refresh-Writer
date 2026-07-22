@@ -61,8 +61,8 @@ class RefreshOrchestrator:
     BLOG_CATEGORY_MAP = {
         "enseigna": "education",
         "enseigna.fr": "education",
-        "superprof-ressources": "education",
-        "superprof-ressources.fr": "education",
+        "superprof.fr-ressources": "education",
+        "superprof.fr-ressources.fr": "education",
     }
 
     def __init__(
@@ -1693,7 +1693,7 @@ class RefreshOrchestrator:
             f"Sauvegarde le résultat dans sites/{row.site_slug}/outputs/{html_subdir}/{output_slug}_refreshed.html",
             f"Sauvegarde les métadonnées dans sites/{row.site_slug}/outputs/metadata/{output_slug}_metadata.json",
         ]
-        if row.site_slug == "superprof-ressources":
+        if row.site_slug == "superprof.fr-ressources":
             refreshed_html_path = f"sites/{row.site_slug}/outputs/{html_subdir}/{output_slug}_refreshed.html"
             instructions.append(
                 f"Exécute en Bash depuis la racine du projet (extraction CSV des tableaux, "

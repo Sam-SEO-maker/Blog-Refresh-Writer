@@ -150,7 +150,7 @@ def process_site(site_dir: Path, dry_run: bool = False, delete_source: bool = Tr
 def process_tests_andra(dry_run: bool = False, delete_source: bool = True) -> list:
     """Traite les fichiers tests/seraphine_andra/html/*_seraphine.html."""
     from _shared.core.site_paths import SitePaths
-    tests_dir = SitePaths(base_path=REPO_ROOT).output_dir("superprof-ressources") / "tests" / "seraphine_andra" / "html"
+    tests_dir = SitePaths(base_path=REPO_ROOT).output_dir("superprof.fr-ressources") / "tests" / "seraphine_andra" / "html"
     if not tests_dir.exists():
         return []
 
@@ -176,7 +176,7 @@ def main() -> int:
 
     all_results = []
     from _shared.core.site_paths import SitePaths
-    for site in ("superprof-ressources", "enseigna"):
+    for site in ("superprof.fr-ressources", "enseigna"):
         site_dir = SitePaths(base_path=REPO_ROOT).output_dir(site)
         results = process_site(site_dir, dry_run=args.dry_run, delete_source=delete_source)
         if results:

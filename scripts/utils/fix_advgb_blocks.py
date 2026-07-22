@@ -22,7 +22,7 @@ import uuid
 from pathlib import Path
 
 from _shared.core.site_paths import SitePaths
-HTML_DIR = SitePaths().output_dir("superprof-ressources") / "html"
+HTML_DIR = SitePaths().output_dir("superprof.fr-ressources") / "html"
 
 FILES = [
     "monnaie_franc_puissance", "ouvrage_brisou_pellen", "regles_bonne_conduite",

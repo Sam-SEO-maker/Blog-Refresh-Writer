@@ -1,7 +1,7 @@
 # Site model — what to copy for your site
 
 This folder ships **on every machine** (it's part of `onboarding/`), so you always have a
-template to copy from — even though the reference site `sites/superprof-ressources/`
+template to copy from — even though the reference site `sites/superprof.fr-ressources/`
 is **not** on your disk (sparse-checkout only materialises your own site + the engine).
 
 Copy these model files into your site and adapt each one. Don't leave any `<...>`
@@ -22,7 +22,7 @@ linking data, added later.
 ## Want the full, mature reference?
 
 The model files above are deliberately minimal. The complete, battle-tested version is the
-`superprof-ressources` site, which isn't on your disk. If you want to see it in full
+`superprof.fr-ressources` site, which isn't on your disk. If you want to see it in full
 (its ~800-line `site.md`, the `sp-ressources-gutenberg` skill, etc.), **ask the maintainer
 (@Sam-SEO-maker)** — don't try to sparse-add another site yourself.
 

@@ -4,7 +4,7 @@ Options CLI partagées (click).
 `--site` est l'option canonique multi-site. `--blog` reste accepté comme alias
 de rétro-compatibilité : les deux pointent vers le même paramètre. Un
 collaborateur n'a qu'un seul identifiant à connaître (le site slug, ex:
-`enseigna`, `superprof-ressources`), qui résout vers l'entrée `sites.json`
+`enseigna`, `superprof.fr-ressources`), qui résout vers l'entrée `sites.json`
 correspondante.
 
 Usage :
@@ -23,6 +23,12 @@ aucune signature de commande n'a besoin d'être modifiée.
 
 import click
 
+from _shared.core.constants import canonical_site_slug
+
+
+def _canonicalize(ctx, param, value):
+    return canonical_site_slug(value)
+
 
 def site_option(required=False, help=None, dest="blog"):
     """Décorateur ajoutant `--site` (alias legacy : `--blog`) sur une commande click.
@@ -35,7 +41,7 @@ def site_option(required=False, help=None, dest="blog"):
     """
     if help is None:
         help = (
-            "Site slug (ex: enseigna, superprof-ressources). Alias : --blog."
+            "Site slug (ex: enseigna, superprof.fr-ressources). Alias : --blog."
             if required
             else "Filtrer par site slug. Alias : --blog."
         )
@@ -45,6 +51,7 @@ def site_option(required=False, help=None, dest="blog"):
         dest,
         required=required,
         help=help,
+        callback=_canonicalize,
     )
 
 

@@ -14,7 +14,7 @@ ci-dessous sont **confirmées présentes** dans `mcp gsc-remote list_properties`
 
 | Pays | URL site Ressources | GSC property | Site ID (convention) | url_base | Site CW ? |
 |------|---------------------|--------------|------------------------|----------|-------------|
-| FR | superprof.fr/ressources/ | `https://www.superprof.fr/ressources/` | `superprof-ressources` (dérog.) | — | ✅ existant |
+| FR | superprof.fr/ressources/ | `https://www.superprof.fr/ressources/` | `superprof.fr-ressources` (dérog.) | — | ✅ existant |
 | ES | superprof.es/**apuntes**/ | `https://www.superprof.es/apuntes/` | `es-es-ressources` | `/apuntes/` | ❌ candidat |
 | DE | superprof.de/**lernplattform**/ | `https://www.superprof.de/lernplattform/` | `de-de-ressources` | `/lernplattform/` | ❌ candidat |
 | UK | superprof.co.uk/resources/ | `https://www.superprof.co.uk/resources/` | `en-uk-ressources` | `/resources/` | ❌ candidat |

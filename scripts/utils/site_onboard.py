@@ -82,7 +82,7 @@ def build_site_config(entry: dict) -> dict:
             "editorial_guides (déposer prompts/site.md + guides dans ce dossier), "
             "sheets, wp_api_config, brand_rules. Copier depuis "
             "onboarding/site-model/ (livré sur ta machine) ; le site de référence "
-            "superprof-ressources n'est pas sur ton disque (sparse-checkout)."
+            "superprof.fr-ressources n'est pas sur ton disque (sparse-checkout)."
         ),
     }
 
@@ -128,7 +128,7 @@ def onboard_site(site_slug: str, base_path: Optional[Path] = None,
     if not entry:
         raise ValueError(
             f"'{site_slug}' absent du catalogue superprof_sites_catalog.json. "
-            f"Vérifier l'id (ex: es-es-ressources, fr-fr-blog)."
+            f"Vérifier l'id (ex: superprof.es-apuntes, superprof.mx)."
         )
 
     site_dir = root / "sites" / site_slug

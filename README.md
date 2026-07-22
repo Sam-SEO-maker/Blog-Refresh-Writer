@@ -4,7 +4,7 @@ Autonomous **multi-site SEO refresh** agent: optimises existing content from
 data signals (GSC + DataForSEO), preserving each site's editorial identity.
 Data-driven decisions (audit → decision → generation → QC → internal linking).
 
-Current sites: `enseigna`, `superprof-ressources`. The registry is open
+Current sites: `enseigna.fr`, `superprof.fr-ressources`. The registry is open
 (`_shared/config/sites.json`): onboarding a site = `python3 content_writer.py
 site init <site-slug>` (skeleton `sites/<site-slug>/` + `sites.json` entry + sparse-checkout),
 then fill in the editorial part. See [onboarding/](onboarding/README.md).
@@ -18,7 +18,7 @@ sites. Full walkthrough: **[onboarding/README.md](onboarding/README.md)**.
 Recommended clone (sparse):
 
 ```bash
-bash onboarding/scripts/setup_sparse.sh <site-slug>   # e.g. es-es-ressources
+bash onboarding/scripts/setup_sparse.sh <site-slug>   # e.g. superprof.es-apuntes
 ```
 
 ## Installation (maintainer / full clone)
@@ -40,7 +40,7 @@ python3 content_writer.py site list        # catalog of onboardable sites
 python3 content_writer.py site init <site-slug>   # onboard a site (skeleton + sparse)
 ```
 
-Example: `python3 content_writer.py refresh <url> --site enseigna`
+Example: `python3 content_writer.py refresh <url> --site enseigna.fr`
 
 ## Golden Rule (invariant)
 

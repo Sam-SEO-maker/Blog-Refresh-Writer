@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 from _shared.core.site_paths import SitePaths
-HTML = SitePaths().output_dir("superprof-ressources") / "html"
+HTML = SitePaths().output_dir("superprof.fr-ressources") / "html"
 EMO = "\U0001F000-\U0001FAFF←-⇿⌀-➿⬀-⯿☀-⛿️⃣‍"
 LEAD_EMOJI = re.compile(r"^\s*[" + EMO + r"]")
 QSTART = re.compile(r"^(comment|pourquoi|qu'est-ce|qui |quel|quelle|quels|quelles|combien|où|en quoi|à quoi|est-ce|faut-il|peut-on)", re.I)

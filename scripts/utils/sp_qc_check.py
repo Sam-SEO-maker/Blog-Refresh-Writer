@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 from _shared.core.site_paths import SitePaths
-OUT = SitePaths().output_dir("superprof-ressources")
+OUT = SitePaths().output_dir("superprof.fr-ressources")
 HTML = OUT / "html"
 CSVDIR = OUT / "csv"
 

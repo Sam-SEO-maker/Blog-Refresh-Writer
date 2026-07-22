@@ -10,7 +10,7 @@ from dataclasses import dataclass
 @dataclass
 class SiteConfig:
     """Configuration d'un site client."""
-    id: str                    # Ex: "enseigna"
+    id: str                    # Ex: "enseigna.fr"
     name: str                  # Ex: "Enseigna"
     domain: str                # Ex: "enseigna.fr"
     gsc_property: str          # Ex: "https://enseigna.fr/"

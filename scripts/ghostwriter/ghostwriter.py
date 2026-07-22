@@ -69,7 +69,7 @@ class Ghostwriter:
     BLOG_CATEGORY_MAP = {
         "enseigna": "education",
         "enseigna.fr": "education",
-        "superprof-ressources": "education",
+        "superprof.fr-ressources": "education",
         "superprof.fr": "education",
     }
 

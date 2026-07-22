@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 OUTPUTS_DIR = PROJECT_ROOT / "_shared" / "outputs"
 
-SITES = ["enseigna", "superprof-ressources"]
+SITES = ["enseigna", "superprof.fr-ressources"]
 
 
 # ---------------------------------------------------------------------------
