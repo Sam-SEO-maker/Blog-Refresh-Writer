@@ -68,11 +68,11 @@ rédaction. Pour chaque URL préparée :
 4. **Finalisation + QC sémantique YTG (SOSEO/DSEO)** :
 
    ```bash
-   python3 content_writer.py finalize <url> --site <site-slug> --html-file <Output HTML> [--type <avis|versus>] [--keyword "<Mot-clé>"] [--guide-id <YTG guide>]
+   python3 content_writer.py finalize <url> --site <site-slug> --html-file <Output HTML> [--type <avis|versus>] [--main-keyword "<Mot-clé>"] [--guide-id <YTG guide>]
    ```
 
    Reporter le `Mot-clé` et le `YTG guide` de l'étape 1 dans
-   `--keyword`/`--guide-id` : le QC score alors SOSEO/DSEO sur le bon guide et
+   `--main-keyword`/`--guide-id` : le QC score alors SOSEO/DSEO sur le bon guide et
    réutilise le guide sans le recréer. La cible n'est **pas uniforme** : elle
    dépend de la SERP de **chaque requête**. Règle (moyennes du guide YTG,
    `top3_soseo`/`top3_dseo` et `top10_soseo`/`top10_dseo`, récupérées au

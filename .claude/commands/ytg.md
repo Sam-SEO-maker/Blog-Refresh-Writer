@@ -17,21 +17,21 @@ le résolveur retombe souvent sur le slug (titre de l'article ≠ vrai mot-clé 
 
 1. **`--site`** depuis le domaine / chemin de l'URL :
    - `superprof.fr/ressources/...` → `superprof.fr-ressources`
-   - `enseigna.fr/...` → `enseigna`
+   - `enseigna.fr/...` → `enseigna.fr`
    - (autres sites : voir `_shared/config/sites.json`)
 2. **`--slug`** = dernier segment de path, sans extension ni slash final
    (ex: `.../francais-terminale/long-bec-fable.html` → `long-bec-fable`).
-3. **`--keyword`** = le mot-clé principal si fourni dans `$ARGUMENTS` (override le résolveur).
+3. **`--main-keyword`** = le mot-clé principal si fourni dans `$ARGUMENTS` (override le résolveur).
 
 Puis exécute :
 
 ```bash
-python3 content_writer.py ytg qc --site <site_slug> --slug <slug> [--keyword "<mot-clé>"]
+python3 content_writer.py ytg qc --site <site_slug> --slug <slug> [--main-keyword "<mot-clé>"]
 ```
 
 Ajoute `--fix` (signaler les A_CORRIGER au correcteur) ou `--json-out`
 (rapport `_shared/outputs/{blog}/ytg_qc_report.json`) si présents dans `$ARGUMENTS`.
-`--keyword` exige `--slug` (un seul article) — le CLI refuse sinon.
+`--main-keyword` exige `--slug` (un seul article) — le CLI refuse sinon.
 
 Le moteur résout le mot-clé principal (Notion/Sheet/GSC/slug), résout ou crée le guide YTG,
 analyse le HTML → SOSEO/DSEO vs les **moyennes TOP 3 / TOP 10 de la SERP de la

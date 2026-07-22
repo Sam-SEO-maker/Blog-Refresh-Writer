@@ -4,7 +4,7 @@ Commandes d'audit.
 Usage:
     cw audit editorial <url> --site enseigna.fr
     cw audit gsc <url>
-    cw audit serp <url> --keyword "parcoursup"
+    cw audit serp <url> --main-keyword "parcoursup"
     cw audit cannibalization <url>
 """
 
@@ -26,7 +26,8 @@ def audit():
 
 @audit.command()
 @click.argument('url')
-@click.option('--keyword', help='Mot-clé principal (optionnel)')
+@click.option('--main-keyword', '--keyword', 'keyword',
+              help='Mot-clé principal (optionnel). --keyword = alias legacy.')
 def serp(url, keyword):
     """
     Audit SERP (PAA, secondary keywords).

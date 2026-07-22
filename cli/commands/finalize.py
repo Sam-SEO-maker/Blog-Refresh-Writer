@@ -29,9 +29,9 @@ from cli.options import blog_option
 @click.option("--type", "article_type", default=None,
               help="Sous-type d'article routant la sortie HTML dans html/{type}/ "
                    "(enseigna : 'avis' | 'versus'). Défaut : pas de sous-dossier.")
-@click.option("--keyword", "keyword", default="",
+@click.option("--main-keyword", "--keyword", "keyword", default="",
               help="Mot-clé principal (guide QC YTG sur le bon terme, pas le slug). "
-                   "À reporter depuis la sortie de `cw refresh`.")
+                   "À reporter depuis la sortie de `cw refresh`. --keyword = alias legacy.")
 @click.option("--guide-id", "guide_id", default="",
               help="ID du guide YTG déjà créé au STEP 2.5 (réutilisation, pas de "
                    "recréation). À reporter depuis la sortie de `cw refresh`.")

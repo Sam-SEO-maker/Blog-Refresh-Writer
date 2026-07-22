@@ -87,9 +87,9 @@ Internal linking → Sync.
 
 | Command | Role |
 |---|---|
-| `/refresh <url> --site <site-slug> --keyword ""` | Full refresh: audit → decision → source research → generation → `cw finalize` |
+| `/refresh <url> --site <site-slug> --main-keyword ""` | Full refresh: audit → decision → source research → generation → `cw finalize` |
 | `/batch --action X --site <site-slug>` | Batch refresh from Google Sheets |
-| `/audit serp <url> --keyword ""` | Targeted SERP audit (PAA, SERP features, top 10). Always pass `--keyword`: without it the keyword is derived from the URL slug, so any typo or shorthand in the slug is queried verbatim and the SERP answers a keyword nobody searches |
+| `/audit serp <url> --main-keyword ""` | Targeted SERP audit (PAA, SERP features, top 10). Always pass `--main-keyword`: without it the keyword is derived from the URL slug, so any typo or shorthand in the slug is queried verbatim and the SERP answers a keyword nobody searches |
 | `/plan-check <url> --site <site-slug>` | Validate the editorial outline (`content_plan.md`) against the SEO invariants — heading hierarchy, PAA coverage, proof placement. Deterministic (no generation). Verdict OK / A_CORRIGER before writing. Scaffold it first with `plan init` (CLI lays the file + injects signals; the agent fills the outline via the `seo-outline` skill) |
 | `/decide --site <site-slug>` | Data-driven decision engine (Sheet) |
 | `/site-status --site <site-slug>` | GSC SEO status of a site (→ Sheet) |

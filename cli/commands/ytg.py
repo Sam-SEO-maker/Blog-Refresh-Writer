@@ -2,7 +2,7 @@
 Commandes YourTextGuru (YTG).
 
 Usage:
-    cw ytg create-guide --keyword "bienfaits yoga"
+    cw ytg create-guide --main-keyword "bienfaits yoga"
     cw ytg check-guide --guide-id ABC123
     cw ytg batch-prefetch --spreadsheet-id ID [--site moments-yoga]
     cw ytg analyze --guide-id ABC123 --html-file path/to/article.html
@@ -26,7 +26,8 @@ def ytg():
 
 
 @ytg.command(name='create-guide')
-@click.option('--keyword', required=True, help='Mot-clé principal pour le guide')
+@click.option('--main-keyword', '--keyword', 'keyword', required=True,
+              help='Mot-clé principal pour le guide. --keyword = alias legacy.')
 @click.option('--lang', default='fr', show_default=True, help='Langue (fr, en, ...)')
 @click.option('--country', default='fr', show_default=True, help='Pays (fr, us, ...)')
 def create_guide(keyword, lang, country):
@@ -517,9 +518,10 @@ def _infer_url_from_html_path(site_slug: str, path) -> str:
 @ytg.command(name='qc')
 @blog_option(required=True, dest='site_slug')
 @click.option('--slug', default='', help='Filtrer sur un slug d\'article précis')
-@click.option('--keyword', 'keyword', default='',
+@click.option('--main-keyword', '--keyword', 'keyword', default='',
               help='Mot-clé principal forcé (override le résolveur). Nécessite --slug '
-                   '(un seul article) : le guide YTG est créé/résolu sur ce mot-clé.')
+                   '(un seul article) : le guide YTG est créé/résolu sur ce mot-clé. '
+                   '--keyword = alias legacy.')
 @click.option('--fix', is_flag=True, default=False,
               help='Signaler les articles A_CORRIGER pour correction ciblée (corrector)')
 @click.option('--json-out', 'json_out', is_flag=True, default=False,
@@ -565,7 +567,7 @@ def qc(site_slug, slug, keyword, fix, json_out):
     keyword = (keyword or "").strip()
     if keyword and len(files) != 1:
         click.echo(
-            f"[ERREUR] --keyword nécessite de cibler un seul article "
+            f"[ERREUR] --main-keyword nécessite de cibler un seul article "
             f"(utilise --slug). {len(files)} fichiers correspondent actuellement.",
             err=True,
         )

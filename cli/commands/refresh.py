@@ -43,7 +43,8 @@ class MinimalRow:
                   'EEAT_REWRITE'
               ]),
               help='Force une stratégie spécifique')
-@click.option('--keyword', help='Mot-clé principal (force analyse SERP)')
+@click.option('--main-keyword', '--keyword', 'keyword',
+              help='Mot-clé principal (force analyse SERP). --keyword = alias legacy.')
 @click.option('--debug', is_flag=True, help='Mode debug avec traceback complet')
 def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
     """
@@ -208,7 +209,7 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
             if _art:
                 click.echo(f"  Type:         {_art}  (finalize --type {_art} → html/{_art}/)")
             click.echo(f"  Assets avant: {generation_info['metadata'].get('assets_before', {})}")
-            # Mot-clé + guide YTG : à reporter dans `finalize --keyword/--guide-id`
+            # Mot-clé + guide YTG : à reporter dans `finalize --main-keyword/--guide-id`
             # pour que le QC post-génération score sur le bon guide (pas le slug).
             _kw = keyword or result.main_keyword or ""
             if _kw:

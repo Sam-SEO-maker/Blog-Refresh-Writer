@@ -1,6 +1,6 @@
 ---
 description: Refresh SEO complet d'une URL (fetch WP REST/scrape → GSC/SERP/PAA/intent → décision → recherche sources → génération via subagent).
-argument-hint: <url> --site <enseigna|superprof.fr-ressources> [--strategy X] [--keyword K]
+argument-hint: <url> --site <enseigna.fr|superprof.fr-ressources> [--strategy X] [--main-keyword K]
 allowed-tools: Bash(python3 content_writer.py refresh:*), Bash(python3 content_writer.py finalize:*), Task, Read, Write, WebSearch, WebFetch, Skill
 ---
 
@@ -117,12 +117,12 @@ sortie ; il **ne renvoie pas** de HTML dans le chat. Note le chemin du HTML brut
 Une fois le HTML brut écrit, chaîner save → assets → QC YTG → maillage :
 
 ```bash
-python3 content_writer.py finalize <url> --site <site-slug> --html-file <Output HTML> [--type <avis|versus>] [--keyword "<Mot-clé>"] [--guide-id <YTG guide>]
+python3 content_writer.py finalize <url> --site <site-slug> --html-file <Output HTML> [--type <avis|versus>] [--main-keyword "<Mot-clé>"] [--guide-id <YTG guide>]
 ```
 
 > **Mot-clé + guide YTG.** L'étape 1 (`cw refresh`) affiche `Mot-clé:` et
 > `YTG guide:` quand le STEP 2.5 a créé un guide. **Reporter les deux** dans
-> `--keyword`/`--guide-id` : le QC post-génération score alors sur le bon guide
+> `--main-keyword`/`--guide-id` : le QC post-génération score alors sur le bon guide
 > (le vrai mot-clé, pas le slug) et **réutilise** le guide sans le recréer
 > (économie de crédits). Absents → le QC re-résout le mot-clé (fallback slug).
 
