@@ -33,7 +33,8 @@ mots-clés à écarter.
 
 ## Livrable
 
-`sites/superprof.fr-ressources/outputs/html/{batch}/{slug}_refreshed.gutenberg.html` —
+`sites/superprof.fr-ressources/outputs/html/{YYYY-MM-DD}/{slug}_refreshed.gutenberg.html` —
+sous-dossier de batch daté au format ymd (ex. `2026-07-21`), jamais en toutes lettres —
 liste **plate** de blocs Gutenberg (pas de wrapper `<article>`/`<section>`).
 Le fichier nu `{slug}_refreshed.html` de debug est supprimé après génération
 ([[feedback-delete-nu-html-keep-gutenberg]]).

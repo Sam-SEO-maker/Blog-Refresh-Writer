@@ -38,7 +38,8 @@ communs** aux deux types (clés par slug).
 
 ## Livrables (3 fichiers par article — type *avis*)
 
-1. `sites/enseigna/outputs/html/avis/{slug}_refreshed.gutenberg.html` — **corps**,
+1. `sites/enseigna/outputs/html/avis/{YYYY-MM-DD}/{slug}_refreshed.gutenberg.html`
+   (sous-dossier de batch daté ymd, ex. `2026-07-08`) — **corps**,
    liste plate de blocs Gutenberg. **PAS de `<h1>` dans le corps** (le H1 est un
    champ ACF sur Enseigna) : le corps commence par le paragraphe d'introduction.
    Pas de fiche technique dans le corps.
