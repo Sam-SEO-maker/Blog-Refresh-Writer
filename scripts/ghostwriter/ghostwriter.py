@@ -36,7 +36,7 @@ _LANGUAGE_NAMES = {
 
 
 def language_directive(lang_code: str) -> list[str]:
-    """Bloc de prompt imposant la langue de rédaction du marché (multi-tenant).
+    """Bloc de prompt imposant la langue de rédaction du marché (multi-site).
 
     Retourne des lignes prêtes à étendre `prompt_parts`, ou [] si la langue est
     absente/inconnue (le comportement historique implicite reste alors le repli).
@@ -65,7 +65,7 @@ class Ghostwriter:
     - Intégration des guidelines GEO 2026
     """
 
-    # Fallback mapping blog_id → semantic category (mirrors RefreshOrchestrator)
+    # Fallback mapping site_slug → semantic category (mirrors RefreshOrchestrator)
     BLOG_CATEGORY_MAP = {
         "enseigna": "education",
         "enseigna.fr": "education",
@@ -181,12 +181,13 @@ class Ghostwriter:
         # NEW: Load semantic field terms for injection into generation prompt
         semantic_field_terms = audit_data.get("semantic_field_override", [])
         if not semantic_field_terms:
-            # Resolve category from audit_data or blog_id fallback
+            # Resolve category from audit_data or site_slug fallback
             category = audit_data.get("category", "")
             if not category:
-                # Fallback: derive category from blog_id
-                blog_id = audit_data.get("blog_id", "")
-                category = self.BLOG_CATEGORY_MAP.get(blog_id, "")
+                # Fallback: derive category from site_slug
+                # "blog_id" = clé legacy des audit_data.json générés avant le renommage
+                site_slug = audit_data.get("site_slug", "") or audit_data.get("blog_id", "")
+                category = self.BLOG_CATEGORY_MAP.get(site_slug, "")
             subject = audit_data.get("subject", "")
             if category:
                 semantic_field_terms = self.semantic_checker._load_semantic_field(
@@ -386,7 +387,7 @@ Retourne l'article complet réécrit en HTML:
 ### E-E-A-T
 - Statistiques sourcées (2025-2026)
 - Citation d'expert avec credentials
-- Sources institutionnelles (annuaire du tenant : tenants/{id}/sources/authority-map.md)
+- Sources institutionnelles (annuaire du site : sites/{id}/sources/authority-map.md)
 
 ### GEO
 - Réponse directe en début de chaque H2
@@ -496,7 +497,7 @@ Retourne l'article complet réécrit en HTML:
         original_html: str,
         rewrite_type: str,
         url: str,
-        blog_id: str = "",
+        site_slug: str = "",
     ) -> RewriteResult:
         """
         Traite la réponse du LLM et produit le résultat.
@@ -506,7 +507,7 @@ Retourne l'article complet réécrit en HTML:
             original_html: HTML original
             rewrite_type: Type de réécriture effectuée
             url: URL de l'article
-            blog_id: ID du blog (pour validation URLs Superprof)
+            site_slug: ID du blog (pour validation URLs Superprof)
 
         Returns:
             RewriteResult avec le contenu traité
@@ -516,8 +517,8 @@ Retourne l'article complet réécrit en HTML:
         llm_response = self._clean_links_in_headings(llm_response)
 
         # Valider les URLs Superprof contre la config (anti-hallucination)
-        if blog_id:
-            site_id = SuperprofRotator.normalize_site_id(blog_id)
+        if site_slug:
+            site_id = SuperprofRotator.normalize_site_id(site_slug)
             valid_slugs = self.superprof_rotator.get_valid_slugs(site_id)
             if valid_slugs:
                 llm_response = self._validate_superprof_urls(llm_response, valid_slugs)
@@ -577,7 +578,7 @@ Retourne l'article complet réécrit en HTML:
         self,
         context_dir: Path,
         output_dir: Path,
-        blog_id: str
+        site_slug: str
     ) -> dict:
         """
         Génère le contenu optimisé à partir d'un contexte préparé.
@@ -589,7 +590,7 @@ Retourne l'article complet réécrit en HTML:
             context_dir: Répertoire contenant les fichiers de contexte
                         (original.html, audit_data.json, guidelines.txt, task.json)
             output_dir: Répertoire de sortie pour le HTML généré
-            blog_id: ID du blog (ex: "enseigna.fr")
+            site_slug: ID du blog (ex: "enseigna.fr")
 
         Returns:
             Dict avec status, output_files, metadata
@@ -641,21 +642,21 @@ Retourne l'article complet réécrit en HTML:
                 decision,
             )
             strategy = "FULL_REFRESH"
-        subject_category = audit_data.get("blog_config", {}).get("subject_category", "education_general")
+        subject_category = audit_data.get("site_config", {}).get("subject_category", "education_general")
 
         # Sous-type d'article (avis/versus) déduit de l'URL — point unique.
         # "versus" ajoute vs_concurrent.md au prompt et route la sortie html/versus/.
         from _shared.core.article_type import classify_article_type
         article_url = audit_data.get("url", "") or task_info.get("url_slug", "")
-        article_type = classify_article_type(article_url, blog_id=blog_id)
+        article_type = classify_article_type(article_url, site_slug=site_slug)
 
         # 3. Composer le prompt complet (CLAUDE.md + catégorie + stratégie + site)
         # Note: CLAUDE.md est déjà accessible à Claude Code via le système
         composed_prompt = self.prompt_composer.compose(
             strategy=strategy.lower(),
             subject=subject_category,
-            site_id=blog_id,
-            content_type=audit_data.get("blog_config", {}).get("content_type"),
+            site_id=site_slug,
+            content_type=audit_data.get("site_config", {}).get("content_type"),
             article_type=article_type
         )
 
@@ -686,12 +687,12 @@ Retourne l'article complet réécrit en HTML:
             original_html=original_html,
             audit_data=audit_data,
             guidelines=guidelines,
-            blog_id=blog_id,
+            site_slug=site_slug,
             context_dir=context_dir,
         )
 
         # 5b. Sauvegarder la sélection CTA Superprof dans audit_data (anti-répétition)
-        site_id = SuperprofRotator.normalize_site_id(blog_id)
+        site_id = SuperprofRotator.normalize_site_id(site_slug)
         if site_id not in ("enseigna",):
             try:
                 article_url = task_info.get("url_slug", "")
@@ -723,7 +724,7 @@ Retourne l'article complet réécrit en HTML:
             "generation_prompt": generation_prompt,
             "metadata": {
                 "url": task_info.get("url_slug", ""),
-                "blog_id": blog_id,
+                "site_slug": site_slug,
                 "strategy": strategy,
                 "subject_category": subject_category,
                 "article_type": article_type,
@@ -770,7 +771,7 @@ Retourne l'article complet réécrit en HTML:
         original_html: str,
         audit_data: dict,
         guidelines: str,
-        blog_id: str = "",
+        site_slug: str = "",
         context_dir: Optional[Path] = None,
     ) -> str:
         """
@@ -790,10 +791,10 @@ Retourne l'article complet réécrit en HTML:
         ]
 
         # Langue de sortie EXPLICITE (multi-marché). Rend le workflow transposable :
-        # le contenu est produit dans la langue du marché (blog_config.language),
+        # le contenu est produit dans la langue du marché (site_config.language),
         # sans dépendre de la langue de la source scrapée. Voir catalogue Superprof.
         prompt_parts.extend(
-            language_directive((audit_data.get("blog_config", {}) or {}).get("language", ""))
+            language_directive((audit_data.get("site_config", {}) or {}).get("language", ""))
         )
 
         # Données chiffrées de l'article (compteurs, année)
@@ -922,12 +923,12 @@ Retourne l'article complet réécrit en HTML:
         prompt_parts.append("")
 
         # CTA Superprof — landing + ancre rotative (données DataForSEO)
-        if blog_id and blog_id not in ("enseigna", "enseigna.fr"):
+        if site_slug and site_slug not in ("enseigna", "enseigna.fr"):
             try:
                 article_url = audit_data.get("url", "") or audit_data.get("url_slug", "")
                 article_subject = audit_data.get("article_subject", "")
-                # Normaliser blog_id (retirer .fr/.com)
-                site_id = SuperprofRotator.normalize_site_id(blog_id)
+                # Normaliser site_slug (retirer .fr/.com)
+                site_id = SuperprofRotator.normalize_site_id(site_slug)
                 # Récupérer slugs ET ancres récents pour anti-répétition
                 recently = self.superprof_rotator.get_recently_used(
                     context_dir

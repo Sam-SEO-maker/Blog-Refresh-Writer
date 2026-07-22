@@ -64,7 +64,7 @@ def verify_spreadsheet():
             print(f"\n   Details des 5 premieres URLs :")
             for i, task in enumerate(pending_urls[:5], 1):
                 print(f"   {i}. {task.url}")
-                print(f"      Blog ID: {task.blog_id}")
+                print(f"      Blog ID: {task.site_slug}")
                 print(f"      Post Type: {task.post_type}")
                 print()
 

@@ -63,13 +63,13 @@ Quand la seule source disponible est blacklistée, chercher dans (par ordre) :
 1. **Institutions officielles** — ministères, `*.gouv.fr`, INSEE, Légifrance…
 2. **Académique** — HAL, Cairn, Persée, revues à comité de lecture.
 3. **Presse nationale de qualité** — Le Monde, Le Figaro, Les Échos… (et équivalents
-   par marché : El País, FAZ, The Guardian…).
+   par pays : El País, FAZ, The Guardian…).
 4. **Audiovisuel public** — France Info, RTBF, RTS, BBC…
 5. **Presse spécialisée reconnue** selon le sujet.
 6. **Livres publiés** (avec ISBN).
 
 Grille de qualité détaillée : `source-quality.md`. Sources préférées par pays :
-fichier de connaissance du tenant (ex. `tenants/superprof-ressources/.claude/skills/sp-ressources-gutenberg/references/connaissance-fr.md` §9).
+fichier de connaissance du site (ex. `sites/superprof-ressources/.claude/skills/sp-ressources-gutenberg/references/connaissance-fr.md` §9).
 
 ## Liste complète (alphabétique — autoritaire)
 

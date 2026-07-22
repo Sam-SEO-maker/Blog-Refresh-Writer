@@ -1,6 +1,6 @@
 ---
 description: Applique le moteur de décision (data-driven GSC/DataForSEO) sur les URLs d'un blog depuis Google Sheets.
-argument-hint: --blog <id> [--spreadsheet-id ID]
+argument-hint: --site <site-slug> [--spreadsheet-id ID]
 allowed-tools: Bash(python3 content_writer.py batch decision:*), Read
 ---
 

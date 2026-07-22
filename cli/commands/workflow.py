@@ -2,7 +2,7 @@
 Commandes de workflow complet.
 
 Usage:
-    cw workflow run <url> --blog enseigna [--row 3]
+    cw workflow run <url> --site enseigna [--row 3]
 """
 
 import os
@@ -79,7 +79,7 @@ def run(url, blog, spreadsheet_id, row):
     try:
         result = orchestrator.process_url(
             url=url,
-            blog_id=blog,
+            site_slug=blog,
             html_content=html,
             force_action=None,
             custom_prompt=None,
@@ -127,7 +127,7 @@ def run(url, blog, spreadsheet_id, row):
         if result.action_taken == "BLOCKED_QUALITY_ISSUES":
             click.echo("❌ Quality Gate a bloqué le refresh")
             click.echo("Consultez le rapport éditorial pour détails:")
-            click.echo(f"  tenants/{blog}/outputs/editorial_audits/")
+            click.echo(f"  sites/{blog}/outputs/editorial_audits/")
         else:
             click.echo("✅ Workflow complété avec succès")
 

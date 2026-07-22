@@ -2,8 +2,8 @@
 Commandes de debug.
 
 Usage:
-    cw debug workflow <url> --blog enseigna
-    cw debug config [--blog enseigna]
+    cw debug workflow <url> --site enseigna
+    cw debug config [--site enseigna]
     cw debug extract-structures --spreadsheet-id <ID>
 """
 
@@ -82,7 +82,7 @@ def workflow(url, blog, spreadsheet_id, strategy):
     try:
         result = orchestrator.process_url(
             url=url,
-            blog_id=blog,
+            site_slug=blog,
             html_content=html,
             force_action=strategy,
             custom_prompt=None,
@@ -124,25 +124,25 @@ def config(blog, show_all):
 
     if blog:
         # Afficher config d'un blog spécifique
-        blog_config = SITE_CONFIGS.get(blog)
-        if not blog_config:
+        site_config = SITE_CONFIGS.get(blog)
+        if not site_config:
             click.echo(f"❌ Blog ID inconnu: {blog}", err=True)
             raise click.Abort()
 
         click.echo(f"\nBlog: {blog}")
         click.echo(f"{'='*70}")
-        click.echo(f"Domain:        {blog_config.get('domain')}")
-        click.echo(f"GSC Property:  {blog_config.get('gsc_property')}")
-        click.echo(f"Spreadsheet:   {blog_config.get('sheet_id') or blog_config.get('sheets_config', {}).get('spreadsheet_id')}")
-        click.echo(f"YMYL:          {blog_config.get('ymyl_level')}")
-        click.echo(f"E-E-A-T:       {blog_config.get('eeat_level')}")
+        click.echo(f"Domain:        {site_config.get('domain')}")
+        click.echo(f"GSC Property:  {site_config.get('gsc_property')}")
+        click.echo(f"Spreadsheet:   {site_config.get('sheet_id') or site_config.get('sheets_config', {}).get('spreadsheet_id')}")
+        click.echo(f"YMYL:          {site_config.get('ymyl_level')}")
+        click.echo(f"E-E-A-T:       {site_config.get('eeat_level')}")
 
     elif show_all:
         # Afficher tous les blogs
         click.echo(f"\nTous les blogs:")
         click.echo(f"{'='*70}")
-        for blog_id, config in SITE_CONFIGS.items():
-            click.echo(f"\n{blog_id}:")
+        for site_slug, config in SITE_CONFIGS.items():
+            click.echo(f"\n{site_slug}:")
             click.echo(f"  Domain:  {config.get('domain')}")
             click.echo(f"  YMYL:    {config.get('ymyl_level')}")
             click.echo(f"  E-E-A-T: {config.get('eeat_level')}")
@@ -150,10 +150,10 @@ def config(blog, show_all):
     else:
         # Afficher résumé
         click.echo(f"\nBlogs configurés: {len(SITE_CONFIGS)}")
-        for blog_id in SITE_CONFIGS.keys():
-            click.echo(f"  - {blog_id}")
+        for site_slug in SITE_CONFIGS.keys():
+            click.echo(f"  - {site_slug}")
 
-        click.echo(f"\nUtilisez --blog <ID> pour voir la config détaillée")
+        click.echo(f"\nUtilisez --site <ID> pour voir la config détaillée")
         click.echo(f"Utilisez --show-all pour voir toutes les configs")
 
 
@@ -192,14 +192,14 @@ def extract_structures(spreadsheet_id):
     for i, row in enumerate(sheet_data[1:], start=2):
         if len(row) > 4:
             url = row[2] if len(row) > 2 else None
-            blog_id = row[0] if len(row) > 0 else None
+            site_slug = row[0] if len(row) > 0 else None
             title = row[4] if len(row) > 4 else ""
 
-            if url and blog_id:
+            if url and site_slug:
                 articles.append({
                     'row': i,
                     'url': url,
-                    'blog_id': blog_id,
+                    'site_slug': site_slug,
                     'title': title
                 })
 

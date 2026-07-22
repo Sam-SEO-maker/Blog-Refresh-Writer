@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # Ordre de priorité par défaut si la config blog ne le précise pas.
 DEFAULT_KEYWORD_SOURCES = ["notion", "sheet", "gsc", "slug"]
 
-# Mapping blog_id → (env var du spreadsheet, onglets à scanner, index colonne du mot-clé)
+# Mapping site_slug → (env var du spreadsheet, onglets à scanner, index colonne du mot-clé)
 # Les onglets et index sont ceux VÉRIFIÉS EN LIVE (juillet 2026).
 _SHEET_LAYOUT = {
     "enseigna": {
@@ -57,17 +57,17 @@ _SHEET_LAYOUT = {
 }
 
 
-def _resolve_sheet_layout(blog_id: str) -> dict | None:
-    """Layout des onglets Sheet d'un tenant.
+def _resolve_sheet_layout(site_slug: str) -> dict | None:
+    """Layout des onglets Sheet d'un site.
 
-    Source de vérité : le bloc `sheets` de tenants/{id}/config/tenant.json
+    Source de vérité : le bloc `sheets` de sites/{id}/config/site.json
     (externalisé en Phase 4bis-A). Repli sur la constante _SHEET_LAYOUT si la
-    config est absente/incomplète, pour ne pas casser un tenant non encore migré.
+    config est absente/incomplète, pour ne pas casser un site non encore migré.
     """
     try:
-        from _shared.core.tenant_paths import TenantPaths
+        from _shared.core.site_paths import SitePaths
         import json
-        cfg_path = TenantPaths().blog_config(blog_id)
+        cfg_path = SitePaths().site_config(site_slug)
         if cfg_path.exists():
             sheets = json.loads(cfg_path.read_text(encoding="utf-8")).get("sheets", {})
             tabs = sheets.get("tabs")
@@ -81,8 +81,8 @@ def _resolve_sheet_layout(blog_id: str) -> dict | None:
                     ],
                 }
     except Exception as e:
-        logger.warning(f"[KeywordResolver] lecture sheets config '{blog_id}' échouée: {e}")
-    return _SHEET_LAYOUT.get(blog_id)
+        logger.warning(f"[KeywordResolver] lecture sheets config '{site_slug}' échouée: {e}")
+    return _SHEET_LAYOUT.get(site_slug)
 
 
 def _norm_url(url: str) -> str:
@@ -123,7 +123,7 @@ class KeywordResolver:
             notion_client: instance NotionClient (optionnel, lazy sinon).
             sheets_client_factory: callable(spreadsheet_id) -> SheetsClient (lazy sinon).
             gsc_analyzer: instance GSCAnalyzer (optionnel, lazy sinon).
-            notion_db_resolver: callable(blog_id) -> notion_commandes_db_id | None.
+            notion_db_resolver: callable(site_slug) -> notion_commandes_db_id | None.
         """
         self._notion = notion_client
         self._sheets_factory = sheets_client_factory
@@ -139,7 +139,7 @@ class KeywordResolver:
 
     def resolve(
         self,
-        blog_id: str,
+        site_slug: str,
         url: str = "",
         slug: str = "",
         sources: Optional[list[str]] = None,
@@ -155,11 +155,11 @@ class KeywordResolver:
         for src in order:
             try:
                 if src == "notion":
-                    kw = self._from_notion(blog_id, url)
+                    kw = self._from_notion(site_slug, url)
                 elif src == "sheet":
-                    kw = self._from_sheet(blog_id, url)
+                    kw = self._from_sheet(site_slug, url)
                 elif src == "gsc":
-                    kw = self._from_gsc(blog_id, url)
+                    kw = self._from_gsc(site_slug, url)
                 elif src == "slug":
                     kw = slug_to_keyword(url or slug)
                 else:
@@ -170,7 +170,7 @@ class KeywordResolver:
                 continue
 
             if kw:
-                logger.info(f"[KeywordResolver] {blog_id} '{url}' → '{kw}' (source={src})")
+                logger.info(f"[KeywordResolver] {site_slug} '{url}' → '{kw}' (source={src})")
                 return kw, src
 
         # Aucun résultat même via slug
@@ -180,45 +180,45 @@ class KeywordResolver:
     # Sources
     # ------------------------------------------------------------------
 
-    def _from_notion(self, blog_id: str, url: str) -> str:
+    def _from_notion(self, site_slug: str, url: str) -> str:
         """Cherche la 'Requête YTG' d'une commande Notion matchant l'URL."""
-        db_id = self._resolve_notion_db(blog_id)
+        db_id = self._resolve_notion_db(site_slug)
         if not db_id:
             return ""
 
-        index = self._notion_cache.get(blog_id)
+        index = self._notion_cache.get(site_slug)
         if index is None:
             notion = self._get_notion()
             if notion is None:
                 return ""
-            commandes = notion.get_commandes(db_id, blog_id=blog_id)
+            commandes = notion.get_commandes(db_id, site_slug=site_slug)
             index = {}
             for c in commandes:
                 if c.ytg_keyword:
                     if c.url:
                         index[_norm_url(c.url)] = c.ytg_keyword.strip()
-            self._notion_cache[blog_id] = index
+            self._notion_cache[site_slug] = index
 
         return index.get(_norm_url(url), "")
 
-    def _from_sheet(self, blog_id: str, url: str) -> str:
+    def _from_sheet(self, site_slug: str, url: str) -> str:
         """Cherche le mot-clé dans l'onglet réel du blog (service account)."""
-        layout = _resolve_sheet_layout(blog_id)
+        layout = _resolve_sheet_layout(site_slug)
         if not layout:
             return ""
 
-        index = self._sheet_index_cache.get(blog_id)
+        index = self._sheet_index_cache.get(site_slug)
         if index is None:
-            index = self._build_sheet_index(blog_id, layout)
-            self._sheet_index_cache[blog_id] = index
+            index = self._build_sheet_index(site_slug, layout)
+            self._sheet_index_cache[site_slug] = index
 
         return index.get(_norm_url(url), "")
 
-    def _from_gsc(self, blog_id: str, url: str) -> str:
+    def _from_gsc(self, site_slug: str, url: str) -> str:
         """Top query GSC 12 mois pour cette URL."""
         if not url:
             return ""
-        gsc = self._get_gsc(blog_id)
+        gsc = self._get_gsc(site_slug)
         if gsc is None:
             return ""
         kw = gsc.fetch_top_keyword_12m(url)
@@ -228,14 +228,14 @@ class KeywordResolver:
     # Construction d'index (avec cache)
     # ------------------------------------------------------------------
 
-    def _build_sheet_index(self, blog_id: str, layout: dict) -> dict:
+    def _build_sheet_index(self, site_slug: str, layout: dict) -> dict:
         """Construit {url_norm: keyword} depuis les onglets réels du blog."""
         import os
 
         sid = os.environ.get(layout["spreadsheet_env"], "")
         if not sid:
             logger.warning(
-                f"[KeywordResolver] {layout['spreadsheet_env']} absent — source sheet sautée pour {blog_id}"
+                f"[KeywordResolver] {layout['spreadsheet_env']} absent — source sheet sautée pour {site_slug}"
             )
             return {}
 
@@ -262,20 +262,20 @@ class KeywordResolver:
                 # Ne pas écraser un mot-clé déjà trouvé dans un onglet prioritaire
                 if kw and u not in index:
                     index[u] = kw
-        logger.info(f"[KeywordResolver] index sheet {blog_id}: {len(index)} URLs")
+        logger.info(f"[KeywordResolver] index sheet {site_slug}: {len(index)} URLs")
         return index
 
-    def _resolve_notion_db(self, blog_id: str) -> Optional[str]:
+    def _resolve_notion_db(self, site_slug: str) -> Optional[str]:
         if self._notion_db_resolver is not None:
             try:
-                return self._notion_db_resolver(blog_id)
+                return self._notion_db_resolver(site_slug)
             except Exception:
                 return None
         # Fallback : lire sites.json
-        return self._notion_db_from_sites_json(blog_id)
+        return self._notion_db_from_sites_json(site_slug)
 
     @staticmethod
-    def _notion_db_from_sites_json(blog_id: str) -> Optional[str]:
+    def _notion_db_from_sites_json(site_slug: str) -> Optional[str]:
         import json
         from pathlib import Path
 
@@ -287,7 +287,7 @@ class KeywordResolver:
             with open(sites_path) as f:
                 data = json.load(f)
             for site in data.get("sites", []):
-                if site.get("id") == blog_id:
+                if (site.get("site_slug") or site.get("id")) == site_slug:
                     return site.get("notion_commandes_db_id") or None
         except Exception:
             return None
@@ -317,37 +317,37 @@ class KeywordResolver:
             logger.warning(f"[KeywordResolver] SheetsClient indisponible: {e}")
             return None
 
-    # GSC analyzers sont par-blog (une gsc_property chacun) → cache par blog_id.
-    def _get_gsc(self, blog_id: str):
+    # GSC analyzers sont par-blog (une gsc_property chacun) → cache par site_slug.
+    def _get_gsc(self, site_slug: str):
         if self._gsc is not None:
             return self._gsc  # instance injectée explicitement
         cached = getattr(self, "_gsc_by_blog", None)
         if cached is None:
             cached = {}
             self._gsc_by_blog = cached
-        if blog_id not in cached:
-            prop = self._gsc_property_for_blog(blog_id)
+        if site_slug not in cached:
+            prop = self._gsc_property_for_blog(site_slug)
             if not prop:
-                cached[blog_id] = None
+                cached[site_slug] = None
             else:
                 try:
                     from scripts.audit.gsc_analyzer import GSCAnalyzer
-                    cached[blog_id] = GSCAnalyzer(prop)
+                    cached[site_slug] = GSCAnalyzer(prop)
                 except Exception as e:
                     logger.warning(f"[KeywordResolver] GSCAnalyzer indisponible: {e}")
-                    cached[blog_id] = None
-        return cached[blog_id]
+                    cached[site_slug] = None
+        return cached[site_slug]
 
     @staticmethod
-    def _gsc_property_for_blog(blog_id: str) -> str:
-        """Lit gsc_property depuis _shared/config/blogs/{blog_id}.json."""
+    def _gsc_property_for_blog(site_slug: str) -> str:
+        """Lit gsc_property depuis _shared/config/blogs/{site_slug}.json."""
         import json
         from pathlib import Path
 
         try:
             base = Path(__file__).resolve().parent.parent.parent
-            from _shared.core.tenant_paths import TenantPaths
-            cfg_path = TenantPaths(base_path=base).blog_config(blog_id)
+            from _shared.core.site_paths import SitePaths
+            cfg_path = SitePaths(base_path=base).site_config(site_slug)
             if not cfg_path.exists():
                 return ""
             with open(cfg_path) as f:

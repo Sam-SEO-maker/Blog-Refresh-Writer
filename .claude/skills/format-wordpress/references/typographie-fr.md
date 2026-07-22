@@ -1,10 +1,10 @@
 # Typographie & mécanique du français
 
-Mécanique **de langue** pour tout contenu français (tous tenants FR) : espaces
+Mécanique **de langue** pour tout contenu français (tous sites FR) : espaces
 insécables, guillemets, apostrophe, nombres, casse, connecteurs IA à bannir,
 anglicismes. Importée du paquet `blog-refresh.skill` (juillet 2026) et adaptée aux
 règles du repo. Complète le `SKILL.md` de `format-wordpress` (invariants HTML/WP) ;
-la connaissance pays (système scolaire, vocabulaire métier) vit côté tenant
+la connaissance pays (système scolaire, vocabulaire métier) vit côté site
 (ex. `connaissance-fr.md` de [[sp-ressources-gutenberg]]).
 
 ## 1. Espaces insécables (NBSP)
@@ -39,7 +39,7 @@ Apostrophe **typographique** `'` (U+2019), jamais droite `'` (U+0027) :
 
 ## 4. Tirets
 
-- **Tiret cadratin `—` : interdit partout** (tous tenants, corps et JSON) —
+- **Tiret cadratin `—` : interdit partout** (tous sites, corps et JSON) —
   [[feedback-no-em-dash]]. Pour les incises : virgules, parenthèses, ou tiret
   demi-cadratin `–` si un séparateur visuel est indispensable.
 - **Tiret demi-cadratin `–`** : plages de nombres (`pages 12–15`, `2010–2024`),
@@ -122,7 +122,7 @@ avec parcimonie.)
 
 | Anti-pattern | Correction |
 |---|---|
-| tu/vous mélangés dans un article | choisir selon l'audience (et la skill du tenant), uniformiser |
+| tu/vous mélangés dans un article | choisir selon l'audience (et la skill du site), uniformiser |
 | `Lundi`, `Septembre` en cours de phrase | minuscule |
 | `L'Espagnol` (la langue) | `l'espagnol` |
 | `15%`, `30€` | NBSP : `15⎵%`, `30⎵€` |

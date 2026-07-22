@@ -20,23 +20,23 @@ class StrategySelector:
     - Les guidelines spécifiques
 
     Le prompt de site n'est PAS résolu ici : la composition
-    strategy + tenants/{id}/prompts/site.md est faite par PromptComposer.
+    strategy + sites/{id}/prompts/site.md est faite par PromptComposer.
     """
 
     def __init__(
         self,
         prompts_dispatch_path: Optional[Path] = None,
-        blog_config: Optional[dict] = None
+        site_config: Optional[dict] = None
     ):
         """
         Initialise le sélecteur.
 
         Args:
             prompts_dispatch_path: Chemin vers prompts_dispatch.json
-            blog_config: Configuration du blog actuel
+            site_config: Configuration du blog actuel
         """
         self.prompts_dispatch = {}
-        self.blog_config = blog_config or {}
+        self.site_config = site_config or {}
 
         if prompts_dispatch_path and prompts_dispatch_path.exists():
             self._load_prompts_dispatch(prompts_dispatch_path)
@@ -76,7 +76,7 @@ class StrategySelector:
         prompt_template = self._get_prompt_template(strategy)
 
         # Récupérer les overrides du blog
-        blog_overrides = self.blog_config.get("prompt_overrides", {})
+        blog_overrides = self.site_config.get("prompt_overrides", {})
 
         # Déterminer si enrichissement E-E-A-T nécessaire
         requires_eeat = strategy in [

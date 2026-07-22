@@ -402,10 +402,10 @@ class TestLanguageDirective:
         import json
         from pathlib import Path
         from scripts.ghostwriter.ghostwriter import language_directive
-        cat_path = Path(__file__).parent.parent / "_shared" / "config" / "superprof_blogs_catalog.json"
+        cat_path = Path(__file__).parent.parent / "_shared" / "config" / "superprof_sites_catalog.json"
         if not cat_path.exists():
             pytest.skip("catalogue absent")
         cat = json.loads(cat_path.read_text(encoding="utf-8"))
-        langs = {e["language"] for e in cat["blogs"] + cat["ressources_sites"] if e["language"]}
+        langs = {e["language"] for e in cat["sites"] if e["language"]}
         for lang in langs:
             assert language_directive(lang), f"langue '{lang}' sans directive"

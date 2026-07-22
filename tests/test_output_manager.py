@@ -14,7 +14,7 @@ def temp_base_path(tmp_path):
     """Create temporary base path for testing, avec un sites.json minimal.
 
     OutputManager valide les site_id contre sites.json (registre ouvert). Le
-    fixture fournit les 2 tenants canoniques pour que la validation soit active.
+    fixture fournit les 2 sites canoniques pour que la validation soit active.
     """
     import json
     config_dir = tmp_path / "_shared" / "config"
@@ -38,27 +38,27 @@ def output_mgr(temp_base_path):
 class TestOutputManagerInit:
     """Test OutputManager initialization"""
 
-    def test_tenants_root_created(self, output_mgr, temp_base_path):
-        """Les sorties sont par tenant (tenants/{id}/outputs/) : la racine tenants/ existe."""
-        expected = temp_base_path / "tenants"
-        assert output_mgr._tenant_paths.tenants_root == expected
+    def test_sites_root_created(self, output_mgr, temp_base_path):
+        """Les sorties sont par site (sites/{id}/outputs/) : la racine sites/ existe."""
+        expected = temp_base_path / "sites"
+        assert output_mgr._site_paths.sites_root == expected
         assert expected.exists()
 
     def test_scrape_cache_dir_resolved(self, output_mgr, temp_base_path):
-        """Le cache de HTML scrapé vit sous tenants/{id}/outputs/_scrape_cache/."""
-        expected = temp_base_path / "tenants" / "enseigna" / "outputs" / "_scrape_cache"
+        """Le cache de HTML scrapé vit sous sites/{id}/outputs/_scrape_cache/."""
+        expected = temp_base_path / "sites" / "enseigna" / "outputs" / "_scrape_cache"
         assert output_mgr._temp_dir("enseigna") == expected
         # domaine hérité en entrée → même dossier (site_id normalisé)
         assert output_mgr._temp_dir("enseigna.fr") == expected
 
-    def test_site_id_is_tenant_id_based(self, output_mgr):
-        """Les site_id sont désormais des tenant_id (sites.json), plus des domaines.
+    def test_site_dir_is_site_slug_based(self, output_mgr):
+        """Les site_id sont désormais des site_slug (sites.json), plus des domaines.
 
-        Un domaine hérité en entrée est remappé vers son tenant_id canonique ; les
+        Un domaine hérité en entrée est remappé vers son site_slug canonique ; les
         sorties sont indexées par id. Plus de whitelist VALID_SITE_IDS codée en dur.
         """
         assert not hasattr(output_mgr, "VALID_SITE_IDS")
-        # Domaine hérité → tenant_id canonique
+        # Domaine hérité → site_slug canonique
         assert output_mgr._normalize_site_id("enseigna.fr") == "enseigna"
         assert output_mgr._normalize_site_id("superprof.fr") == "superprof-ressources"
         # Un id déjà canonique reste inchangé
@@ -69,22 +69,22 @@ class TestInitWorkspace:
     """Test init_workspace() method"""
 
     def test_init_workspace_creates_site_directories(self, output_mgr):
-        """init_workspace crée un dossier de sortie par tenant enregistré (sites.json)."""
+        """init_workspace crée un dossier de sortie par site enregistré (sites.json)."""
         output_mgr.init_workspace(purge_temp=False)
 
-        known = output_mgr._known_tenant_ids()
+        known = output_mgr._known_site_slugs()
         assert known  # le fixture fournit enseigna + superprof-ressources
         for site_id in known:
-            site_dir = output_mgr._tenant_paths.output_dir(site_id)
+            site_dir = output_mgr._site_paths.output_dir(site_id)
             assert site_dir.exists(), f"Missing output dir for {site_id}"
 
     def test_init_workspace_creates_subdirectories(self, output_mgr):
-        """html/, metadata/, editorial_audits/ créés pour chaque tenant enregistré."""
+        """html/, metadata/, editorial_audits/ créés pour chaque site enregistré."""
         output_mgr.init_workspace(purge_temp=False)
 
-        for site_id in output_mgr._known_tenant_ids():
+        for site_id in output_mgr._known_site_slugs():
             for subdir in ["html", "metadata", "editorial_audits"]:
-                sub_path = output_mgr._tenant_paths.output_dir(site_id) / subdir
+                sub_path = output_mgr._site_paths.output_dir(site_id) / subdir
                 assert sub_path.exists(), f"Missing {subdir} for {site_id}"
 
     def test_init_workspace_purges_temp_cache(self, output_mgr):
@@ -124,14 +124,14 @@ class TestSiteValidation:
 
     def test_validate_valid_site_id(self, output_mgr):
         """Test that valid site IDs pass validation"""
-        # Should not raise : tenant_id canonique OU domaine hérité (remappé)
+        # Should not raise : site_slug canonique OU domaine hérité (remappé)
         output_mgr._validate_site_id("enseigna")
         output_mgr._validate_site_id("superprof-ressources")
         output_mgr._validate_site_id("enseigna.fr")  # domaine hérité → enseigna
         output_mgr._validate_site_id("superprof.fr")
 
     def test_validate_invalid_site_id(self, output_mgr):
-        """Test qu'un tenant absent de sites.json lève ValueError"""
+        """Test qu'un site absent de sites.json lève ValueError"""
         with pytest.raises(ValueError, match="Invalid site_id"):
             output_mgr._validate_site_id("invalid-site.com")
 
@@ -208,8 +208,8 @@ class TestOutputMethods:
         output_dir = output_mgr.get_site_output_dir("enseigna")
 
         assert output_dir.exists()
-        # Layout monorepo : tenants/{id}/outputs/ (le dossier feuille = "outputs",
-        # le tenant_id est le dossier parent).
+        # Layout monorepo : sites/{id}/outputs/ (le dossier feuille = "outputs",
+        # le site_slug est le dossier parent).
         assert output_dir.name == "outputs"
         assert output_dir.parent.name == "enseigna"
         assert "enseigna" in str(output_dir)

@@ -54,15 +54,15 @@ def main():
         print("   Aucune URL à traiter")
         return
 
-    # Nouvelle structure: url, title, blog_id, post_type, status, ...
+    # Nouvelle structure: url, title, site_slug, post_type, status, ...
     print(f"\n[3] URLs trouvées ({len(urls_data)}):")
     for i, row in enumerate(urls_data, 1):
         url = row[0] if row else "N/A"
-        blog_id = row[2] if len(row) > 2 else "N/A"
+        site_slug = row[2] if len(row) > 2 else "N/A"
         post_type = row[3] if len(row) > 3 else "N/A"
         status = row[4] if len(row) > 4 else "N/A"
         print(f"   {i}. {url}")
-        print(f"      Blog: {blog_id} | Type: {post_type} | Status: {status}")
+        print(f"      Blog: {site_slug} | Type: {post_type} | Status: {status}")
 
     # Filtrer les URLs PENDING
     pending_urls = []
@@ -72,7 +72,7 @@ def main():
             if status == "PENDING" or status == "":
                 pending_urls.append({
                     "url": row[0],
-                    "blog_id": row[2] if len(row) > 2 else "enseigna",
+                    "site_slug": row[2] if len(row) > 2 else "enseigna",
                     "post_type": row[3] if len(row) > 3 else "standalone",
                     "priority": 3,
                     "row_index": i
@@ -86,7 +86,7 @@ def main():
         pending_urls = [
             {
                 "url": row[0],
-                "blog_id": row[2] if len(row) > 2 else "enseigna",
+                "site_slug": row[2] if len(row) > 2 else "enseigna",
                 "post_type": row[3] if len(row) > 3 else "standalone",
                 "priority": 3,
                 "row_index": i
@@ -134,7 +134,7 @@ def main():
 
         for url_data in pending_urls[:2]:  # Limiter à 2 pour le test
             url = url_data["url"]
-            blog_id = url_data["blog_id"]
+            site_slug = url_data["site_slug"]
 
             print(f"\n   Processing: {url}")
 
@@ -152,7 +152,7 @@ def main():
             try:
                 result = agent.process_single_url(
                     url=url,
-                    blog_id=blog_id,
+                    site_slug=site_slug,
                     html_content=html_content
                 )
 

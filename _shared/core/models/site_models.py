@@ -1,7 +1,7 @@
 """
 Site Models Module
 
-Modèles pour la gestion multi-tenant des sites.
+Modèles pour la gestion multi-site des sites.
 """
 
 from dataclasses import dataclass

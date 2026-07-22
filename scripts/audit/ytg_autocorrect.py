@@ -54,7 +54,7 @@ SUBAGENT_INSTRUCTIONS = (
 class CorrectionTask:
     """Un item de correction à confier à un sub-agent (mode plan Max)."""
     url: str
-    blog_id: str
+    site_slug: str
     guide_id: str
     html_path: str          # _refreshed.html source
     output_path: str        # _corrected.html à écrire par le sub-agent
@@ -70,7 +70,7 @@ class CorrectionTask:
 class RevalidationResult:
     """Résultat de la re-validation d'un `_corrected.html` produit par le sub-agent."""
     url: str
-    blog_id: str
+    site_slug: str
     status: str = ""        # IMPROVED / PARTIAL / NO_IMPROVEMENT / ASSET_VIOLATION / MISSING / ERROR
     before: dict = field(default_factory=dict)
     after: dict = field(default_factory=dict)
@@ -93,12 +93,12 @@ class YTGAutoCorrector:
 
     def __init__(
         self,
-        blog_id: str,
+        site_slug: str,
         analyzer=None,
         rate_limiter: Optional[RateLimiter] = None,
     ):
-        self.blog_id = blog_id
-        self._corrector = YTGCorrector(site_id=blog_id)
+        self.site_slug = site_slug
+        self._corrector = YTGCorrector(site_id=site_slug)
         if analyzer is not None:
             self._corrector.analyzer = analyzer
         if rate_limiter is not None:
@@ -160,7 +160,7 @@ class YTGAutoCorrector:
 
         return CorrectionTask(
             url=url,
-            blog_id=self.blog_id,
+            site_slug=self.site_slug,
             guide_id=guide_id,
             html_path=str(html_path),
             output_path=str(output_path),
@@ -188,8 +188,8 @@ class YTGAutoCorrector:
                 tasks.append(task)
 
         if tasks:
-            from _shared.core.tenant_paths import TenantPaths
-            manifest = TenantPaths(base_path=PROJECT_ROOT).output_dir(self.blog_id) / "ytg_fix_manifest.json"
+            from _shared.core.site_paths import SitePaths
+            manifest = SitePaths(base_path=PROJECT_ROOT).output_dir(self.site_slug) / "ytg_fix_manifest.json"
             manifest.parent.mkdir(parents=True, exist_ok=True)
             manifest.write_text(
                 json.dumps([t.to_dict() for t in tasks], ensure_ascii=False, indent=2),
@@ -208,7 +208,7 @@ class YTGAutoCorrector:
 
         À appeler APRÈS que le sub-agent a écrit output_path.
         """
-        res = RevalidationResult(url=task.url, blog_id=task.blog_id)
+        res = RevalidationResult(url=task.url, site_slug=task.site_slug)
         original_path = Path(task.html_path)
         corrected_path = Path(task.output_path)
 

@@ -97,7 +97,7 @@ _shared/outputs/superprof-ressources/
 
 ---
 
-## 3. Multi-Tenant Isolation
+## 3. Multi-Site Isolation
 
 **Sites autorisés** (définis dans `OutputManager.VALID_SITE_IDS`):
 

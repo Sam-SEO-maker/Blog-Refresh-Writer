@@ -41,13 +41,13 @@ NOTION_CREDENTIALS_PATH = Path(
 # Data Models
 # ---------------------------------------------------------------------------
 
-# Mapping domaine Notion (NDD) → blog_id interne
+# Mapping domaine Notion (NDD) → site_slug interne
 _DOMAIN_TO_BLOG_ID: dict[str, str] = {
     "enseigna.fr": "enseigna",
     "superprof.fr": "superprof-ressources",
 }
 
-# Mapping inverse blog_id → domaine Notion (pour les filtres API)
+# Mapping inverse site_slug → domaine Notion (pour les filtres API)
 _BLOG_ID_TO_DOMAIN: dict[str, str] = {v: k for k, v in _DOMAIN_TO_BLOG_ID.items()}
 
 
@@ -57,7 +57,7 @@ class NotionCommande:
     notion_page_id: str
     title: str
     url: str = ""
-    blog_id: str = ""
+    site_slug: str = ""
     status: str = ""
     date: str = ""
     subject: str = ""
@@ -69,7 +69,7 @@ class NotionSujet:
     """Un sujet à traiter, lu depuis la base Notion."""
     notion_page_id: str
     title: str
-    blog_id: str = ""
+    site_slug: str = ""
     category: str = ""
     priority: str = ""
     status: str = ""
@@ -279,7 +279,7 @@ class NotionClient:
     def get_commandes(
         self,
         database_id: str,
-        blog_id: Optional[str] = None,
+        site_slug: Optional[str] = None,
         status: Optional[str] = None,
     ) -> list[NotionCommande]:
         """
@@ -296,7 +296,7 @@ class NotionClient:
 
         Args:
             database_id: ID de la base "Commandes" Notion
-            blog_id: blog ID interne (ex: "enseigna") — converti en domaine pour le filtre
+            site_slug: blog ID interne (ex: "enseigna") — converti en domaine pour le filtre
             status: Filtre sur le statut (optionnel)
 
         Returns:
@@ -304,8 +304,8 @@ class NotionClient:
         """
         filter_dict = None
 
-        # Convertir blog_id → domaine pour le filtre "NDD"
-        domain = _BLOG_ID_TO_DOMAIN.get(blog_id, blog_id) if blog_id else None
+        # Convertir site_slug → domaine pour le filtre "NDD"
+        domain = _BLOG_ID_TO_DOMAIN.get(site_slug, site_slug) if site_slug else None
 
         conditions = []
         if domain:
@@ -327,7 +327,7 @@ class NotionClient:
         Champs clés :
           - "Sujet"          → title  (titre de l'article, utilisé pour l'anti-cannibalisation)
           - "Blog Catégorie" → subject (catégorie editoriale, ex: "Postures de yoga")
-          - "NDD"            → blog_id (domaine → id interne)
+          - "NDD"            → site_slug (domaine → id interne)
           - "Permalink"      → url
           - "Statut"         → status (type Notion natif "status")
           - "Mois"           → date (select, ex: "Mars 2026")
@@ -335,9 +335,9 @@ class NotionClient:
         """
         props = page.get("properties", {})
 
-        # "NDD" contient le domaine (ex: "enseigna.fr") → convertir en blog_id
+        # "NDD" contient le domaine (ex: "enseigna.fr") → convertir en site_slug
         ndd = self._extract_select(props, ["NDD"])
-        blog_id = _DOMAIN_TO_BLOG_ID.get(ndd, ndd)
+        site_slug = _DOMAIN_TO_BLOG_ID.get(ndd, ndd)
 
         # "Mois" est un select (pas un champ date) → ex: "Mars 2026"
         mois = self._extract_select(props, ["Mois"])
@@ -346,7 +346,7 @@ class NotionClient:
             notion_page_id=page.get("id", ""),
             title=self._extract_text(props, ["Sujet"]),         # titre réel de l'article
             url=self._extract_text(props, ["Permalink"]),
-            blog_id=blog_id,
+            site_slug=site_slug,
             status=self._extract_status(props, "Statut"),
             date=mois,
             subject=self._extract_title(props),                 # "Blog Catégorie" = catégorie
@@ -360,21 +360,21 @@ class NotionClient:
     def get_sujets(
         self,
         database_id: str,
-        blog_id: Optional[str] = None,
+        site_slug: Optional[str] = None,
     ) -> list[NotionSujet]:
         """
         Récupère les sujets à traiter depuis une base Notion.
 
         Args:
             database_id: ID de la base "Sujets" Notion
-            blog_id: Filtre sur le blog (optionnel)
+            site_slug: Filtre sur le blog (optionnel)
 
         Returns:
             Liste de NotionSujet.
         """
         filter_dict = None
-        if blog_id:
-            filter_dict = {"property": "Blog", "select": {"equals": blog_id}}
+        if site_slug:
+            filter_dict = {"property": "Blog", "select": {"equals": site_slug}}
 
         pages = self.query_database(database_id, filter_dict=filter_dict)
         return [self._parse_sujet(p) for p in pages]
@@ -385,7 +385,7 @@ class NotionClient:
         return NotionSujet(
             notion_page_id=page.get("id", ""),
             title=self._extract_title(props),
-            blog_id=self._extract_select(props, ["Blog", "Site", "blog"]),
+            site_slug=self._extract_select(props, ["Blog", "Site", "blog"]),
             category=self._extract_select(props, ["Catégorie", "Category", "Thème"]),
             priority=self._extract_select(props, ["Priorité", "Priority"]),
             status=self._extract_select(props, ["Statut", "Status"]),
@@ -395,7 +395,7 @@ class NotionClient:
         self,
         database_id: str,
         title: str,
-        blog_id: str = "",
+        site_slug: str = "",
         category: str = "",
         priority: str = "medium",
     ) -> Optional[dict]:
@@ -405,7 +405,7 @@ class NotionClient:
         Args:
             database_id: ID de la base "Sujets"
             title: Titre du sujet
-            blog_id: Identifiant du blog
+            site_slug: Identifiant du blog
             category: Catégorie thématique
             priority: Priorité ("high", "medium", "low")
 
@@ -415,8 +415,8 @@ class NotionClient:
         properties = {
             "Nom": {"title": [{"text": {"content": title}}]},
         }
-        if blog_id:
-            properties["Blog"] = {"select": {"name": blog_id}}
+        if site_slug:
+            properties["Blog"] = {"select": {"name": site_slug}}
         if category:
             properties["Catégorie"] = {"select": {"name": category}}
         if priority:
@@ -435,7 +435,7 @@ class NotionClient:
         title: str,
         url: str,
         strategy: str,
-        blog_id: str,
+        site_slug: str,
         impressions: int = 0,
         clicks: int = 0,
         indexed: str = "",
@@ -450,7 +450,7 @@ class NotionClient:
             title: Titre de l'article (nouveau H1 ou original)
             url: URL de l'article
             strategy: Stratégie appliquée (ex: FULL_REFRESH)
-            blog_id: Identifiant du blog (ex: enseigna)
+            site_slug: Identifiant du blog (ex: enseigna)
             impressions: Impressions GSC 30j au moment du refresh
             clicks: Clics GSC 30j au moment du refresh
             indexed: Statut d'indexation ("YES" ou "NO")
@@ -477,7 +477,7 @@ class NotionClient:
                 "multi_select": [{"name": "Samuel"}]
             },
             "Commentaires": {
-                "rich_text": [{"text": {"content": f"{strategy} — {blog_id}"}}]
+                "rich_text": [{"text": {"content": f"{strategy} — {site_slug}"}}]
             },
             "Impressions": {
                 "number": impressions

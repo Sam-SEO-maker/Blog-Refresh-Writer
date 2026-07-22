@@ -1,6 +1,6 @@
 ---
 description: Refresh batch depuis Google Sheets (toutes les URLs d'une action donnée pour un blog).
-argument-hint: --action <PARTIAL_REFRESH|FULL_REFRESH|REFRESH_TITLES> --blog <id> [--limit N]
+argument-hint: --action <PARTIAL_REFRESH|FULL_REFRESH|REFRESH_TITLES> --site <site-slug> [--limit N]
 allowed-tools: Bash(python3 content_writer.py batch refresh:*), Bash(python3 content_writer.py plan init:*), Bash(python3 content_writer.py plan check:*), Bash(python3 content_writer.py finalize:*), Task, Read, Write, WebSearch, WebFetch, Skill
 ---
 
@@ -45,14 +45,14 @@ rédaction. Pour chaque URL préparée :
 2. **Plan optimisé SEO (obligatoire, comme en /refresh étape 2bis)** :
 
    ```bash
-   python3 content_writer.py plan init <url> --blog <id>
+   python3 content_writer.py plan init <url> --site <site-slug>
    ```
 
    puis invoquer la skill **`seo-outline`** pour remplir `content_plan.md`
    (mapping PAA→sections, placement des preuves, gap top 10), et valider :
 
    ```bash
-   python3 content_writer.py plan check <url> --blog <id>
+   python3 content_writer.py plan check <url> --site <site-slug>
    ```
 
    `OK` → générer ; `A_CORRIGER` → corriger le plan puis relancer `plan check`.
@@ -61,14 +61,14 @@ rédaction. Pour chaque URL préparée :
 
 3. **Génération** — subagent **content-generator** via Task, avec
    `generation_prompt.txt`, le `content_plan.md` validé, le brief de sources,
-   le `blog_id`, les chemins de sortie, la `Strategy` et les `Assets avant`
+   le `site_slug`, les chemins de sortie, la `Strategy` et les `Assets avant`
    (Règle d'Or : assets après ≥ avant). Le subagent écrit les fichiers,
    jamais de HTML dans le chat.
 
 4. **Finalisation + QC sémantique YTG (SOSEO/DSEO)** :
 
    ```bash
-   python3 content_writer.py finalize <url> --blog <id> --html-file <Output HTML> [--type <avis|versus>] [--keyword "<Mot-clé>"] [--guide-id <YTG guide>]
+   python3 content_writer.py finalize <url> --site <site-slug> --html-file <Output HTML> [--type <avis|versus>] [--keyword "<Mot-clé>"] [--guide-id <YTG guide>]
    ```
 
    Reporter le `Mot-clé` et le `YTG guide` de l'étape 1 dans
@@ -90,4 +90,4 @@ avant de passer au suivant.
 
 Rapporter : nombre d'URLs traitées / écartées (et pourquoi), stratégie par URL,
 verdict `plan check`, verdict YTG avec scores SOSEO/DSEO vs cible, verdict
-assets (avant/après), et chemins de sortie (`tenants/{tenant}/outputs/`).
+assets (avant/après), et chemins de sortie (`sites/<site-slug>/outputs/`).

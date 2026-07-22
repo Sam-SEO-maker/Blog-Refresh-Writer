@@ -73,7 +73,7 @@ demi-cadratin `–` si un séparateur visuel est indispensable. Tous blogs. Réf
 - **Ancres sans `<strong>`** : `<a href="…">texte</a>`, jamais
   `<a href="…"><strong>texte</strong></a>` (anti-pattern sur-optimisation).
 - **Pas de lien dans les H2/H3** : un `<a>` dans un heading est un red flag SEO.
-- **Jamais de _nouveau_ lien vers Wikipédia** (tous tenants) : lier la source primaire,
+- **Jamais de _nouveau_ lien vers Wikipédia** (tous sites) : lier la source primaire,
   pas l'article encyclopédique — [[feedback-no-wikipedia-links]]. (Un lien Wikipédia
   déjà présent reste conservé au titre de la Règle d'Or ; l'interdiction porte sur l'ajout.)
 - **Sources** : pas de « Consulté le [date] » — [[feedback-no-consulte-le]].
@@ -112,7 +112,7 @@ d'assets de l'original (`assets_after ≥ assets_before`) — images, tableaux,
 vidéos, liens internes **et** liens externes (y compris vers des concurrents).
 On peut enrichir, jamais appauvrir. Conserver chaque lien existant à l'identique
 (URL **et** texte d'ancre), sans en injecter de nouveau. Le périmètre exact des
-assets comptés est propre à chaque tenant (Superprof Ressources n'émet ni
+assets comptés est propre à chaque site (Superprof Ressources n'émet ni
 `<table>` ni vidéo) : voir la skill du site.
 
 ## Métadonnées JSON

@@ -47,7 +47,7 @@ SOURCE_SERVICE_ACCOUNT = "service_account"
 
 # Substrings de domaine couverts par le MCP gsc-remote (dérivé du list_properties
 # live 2026-07-15 : uniquement des variantes superprof). Élargir cette liste au
-# fur et à mesure que d'autres tenants sont ajoutés au serveur MCP.
+# fur et à mesure que d'autres sites sont ajoutés au serveur MCP.
 MCP_COVERED_DOMAIN_HINTS = ("superprof.", "super-prof.")
 
 
@@ -155,7 +155,7 @@ class GSCAnalyzer:
 
         Routage (Phase 6c) : la **période courante par requête** passe par le MCP
         gsc-remote pour superprof.* (fallback SA sur erreur), par le SA pour
-        enseigna/tenants hors MCP. Le **calcul de tendances** (baseline période
+        enseigna/sites hors MCP. Le **calcul de tendances** (baseline période
         N-1) reste sur le SA dans TOUS les cas — voir `_calculate_trends_direct` :
         il repose sur un total *par page* de la période précédente, non couvert de
         façon fiable par les tools MCP (compare_search_periods tronque au top-N et
@@ -345,7 +345,7 @@ class GSCAnalyzer:
         impressions DESC. Chaque élément : {"query", "clicks", "impressions"}.
 
         Routage (Phase 6c) : MCP gsc-remote pour superprof.* (fallback SA sur
-        erreur MCP), service account pour enseigna et tout tenant hors MCP.
+        erreur MCP), service account pour enseigna et tout site hors MCP.
         NB row-limit : le MCP plafonne à ~20 lignes. Pour limit>20 on retombe
         sur le SA (qui pagine jusqu'à 50) afin de ne pas tronquer silencieusement.
         """
@@ -395,7 +395,7 @@ class GSCAnalyzer:
         """Perfs SEO au niveau **propriété/blog** (pas par URL) : totaux + top KW.
 
         Routage identique aux autres fetch : MCP gsc-remote pour superprof.*
-        (fallback SA sur erreur), service account pour enseigna/tenants hors MCP.
+        (fallback SA sur erreur), service account pour enseigna/sites hors MCP.
         Le top KW est plafonné à ~20 côté MCP ; `top_kw>20` force la voie SA.
 
         Retourne : {

@@ -14,7 +14,7 @@ tools: Read, Write, Edit, Bash, Skill, Glob, Grep
 Tu es le **contexte d'exécution de la génération** de contenu du projet Content
 Writer. Tu tournes sous l'abonnement Max (jamais l'API payante). Ton rôle : à
 partir d'un contexte déjà préparé, **écrire le HTML de l'article** en respectant
-les règles éditoriales du tenant, et **écrire directement les fichiers de sortie**.
+les règles éditoriales du site, et **écrire directement les fichiers de sortie**.
 
 ## Entrées (transmises par /refresh)
 
@@ -28,20 +28,20 @@ les règles éditoriales du tenant, et **écrire directement les fichiers de sor
   interrogatifs — définis par la skill `seo-outline`).
 - Le **brief de sources vérifiées** (source → claim → url → année) issu de la
   skill `recherche-sources`.
-- `blog_id` (tenant) : détermine la skill de rédaction à charger.
+- `site_slug` (site) : détermine la skill de rédaction à charger.
 - Chemins de sortie `Output HTML` / `Output JSON`.
 - `Strategy` et `Assets avant` (counts images/tableaux/vidéos/liens).
 
-## Skill de rédaction à charger selon le tenant
+## Skill de rédaction à charger selon le site
 
-Le mapping tenant→skill n'est **plus codé en dur ici** : il est résolu depuis la
-config du tenant (§4bis-C levé). Déroulé :
+Le mapping site→skill n'est **plus codé en dur ici** : il est résolu depuis la
+config du site (§4bis-C levé). Déroulé :
 
-1. Lis `tenants/{blog_id}/config/tenant.json`.
+1. Lis `sites/{site_slug}/config/site.json`.
 2. Charge (via l'outil Skill) la skill nommée dans **`generation_skill`**, puis les
    deux skills transverses **`edito-refresh`** (règles SEO/GEO/E-E-A-T de ranking)
    et **`format-wordpress`** (règles de forme HTML/WP).
-3. Si le tenant a un champ **`qc_skill`**, passe cette skill avant de finaliser.
+3. Si le site a un champ **`qc_skill`**, passe cette skill avant de finaliser.
 
 Exemples (valeurs lues dans la config, pas câblées) :
 
@@ -49,10 +49,10 @@ Exemples (valeurs lues dans la config, pas câblées) :
 - `superprof-ressources` : `generation_skill = sp-ressources-gutenberg`,
   `qc_skill = qc-sp-ressources`.
 
-Les skills métier vivent sous **`tenants/{blog_id}/.claude/skills/`** (discovery
+Les skills métier vivent sous **`sites/{site_slug}/.claude/skills/`** (discovery
 scopée native) ; `edito-refresh`, `format-wordpress` et `recherche-sources`
-restent transverses à la racine `.claude/skills/`. Onboarder un nouveau marché =
-déposer sa skill dans `tenants/{id}/.claude/skills/` + renseigner
+restent transverses à la racine `.claude/skills/`. Onboarder un nouveau site =
+déposer sa skill dans `sites/<site-slug>/.claude/skills/` + renseigner
 `generation_skill` dans sa config, **sans éditer ce fichier**.
 
 Ces skills portent la structure, les blocs obligatoires, les interdits et le ton.
@@ -82,7 +82,7 @@ mémoires de feedback.
 5. **Format de sortie** : respecte format-wordpress (HTML clean sans wrappers WP,
    accents corrects, pas de tiret cadratin `—`, ancres sans `<strong>`, pas de
    lien dans les H2/H3, listes ponctuées). Double sortie Gutenberg selon la skill
-   du tenant.
+   du site.
 6. **Règles de ranking** : charge et applique `edito-refresh` (réponse directe en
    début de H2, ≥ 2 statistiques et ≥ 1 citation sourcées, ≥ 3 sources
    institutionnelles, densité par occurrences et non en %). C'est une skill
@@ -94,7 +94,7 @@ mémoires de feedback.
    fixe l'outline (H2/H3, PAA, placement des preuves) : rédige section par section
    en le suivant, ne réorganise pas la structure validée.
 2. Charge (outil Skill), dans cet ordre, les **trois** skills — aucune n'est optionnelle :
-   a. la skill de rédaction du tenant (`generation_skill` de tenant.json),
+   a. la skill de rédaction du site (`generation_skill` de site.json),
    b. **`edito-refresh`** (règles de ranking SEO/GEO/E-E-A-T),
    c. **`format-wordpress`** (règles de forme HTML/WP).
 3. Rédige le HTML en injectant les sources vérifiées dans le contenu et
@@ -109,7 +109,7 @@ mémoires de feedback.
 
 > Répartition avec `cw finalize` (post-génération) :
 > - **Toi** : le contenu correct et complet, **y compris les blocs Gutenberg
->   maison** quand la skill du tenant les exige (superprof-ressources : les 5
+>   maison** quand la skill du site les exige (superprof-ressources : les 5
 >   blocs AdvGB obligatoires — le convertisseur mécanique de finalize ne les
 >   ajoute PAS, cf. skill sp-ressources-gutenberg). Écris ce contenu dans
 >   `Output HTML`.

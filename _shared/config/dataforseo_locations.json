@@ -1,5 +1,5 @@
 {
-  "_comment": "country ISO (superprof_blogs_catalog.json) -> location_name DataForSEO. Généré et validé contre /v3/serp/google/locations ; ne pas éditer à la main. Régénérer : python3 scripts/utils/build_dataforseo_locations.py. UK (catalogue) -> GB (ISO). HK/TW/PR n'existent pas en 'Country' chez DataForSEO : repli sur la Region homonyme.",
+  "_comment": "country ISO (superprof_sites_catalog.json) -> location_name DataForSEO. Généré et validé contre /v3/serp/google/locations ; ne pas éditer à la main. Régénérer : python3 scripts/utils/build_dataforseo_locations.py. UK (catalogue) -> GB (ISO). HK/TW/PR n'existent pas en 'Country' chez DataForSEO : repli sur la Region homonyme.",
   "locations": {
     "AE": "United Arab Emirates",
     "AL": "Albania",

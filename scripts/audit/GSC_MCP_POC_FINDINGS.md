@@ -54,7 +54,7 @@ Le SA n'est **pas** obligatoire à supprimer (la suppression était un objectif 
 *distribution*, pas une contrainte technique). Le conserver ne crée **aucun
 conflit** : SA et MCP sont deux canaux de lecture indépendants sur des propriétés
 **disjointes** (MCP = superprof.* ; SA = enseigna + repli superprof), et le choix
-est déjà routé par tenant via `auth_mode` (Phase 4bis-B) au point unique
+est déjà routé par site via `auth_mode` (Phase 4bis-B) au point unique
 `_shared/core/google_auth.py::get_credentials`. Le SA n'alourdit pas le repo :
 **aucune clé n'est dans l'arbre git** (JSON hors repo, `GOOGLE_SA_PATH`
 = `~/.credentials/...`) ; seule reste la lib `google-api-python-client`, de toute
@@ -80,7 +80,7 @@ de fallback permanent**, pas supprimé.
    Fallback SA sur toute `GSCMCPError`. **Row-limit** : `limit>20` bypasse le MCP
    (retombe sur le SA qui pagine à 50) pour ne pas tronquer silencieusement.
 5. ~~Suppression du service account~~ → **SA conservé en fallback permanent** tant
-   qu'enseigna (et tout tenant hors MCP) n'est pas exposé sur `gsc-remote`.
+   qu'enseigna (et tout site hors MCP) n'est pas exposé sur `gsc-remote`.
 
 ### `_fetch_performance_direct` : refactoré, PAS basculé (blocage row-limit)
 

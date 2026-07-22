@@ -29,26 +29,26 @@ Signaux : auteur avec credentials complets, titres académiques/professionnels, 
 
 Signaux : disclaimers transparents, méthodologie expliquée, dates visibles, sources vérifiables avec liens, absence de conflits d'intérêt (ou transparence totale).
 
-> **Note tenant** : la **déclaration d'indépendance éditoriale** est **interdite sur
+> **Note site** : la **déclaration d'indépendance éditoriale** est **interdite sur
 > Enseigna** (voir sa skill), ne pas l'inclure. Elle n'est prescrite pour aucun
-> tenant actuel par défaut.
+> site actuel par défaut.
 
 ## Sources institutionnelles (principe transverse)
 
-**Minimum : ≥ 3 sources institutionnelles citées avec lien** (uniforme, tous tenants).
+**Minimum : ≥ 3 sources institutionnelles citées avec lien** (uniforme, tous sites).
 
-**Types de domaines à viser** (valable quel que soit le marché) :
+**Types de domaines à viser** (valable quel que soit le site) :
 - **Gouvernemental / officiel** : ministères, agences publiques, autorités de régulation.
 - **Académique** : archives ouvertes, revues à comité de lecture, presses universitaires.
 - **Statistique** : institut national de statistiques, organismes internationaux (OCDE…).
 
-**Les domaines concrets sont un savoir par marché/tenant, pas transverse** : ils vivent
-dans l'annuaire du tenant `tenants/{id}/sources/authority-map.md` (par matière + socle
+**Les domaines concrets sont un savoir par site, pas transverse** : ils vivent
+dans l'annuaire du site `sites/<site-slug>/sources/authority-map.md` (par matière + socle
 transverse), consommé au tier 1 de la skill `recherche-sources`. Ne pas maintenir de
 liste de domaines ici. Domaines interdits (concurrents, agrégateurs) :
 `recherche-sources/references/blacklisted-domains.md`.
 
-**Jamais de lien vers Wikipédia** (tous tenants) : Wikipédia agrège des sources primaires
+**Jamais de lien vers Wikipédia** (tous sites) : Wikipédia agrège des sources primaires
 sans être lui-même une autorité E-E-A-T. Remonter à la source qu'il cite (étude, texte
 officiel, institution) et lier celle-ci à la place.
 

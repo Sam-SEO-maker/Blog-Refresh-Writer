@@ -2,7 +2,7 @@
 Commandes de plan éditorial (content_plan.md).
 
 Usage:
-    cw plan check <url> --blog superprof-ressources
+    cw plan check <url> --site superprof-ressources
 
 `plan check` valide *mécaniquement* le plan produit à l'étape 2bis de /refresh
 (skill seo-outline) : hiérarchie des titres, couverture PAA, preuves. 100%
@@ -114,7 +114,7 @@ def init(url: str, blog: str, force: bool):
     if context_dir is None:
         click.echo(
             f"❌ Aucun context_dir pour {url}. Lance d'abord "
-            f"`cw refresh {url} --blog {blog}`.",
+            f"`cw refresh {url} --site {blog}`.",
             err=True,
         )
         sys.exit(2)
@@ -146,7 +146,7 @@ def init(url: str, blog: str, force: bool):
     click.echo(f"   {paa_count} PAA injectée(s) à couvrir.")
     click.echo(
         "   → Remplis l'outline via la skill `seo-outline`, puis "
-        f"`cw plan check {url} --blog {blog}`.")
+        f"`cw plan check {url} --site {blog}`.")
 
 
 @plan.command(name="check")
@@ -172,7 +172,7 @@ def check(url: str, blog: str, plan_file: Optional[Path], as_json: bool):
         if context_dir is None:
             click.echo(
                 f"❌ Aucun context_dir trouvé pour {url}. "
-                f"Lance d'abord `cw refresh {url} --blog {blog}`.",
+                f"Lance d'abord `cw refresh {url} --site {blog}`.",
                 err=True,
             )
             sys.exit(2)

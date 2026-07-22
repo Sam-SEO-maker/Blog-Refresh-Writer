@@ -250,7 +250,7 @@ class URLTask:
     """Représente une tâche de refresh d'URL."""
     url: str
     title: str  # Titre de l'article (nouvelle colonne)
-    blog_id: str
+    site_slug: str
     row_index: int
     status: TaskStatus = TaskStatus.PENDING
     triggered_by: TriggerType = TriggerType.MANUAL
@@ -323,7 +323,7 @@ class RefreshAuditRow:
     """
 
     # A: Core identification
-    blog_id: str                                   # A
+    site_slug: str                                   # A
 
     # B-E: Article identification
     blogpost_url: str = ""                         # B
@@ -380,7 +380,7 @@ class RefreshAuditRow:
     def to_list(self) -> list:
         """Convertit en liste pour écriture Google Sheets (28 colonnes A-AB)."""
         return [
-            self.blog_id,                                                       # A
+            self.site_slug,                                                       # A
             self.blogpost_url,                                                   # B
             self.main_keyword,                                                   # C
             self.title,                                                          # D
@@ -414,7 +414,7 @@ class RefreshAuditRow:
     def from_list(row: list, row_index: int = 0) -> "RefreshAuditRow":
         """Crée une instance à partir d'une liste (28 colonnes A-AB du sheet)."""
         return RefreshAuditRow(
-            blog_id=row[0] if len(row) > 0 else "",                             # A
+            site_slug=row[0] if len(row) > 0 else "",                             # A
             blogpost_url=row[1] if len(row) > 1 else "",                         # B
             main_keyword=row[2] if len(row) > 2 else "",                         # C
             title=row[3] if len(row) > 3 else "",                                # D

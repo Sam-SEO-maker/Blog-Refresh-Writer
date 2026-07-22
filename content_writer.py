@@ -5,12 +5,12 @@ Content Writer CLI
 CLI unifié pour le workflow de refresh SEO (Enseigna + Superprof Ressources FR).
 
 Usage:
-    cw refresh <url> --blog enseigna
-    cw refresh <url> --blog superprof-ressources
-    cw workflow run <url> --blog enseigna [--row 3]
-    cw audit editorial <url> --blog superprof-ressources
-    cw batch audit-gsc --blog enseigna
-    cw debug workflow <url> --blog enseigna
+    cw refresh <url> --site enseigna
+    cw refresh <url> --site superprof-ressources
+    cw workflow run <url> --site enseigna [--row 3]
+    cw audit editorial <url> --site superprof-ressources
+    cw batch audit-gsc --site enseigna
+    cw debug workflow <url> --site enseigna
     cw statuts <url> "Rédigé"
 """
 
@@ -48,7 +48,7 @@ from cli.commands import plan as plan_cmd
 from cli.commands import finalize as finalize_cmd
 from cli.commands import statuts as statuts_cmd
 from cli.commands import ngl_status as ngl_status_cmd
-from cli.commands import tenant as tenant_cmd
+from cli.commands import site as site_cmd
 
 # Enregistrer les commandes
 cli.add_command(refresh.refresh)
@@ -64,7 +64,7 @@ cli.add_command(plan_cmd.plan)
 cli.add_command(notion_cmd.notion)
 cli.add_command(statuts_cmd.statuts)
 cli.add_command(ngl_status_cmd.ngl_status)
-cli.add_command(tenant_cmd.tenant)
+cli.add_command(site_cmd.site)
 
 
 if __name__ == "__main__":

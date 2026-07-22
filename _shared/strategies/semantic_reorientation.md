@@ -41,4 +41,4 @@ Exemple, original en déclin « cours de maths particulier », variantes montant
 - **Forme** (préservation des assets, HTML clean, métadonnées, callouts colorés
   interdits) → skill `format-wordpress`.
 - **Structure d'ensemble** (intro, ordre des blocs, tableau récap éventuel) →
-  skill du tenant. Ne pas imposer de structure ni de couleurs codées en dur ici.
+  skill du site. Ne pas imposer de structure ni de couleurs codées en dur ici.

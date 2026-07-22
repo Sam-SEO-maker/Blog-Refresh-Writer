@@ -41,7 +41,7 @@ class TaskScheduler:
     def add_task(
         self,
         url: str,
-        blog_id: str,
+        site_slug: str,
         action: str,
         priority: TaskPriority = TaskPriority.MEDIUM,
         metadata: Optional[dict] = None
@@ -51,7 +51,7 @@ class TaskScheduler:
 
         Args:
             url: URL à traiter
-            blog_id: Identifiant du blog
+            site_slug: Identifiant du blog
             action: Action à effectuer
             priority: Niveau de priorité
             metadata: Données supplémentaires
@@ -72,7 +72,7 @@ class TaskScheduler:
         task = ScheduledTask(
             priority=priority.value,
             url=url,
-            blog_id=blog_id,
+            site_slug=site_slug,
             action=action,
             scheduled_at=datetime.now().isoformat(),
             metadata=metadata or {},
@@ -90,7 +90,7 @@ class TaskScheduler:
         Ajoute un batch de tâches.
 
         Args:
-            tasks: Liste de dicts avec url, blog_id, action, priority (optionnel), main_keyword (optionnel)
+            tasks: Liste de dicts avec url, site_slug, action, priority (optionnel), main_keyword (optionnel)
             default_priority: Priorité par défaut
         """
         for task in tasks:
@@ -102,7 +102,7 @@ class TaskScheduler:
 
             self.add_task(
                 url=task["url"],
-                blog_id=task["blog_id"],
+                site_slug=task["site_slug"],
                 action=task.get("action", "AUDIT"),
                 priority=priority,
                 metadata=metadata,
@@ -264,7 +264,7 @@ class TaskScheduler:
         return [
             {
                 "url": t.url,
-                "blog_id": t.blog_id,
+                "site_slug": t.site_slug,
                 "action": t.action,
                 "priority": TaskPriority(t.priority).name,
                 "scheduled_at": t.scheduled_at,

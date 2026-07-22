@@ -1,6 +1,6 @@
-"""Routing locale (serp_location / language) du SERPAnalyzer par tenant.
+"""Routing locale (serp_location / language) du SERPAnalyzer par site.
 
-Garde-fou de non-régression : les tenants historiques (enseigna,
+Garde-fou de non-régression : les sites historiques (enseigna,
 superprof-ressources) ne déclarent pas `serp_location`/`language` et doivent
 continuer à cibler France/fr. Les nouveaux marchés (US, AU...) déclarent les
 deux champs et doivent les voir appliqués.
@@ -34,33 +34,33 @@ def _orchestrator_with_configs(configs: dict):
     orch._sites_config = {}
 
     class _DocCache:
-        def get_blog_config(self, blog_id):
-            return configs.get(blog_id, {})
+        def get_blog_config(self, site_slug):
+            return configs.get(site_slug, {})
 
     orch.doc_cache = _DocCache()
     return orch
 
 
-def _resolve(configs, blog_id):
+def _resolve(configs, site_slug):
     orch = _orchestrator_with_configs(configs)
     with patch("scripts.agent.orchestrator.SERPAnalyzer", _FakeSERPAnalyzer):
-        return orch._get_serp_analyzer(blog_id)
+        return orch._get_serp_analyzer(site_slug)
 
 
 # --- Non-régression France --------------------------------------------------
 
-@pytest.mark.parametrize("blog_id", ["enseigna", "superprof-ressources"])
-def test_tenant_sans_locale_reste_france_fr(blog_id):
+@pytest.mark.parametrize("site_slug", ["enseigna", "superprof-ressources"])
+def test_site_sans_locale_reste_france_fr(site_slug):
     """Config sans serp_location/language → France/fr (comportement historique)."""
-    analyzer = _resolve({blog_id: {"gsc_property": "https://example.test/"}}, blog_id)
+    analyzer = _resolve({site_slug: {"gsc_property": "https://example.test/"}}, site_slug)
 
     assert analyzer.location == "France"
     assert analyzer.language == "fr"
 
 
-def test_blog_id_inconnu_reste_france_fr():
+def test_site_slug_inconnu_reste_france_fr():
     """Config absente → défauts, sans lever."""
-    analyzer = _resolve({}, "tenant-inexistant")
+    analyzer = _resolve({}, "site-inexistant")
 
     assert analyzer.location == "France"
     assert analyzer.language == "fr"
@@ -68,7 +68,7 @@ def test_blog_id_inconnu_reste_france_fr():
 
 # --- Nouveaux marchés -------------------------------------------------------
 
-def test_tenant_us_route_sur_united_states_en():
+def test_site_us_route_sur_united_states_en():
     configs = {"en-us-blog": {"serp_location": "United States", "language": "en"}}
 
     analyzer = _resolve(configs, "en-us-blog")

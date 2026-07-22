@@ -15,11 +15,11 @@ with open(_config_path, 'r', encoding='utf-8') as f:
 
 # Créer le dict SITE_CONFIGS (indexé par site ID)
 SITE_CONFIGS = {
-    site['id']: site
+    (site.get('site_slug') or site['id']): site
     for site in _sites_data['sites']
 }
 
 # Exporter également la liste des sites actifs
-ACTIVE_SITES = [site['id'] for site in _sites_data['sites'] if site.get('active', True)]
+ACTIVE_SITES = [(site.get('site_slug') or site['id']) for site in _sites_data['sites'] if site.get('active', True)]
 
 __all__ = ['SITE_CONFIGS', 'ACTIVE_SITES']

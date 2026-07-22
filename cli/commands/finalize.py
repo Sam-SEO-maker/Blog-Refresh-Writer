@@ -22,7 +22,7 @@ from cli.options import blog_option
 
 @click.command()
 @click.argument("url")
-@blog_option(required=True, dest="blog_id")
+@blog_option(required=True, dest="site_slug")
 @click.option("--html-file", "html_file", required=True,
               help="Chemin du HTML brut écrit par le subagent de génération.")
 @click.option("--title", default="", help="Titre article (col E) — sinon slug de l'URL.")
@@ -42,11 +42,11 @@ from cli.options import blog_option
                    "confirmation humaine obligatoire. Refusé si verdict A_CORRIGER/BLOQUE.")
 @click.option("--yes", "assume_yes", is_flag=True, default=False,
               help="Saute la confirmation interactive de publication (usage batch averti).")
-def finalize(url, blog_id, html_file, title, article_type, keyword, guide_id, apply_linking, publish, assume_yes):
+def finalize(url, site_slug, html_file, title, article_type, keyword, guide_id, apply_linking, publish, assume_yes):
     """
     Chaîne post-génération : save → assets → QC YTG → maillage.
 
-    URL de l'article, --blog le tenant, --html-file le HTML brut généré.
+    URL de l'article, --site le site, --html-file le HTML brut généré.
     """
     import time
     finalize_t0 = time.perf_counter()
@@ -66,7 +66,7 @@ def finalize(url, blog_id, html_file, title, article_type, keyword, guide_id, ap
     click.echo("FINALIZE (post-génération)")
     click.echo(f"{'='*70}")
     click.echo(f"URL:  {url}")
-    click.echo(f"Blog: {blog_id}")
+    click.echo(f"Blog: {site_slug}")
     if article_type:
         click.echo(f"Type: {article_type}  (→ html/{article_type}/)")
 
@@ -78,7 +78,7 @@ def finalize(url, blog_id, html_file, title, article_type, keyword, guide_id, ap
 
     om = OutputManager(base_path=base)
     saved = om.save_refreshed_html(
-        site_id=blog_id,
+        site_id=site_slug,
         url_slug=url_slug,
         html_content=html,
         title=title or None,
@@ -90,14 +90,14 @@ def finalize(url, blog_id, html_file, title, article_type, keyword, guide_id, ap
     # 2. Validation des assets (Règle d'Or)
     # -------------------------------------------------------------------
     click.echo("\n[2/4] Validation des assets (Règle d'Or)…")
-    assets_report = _validate_assets(base, blog_id, url, html, saved)
+    assets_report = _validate_assets(base, site_slug, url, html, saved)
     click.echo(f"  {assets_report}")
 
     # -------------------------------------------------------------------
     # 3. QC sémantique YTG
     # -------------------------------------------------------------------
     click.echo("\n[3/4] QC sémantique YTG…")
-    verdict = _run_ytg_qc(base, blog_id, url, saved, main_keyword=keyword, guide_id=guide_id)
+    verdict = _run_ytg_qc(base, site_slug, url, saved, main_keyword=keyword, guide_id=guide_id)
 
     # BLOQUE = problème de fond → arrêt + alerte humaine (pas de maillage)
     if verdict == "BLOQUE":
@@ -111,13 +111,13 @@ def finalize(url, blog_id, html_file, title, article_type, keyword, guide_id, ap
     # 4. Maillage interne
     # -------------------------------------------------------------------
     click.echo("\n[4/4] Maillage interne…")
-    _run_linking(base, blog_id, url, apply_linking)
+    _run_linking(base, site_slug, url, apply_linking)
 
     # -------------------------------------------------------------------
     # 5. Publication WordPress (optionnelle, --publish) — fort blast radius
     # -------------------------------------------------------------------
     if publish:
-        _maybe_publish(base, blog_id, url, url_slug, saved, verdict, assume_yes)
+        _maybe_publish(base, site_slug, url, url_slug, saved, verdict, assume_yes)
 
     click.echo(f"\n{'='*70}")
     if verdict == "A_CORRIGER":
@@ -163,7 +163,7 @@ def _fmt_duration(seconds: float) -> str:
     return f"{hours}h {minutes:02d}m {secs:02d}s"
 
 
-def _maybe_publish(base: Path, blog_id: str, url: str, url_slug: str, saved: Path,
+def _maybe_publish(base: Path, site_slug: str, url: str, url_slug: str, saved: Path,
                    verdict: str, assume_yes: bool) -> None:
     """Publie l'article sur WordPress via REST, uniquement si le QC est OK.
 
@@ -205,16 +205,16 @@ def _maybe_publish(base: Path, blog_id: str, url: str, url_slug: str, saved: Pat
         click.echo("  ⚠ metadata introuvable — "
                    "publication du contenu sans mise à jour titre/SEOPress.")
 
-    # Construire le client (peut échouer si wp_api_config absent pour ce tenant).
+    # Construire le client (peut échouer si wp_api_config absent pour ce site).
     try:
-        client = build_client(tenant=blog_id, base_path=base)
+        client = build_client(site=site_slug, base_path=base)
     except (ValueError, FileNotFoundError, KeyError) as e:
-        click.echo(f"  ⛔ Client WP indisponible pour '{blog_id}' : {e}")
+        click.echo(f"  ⛔ Client WP indisponible pour '{site_slug}' : {e}")
         return
 
     # Confirmation humaine — le seul Y/N qui doit subsister (blast radius).
     click.echo(f"  Cible : {url}")
-    click.echo(f"  Tenant: {blog_id}  |  Verdict QC: {verdict}")
+    click.echo(f"  Site: {site_slug}  |  Verdict QC: {verdict}")
     click.echo(f"  Contenu: {gutenberg_path.name}")
     if not assume_yes:
         if not click.confirm("  ⚠ PUBLIER sur le site public maintenant ?", default=False):
@@ -223,7 +223,7 @@ def _maybe_publish(base: Path, blog_id: str, url: str, url_slug: str, saved: Pat
 
     res = publish_article(
         client=client,
-        tenant=blog_id,
+        site=site_slug,
         url=url,
         gutenberg_path=gutenberg_path,
         metadata_path=metadata_path,
@@ -235,7 +235,7 @@ def _maybe_publish(base: Path, blog_id: str, url: str, url_slug: str, saved: Pat
         click.echo(f"  ❌ Échec publication : {res.get('error')}")
 
 
-def _validate_assets(base: Path, blog_id: str, url: str, html: str, saved: Path) -> str:
+def _validate_assets(base: Path, site_slug: str, url: str, html: str, saved: Path) -> str:
     """Valide assets_after ≥ assets_before via AssetManager + le contexte d'audit."""
     from scripts.assets.asset_manager import AssetManager
 
@@ -282,7 +282,7 @@ def _validate_assets(base: Path, blog_id: str, url: str, html: str, saved: Path)
     return "⚠ assets manquants NON restaurables — à vérifier manuellement."
 
 
-def _run_ytg_qc(base: Path, blog_id: str, url: str, saved: Path,
+def _run_ytg_qc(base: Path, site_slug: str, url: str, saved: Path,
                 main_keyword: str = "", guide_id: str = "") -> str:
     """Lance YTGQualityCheck.check_html sur le HTML sauvegardé. Retourne le verdict.
 
@@ -293,8 +293,8 @@ def _run_ytg_qc(base: Path, blog_id: str, url: str, saved: Path,
         YTGQualityCheck, VERDICT_A_CORRIGER, VERDICT_BLOQUE, VERDICT_SKIP,
     )
 
-    from _shared.core.tenant_paths import TenantPaths
-    cfg_path = TenantPaths(base_path=base).blog_config(blog_id)
+    from _shared.core.site_paths import SitePaths
+    cfg_path = SitePaths(base_path=base).site_config(site_slug)
     ytg_cfg = {}
     if cfg_path.exists():
         try:
@@ -309,7 +309,7 @@ def _run_ytg_qc(base: Path, blog_id: str, url: str, saved: Path,
         engine = YTGQualityCheck()
         html = saved.read_text(encoding="utf-8")
         res = engine.check_html(
-            blog_id, url=url, html=html, ytg_config=ytg_cfg,
+            site_slug, url=url, html=html, ytg_config=ytg_cfg,
             main_keyword=main_keyword or "", guide_id=guide_id or "",
         )
         res.html_path = str(saved)
@@ -325,9 +325,9 @@ def _run_ytg_qc(base: Path, blog_id: str, url: str, saved: Path,
         return VERDICT_SKIP
 
 
-def _run_linking(base: Path, blog_id: str, url: str, apply_linking: bool):
-    """Applique le maillage selon le tenant."""
-    if blog_id == "enseigna":
+def _run_linking(base: Path, site_slug: str, url: str, apply_linking: bool):
+    """Applique le maillage selon le site."""
+    if site_slug == "enseigna":
         from scripts.linking.enseigna_avis_linker import EnseignaAvisLinker
 
         linker = EnseignaAvisLinker(base_path=base)
@@ -340,9 +340,9 @@ def _run_linking(base: Path, blog_id: str, url: str, apply_linking: bool):
                            f"{'appliqué(s)' if apply_linking else 'planifié(s) (dry-run)'}")
         if not apply_linking:
             click.echo("  (dry-run — relancer avec --apply-linking pour écrire)")
-    elif blog_id == "superprof-ressources":
+    elif site_slug == "superprof-ressources":
         click.echo("  Superprof : les liens de landing sont injectés par "
                    "SuperprofRotator.get_prompt_directive() AVANT la génération. "
                    "Vérifier leur présence dans le HTML généré.")
     else:
-        click.echo(f"  Aucun maillage automatique câblé pour '{blog_id}'.")
+        click.echo(f"  Aucun maillage automatique câblé pour '{site_slug}'.")

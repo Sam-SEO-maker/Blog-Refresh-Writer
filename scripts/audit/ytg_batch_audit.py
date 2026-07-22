@@ -52,8 +52,8 @@ class RateLimiter:
 
 def discover_html_files(site_id: str) -> list[Path]:
     """Find all _refreshed.html files, deduplicate (prefer slug-named)."""
-    from _shared.core.tenant_paths import TenantPaths
-    base = TenantPaths(base_path=PROJECT_ROOT).output_dir(site_id)
+    from _shared.core.site_paths import SitePaths
+    base = SitePaths(base_path=PROJECT_ROOT).output_dir(site_id)
     all_files: list[Path] = []
 
     for folder in ["html_child_posts", "html_parent_posts"]:
@@ -96,8 +96,8 @@ def discover_html_files(site_id: str) -> list[Path]:
 
 def resolve_keyword(html_path: Path, site_id: str) -> str:
     """Resolve main keyword from metadata JSON or slug."""
-    from _shared.core.tenant_paths import TenantPaths
-    metadata_dir = TenantPaths(base_path=PROJECT_ROOT).output_dir(site_id) / "metadata"
+    from _shared.core.site_paths import SitePaths
+    metadata_dir = SitePaths(base_path=PROJECT_ROOT).output_dir(site_id) / "metadata"
 
     # Try multiple matching strategies
     stem = html_path.stem.replace("_refreshed", "")
@@ -289,8 +289,8 @@ def main():
             )
 
         # Save results
-        from _shared.core.tenant_paths import TenantPaths
-        out_path = TenantPaths(base_path=PROJECT_ROOT).output_dir(site_id) / "ytg_batch_results.json"
+        from _shared.core.site_paths import SitePaths
+        out_path = SitePaths(base_path=PROJECT_ROOT).output_dir(site_id) / "ytg_batch_results.json"
         out_path.write_text(
             json.dumps(results, ensure_ascii=False, indent=2),
             encoding="utf-8",

@@ -65,8 +65,8 @@ SLUGS = [
 ]
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-from _shared.core.tenant_paths import TenantPaths
-BASE = TenantPaths(base_path=PROJECT_ROOT).output_dir("enseigna")
+from _shared.core.site_paths import SitePaths
+BASE = SitePaths(base_path=PROJECT_ROOT).output_dir("enseigna")
 
 
 def main():
@@ -82,7 +82,7 @@ def main():
 
     # Keyword mapping from spreadsheet
     # ⚠️ OBSOLÈTE : onglet "Refreshs_Audit" + ancien spreadsheet ID. Script legacy —
-    # préférer `cw ytg qc --blog enseigna` (scripts/audit/ytg_qc.py) qui lit les
+    # préférer `cw ytg qc --site enseigna` (scripts/audit/ytg_qc.py) qui lit les
     # onglets réels ("Avis"/"Versus") via KeywordResolver.
     sc = SheetsClient("1F99FtN8fWQlQm0ZTJphBRz_c64iDs2DvohyHyM2Tk1M")
     rows = sc._sheets_service.spreadsheets().values().get(

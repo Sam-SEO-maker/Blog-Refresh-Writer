@@ -4,7 +4,7 @@ Phase 6d (révisé 2026-07-16 ; constat réévalué 2026-07-17). La base Notion
 « Config blogs Superprof dans le monde » est l'annuaire tenu par l'équipe :
 `Pays` (libellé), `URL du blog`, `Région`, `Drapeau` (emoji).
 
-Elle porte AUSSI, depuis, des champs machine (`Tenant ID`, `GSC Property`,
+Elle porte AUSSI, depuis, des champs machine (`Site ID`, `GSC Property`,
 `Language`, `Country code`, `Onboardable`) — contrairement à ce que décrivait
 cette note. Ils n'en font pas pour autant la source machine : c'est une saisie
 humaine, qui peut être en retard ou fautive. Écarts constatés le 2026-07-17 :
@@ -16,7 +16,7 @@ humaine, qui peut être en retard ou fautive. Écarts constatés le 2026-07-17 :
 
 Répartition qui reste en vigueur : le catalogue généré depuis GSC
 (`build_superprof_catalog.py`, + overrides de langue vérifiés sur le contenu)
-est la source MACHINE et le pilote de l'onboarding (`cw tenant init`) ; Notion
+est la source MACHINE et le pilote de l'onboarding (`cw site init`) ; Notion
 est la source des LIBELLÉS humains (country_label / region / flag), joints par
 `URL du blog` ↔ `gsc_property`. Le registre runtime `sites.json` n'est pas
 touché ici.
@@ -52,7 +52,7 @@ NOTION_VERSION = "2025-09-03"
 CONFIG_PAYS_DB_ID = "b4f6b521eeb14e29a56a527febd9d278"
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-CATALOG_PATH = _PROJECT_ROOT / "_shared" / "config" / "superprof_blogs_catalog.json"
+CATALOG_PATH = _PROJECT_ROOT / "_shared" / "config" / "superprof_sites_catalog.json"
 
 # Mapping propriété Notion → champ d'enrichissement du catalogue.
 PROPERTY_MAP = {
@@ -152,7 +152,7 @@ def enrich_catalog(catalog: dict, notion_rows: list[dict]) -> tuple[dict, list[s
     Retourne (catalogue, changements, non_appariés_notion).
     """
     # Index catalogue par gsc_property normalisée.
-    entries = catalog.get("ressources_sites", []) + catalog.get("blogs", [])
+    entries = catalog.get("sites", [])
     by_url = {_norm_url(e.get("gsc_property")): e for e in entries}
 
     changes, unmatched = [], []
@@ -167,7 +167,7 @@ def enrich_catalog(catalog: dict, notion_rows: list[dict]) -> tuple[dict, list[s
             continue
         for k, v in labels.items():
             if entry.get(k) != v:
-                changes.append(f"~ {entry['tenant_id']}.{k} = {v!r}")
+                changes.append(f"~ {entry['site_slug']}.{k} = {v!r}")
                 entry[k] = v
     return catalog, changes, unmatched
 

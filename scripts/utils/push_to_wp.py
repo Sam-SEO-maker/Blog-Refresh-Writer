@@ -7,9 +7,9 @@ Pour chaque URL fournie :
 
 Deux usages :
 - CLI batch (rétro-compat) : `python -m scripts.utils.push_to_wp <fichier_urls.txt>`
-  (tenant historique `superprof-ressources`).
-- Programmatique, multi-tenant (Phase 6b, appelé par `cw finalize --publish`) :
-  `build_client(tenant)` + `publish_article(client, tenant, url, gutenberg_path, metadata_path)`.
+  (site historique `superprof-ressources`).
+- Programmatique, multi-site (Phase 6b, appelé par `cw finalize --publish`) :
+  `build_client(site)` + `publish_article(client, site, url, gutenberg_path, metadata_path)`.
 """
 from __future__ import annotations
 
@@ -23,23 +23,23 @@ from dotenv import load_dotenv
 
 from scripts.scraping.wordpress_api_client import WordPressAPIClient
 
-from _shared.core.tenant_paths import TenantPaths
+from _shared.core.site_paths import SitePaths
 
-_DEFAULT_TENANT = "superprof-ressources"
+_DEFAULT_SITE = "superprof-ressources"
 
 
 def _slug(url: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", url.lower()).strip("_")
 
 
-def build_client(tenant: str = _DEFAULT_TENANT, base_path: Optional[Path] = None) -> WordPressAPIClient:
-    """Construit le client WP REST à partir du bloc `wp_api_config` du tenant."""
-    tp = TenantPaths(base_path=base_path) if base_path else TenantPaths()
-    cfg_path = tp.blog_config(tenant)
+def build_client(site: str = _DEFAULT_SITE, base_path: Optional[Path] = None) -> WordPressAPIClient:
+    """Construit le client WP REST à partir du bloc `wp_api_config` du site."""
+    tp = SitePaths(base_path=base_path) if base_path else SitePaths()
+    cfg_path = tp.site_config(site)
     cfg_full = json.loads(cfg_path.read_text(encoding="utf-8"))
     cfg = cfg_full.get("wp_api_config")
     if not cfg:
-        raise ValueError(f"Tenant '{tenant}' n'a pas de bloc 'wp_api_config' — publication impossible.")
+        raise ValueError(f"Site '{site}' n'a pas de bloc 'wp_api_config' — publication impossible.")
     return WordPressAPIClient(
         api_base_url=cfg["api_base_url"],
         user_env_var=cfg["user_env_var"],
@@ -50,18 +50,18 @@ def build_client(tenant: str = _DEFAULT_TENANT, base_path: Optional[Path] = None
 
 def publish_article(
     client: WordPressAPIClient,
-    tenant: str,
+    site: str,
     url: str,
     gutenberg_path: Path,
     metadata_path: Optional[Path] = None,
     base_path: Optional[Path] = None,
     status: str = "publish",
 ) -> dict:
-    """Publie un article déjà généré sur WP (paths explicites, multi-tenant).
+    """Publie un article déjà généré sur WP (paths explicites, multi-site).
 
     Args:
-        client: client WP REST du tenant.
-        tenant: id du tenant (pour localiser wp_backups/).
+        client: client WP REST du site.
+        site: id du site (pour localiser wp_backups/).
         url: URL de l'article live (résolution du post par slug).
         gutenberg_path: fichier `.gutenberg.html` à pousser (contenu).
         metadata_path: JSON {title, meta_description} pour title + meta SEOPress.
@@ -91,9 +91,9 @@ def publish_article(
         return {"url": url, "ok": False, "error": "post_not_found"}
     pid = post["id"]
 
-    # Backup once (par tenant)
-    tp = TenantPaths(base_path=base_path) if base_path else TenantPaths()
-    backups = tp.output_dir(tenant) / "wp_backups"
+    # Backup once (par site)
+    tp = SitePaths(base_path=base_path) if base_path else SitePaths()
+    backups = tp.output_dir(site) / "wp_backups"
     backups.mkdir(parents=True, exist_ok=True)
     bkp = backups / f"{pid}_before.json"
     if not bkp.exists():
@@ -118,16 +118,16 @@ def publish_article(
     return {"url": url, "id": pid, "ok": res["ok"], "error": res["error"]}
 
 
-def push_url(client: WordPressAPIClient, url: str, tenant: str = _DEFAULT_TENANT) -> dict:
-    """Chemin batch historique : résout gutenberg/metadata par slug d'URL dans le tenant."""
-    tp = TenantPaths()
-    out = tp.output_dir(tenant)
+def push_url(client: WordPressAPIClient, url: str, site: str = _DEFAULT_SITE) -> dict:
+    """Chemin batch historique : résout gutenberg/metadata par slug d'URL dans le site."""
+    tp = SitePaths()
+    out = tp.output_dir(site)
     slug = _slug(url)
     gut = out / "html" / f"{slug}_refreshed.gutenberg.html"
     meta_p = out / "metadata" / f"{slug}_metadata.json"
     if not meta_p.exists():
         return {"url": url, "ok": False, "error": "no_metadata_file"}
-    return publish_article(client, tenant, url, gut, meta_p)
+    return publish_article(client, site, url, gut, meta_p)
 
 
 def main() -> int:

@@ -10,7 +10,7 @@ que du code interne, des tests ou de la doc ne déclenche rien.
 Surfaces surveillées (ajout OU modification) :
   - .claude/commands/*.md        (slash commands)
   - .claude/skills/**            (skills transverses)
-  - tenants/*/.claude/skills/**  (skills tenant)
+  - sites/*/.claude/skills/**  (skills site)
   - cli/commands/*.py            (groupes/commandes CLI)
 
 Docs attendues en regard : CLAUDE.md, README.md (l'une des deux suffit).
@@ -58,8 +58,8 @@ def _changed_files() -> set[str]:
 def _is_watched(path: str) -> bool:
     if path.startswith(WATCHED_PREFIXES):
         return True
-    # skills scopées par tenant : tenants/<id>/.claude/skills/...
-    if path.startswith("tenants/") and "/.claude/skills/" in path:
+    # skills scopées par site : sites/<id>/.claude/skills/...
+    if path.startswith("sites/") and "/.claude/skills/" in path:
         return True
     return False
 

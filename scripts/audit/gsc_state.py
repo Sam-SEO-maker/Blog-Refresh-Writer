@@ -54,7 +54,7 @@ def _site_gsc_property(site_id: str) -> str:
     with open(sites_path, encoding="utf-8") as f:
         data = json.load(f)
     for s in data.get("sites", []):
-        if s.get("id") == site_id:
+        if (s.get("site_slug") or s.get("id")) == site_id:
             prop = s.get("gsc_property")
             if not prop:
                 raise ValueError(f"gsc_property manquante pour {site_id}")
@@ -202,8 +202,8 @@ def run_gsc_state(
         for r in rows
     ]
 
-    from _shared.core.tenant_paths import TenantPaths
-    out_dir = TenantPaths(base_path=REPO_ROOT).output_dir(site_id) / "audit"
+    from _shared.core.site_paths import SitePaths
+    out_dir = SitePaths(base_path=REPO_ROOT).output_dir(site_id) / "audit"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"gsc_state_{snapshot}.json"
     with open(out_path, "w", encoding="utf-8") as f:

@@ -2,10 +2,10 @@
 Commandes Notion.
 
 Usage:
-    cw notion sync [--blog moments-yoga]
-    cw notion check-title --blog moments-yoga --title "Les bienfaits du yoga"
-    cw notion list-sujets [--blog moments-yoga]
-    cw notion create-sujet --blog moments-yoga --title "Nouveau sujet" --db-id ABC123
+    cw notion sync [--site moments-yoga]
+    cw notion check-title --site moments-yoga --title "Les bienfaits du yoga"
+    cw notion list-sujets [--site moments-yoga]
+    cw notion create-sujet --site moments-yoga --title "Nouveau sujet" --db-id ABC123
 """
 
 import json
@@ -18,7 +18,7 @@ from cli.options import blog_option
 from scripts.notion import NotionClient
 
 
-def _load_db_id(blog_id: str, db_type: str) -> str:
+def _load_db_id(site_slug: str, db_type: str) -> str:
     """Charge le DB ID Notion depuis sites.json."""
     sites_path = Path.cwd() / "_shared" / "config" / "sites.json"
     if not sites_path.exists():
@@ -27,7 +27,7 @@ def _load_db_id(blog_id: str, db_type: str) -> str:
         with open(sites_path) as f:
             data = json.load(f)
         for site in data.get("sites", []):
-            if site.get("id") == blog_id:
+            if (site.get("site_slug") or site.get("id")) == site_slug:
                 key = f"notion_{db_type}_db_id"
                 return site.get(key, "") or ""
     except Exception:
@@ -78,14 +78,14 @@ def sync(blog, db_id):
         )
         sys.exit(1)
 
-    commandes = client.get_commandes(database_id, blog_id=blog)
+    commandes = client.get_commandes(database_id, site_slug=blog)
 
     # Résumé par statut
     by_status: dict[str, int] = {}
     by_blog: dict[str, int] = {}
     for c in commandes:
         by_status[c.status or "inconnu"] = by_status.get(c.status or "inconnu", 0) + 1
-        by_blog[c.blog_id or "inconnu"] = by_blog.get(c.blog_id or "inconnu", 0) + 1
+        by_blog[c.site_slug or "inconnu"] = by_blog.get(c.site_slug or "inconnu", 0) + 1
 
     click.echo(f"Total articles : {len(commandes)}")
     click.echo()
@@ -124,7 +124,7 @@ def check_title(blog, title, db_id, threshold):
         click.echo("[ERREUR] DB ID manquant (notion_commandes_db_id dans sites.json).", err=True)
         sys.exit(1)
 
-    commandes = client.get_commandes(database_id, blog_id=blog)
+    commandes = client.get_commandes(database_id, site_slug=blog)
     match = client.find_title_match(commandes, title, threshold=threshold)
 
     if match:
@@ -157,7 +157,7 @@ def list_sujets(blog, db_id):
         click.echo("[ERREUR] NOTION_TOKEN manquant.", err=True)
         sys.exit(1)
 
-    sujets = client.get_sujets(db_id, blog_id=blog)
+    sujets = client.get_sujets(db_id, site_slug=blog)
 
     if not sujets:
         click.echo("Aucun sujet trouvé.")
@@ -170,7 +170,7 @@ def list_sujets(blog, db_id):
         )
         click.echo(
             f"  [{priority_icon}] {s.title:<50} "
-            f"| {s.blog_id or '?':<20} | {s.status or '?'}"
+            f"| {s.site_slug or '?':<20} | {s.status or '?'}"
         )
 
 
@@ -200,7 +200,7 @@ def create_sujet(blog, title, db_id, category, priority):
     page = client.create_sujet(
         database_id=db_id,
         title=title,
-        blog_id=blog,
+        site_slug=blog,
         category=category,
         priority=priority,
     )

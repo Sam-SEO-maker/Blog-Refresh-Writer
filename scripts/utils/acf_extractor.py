@@ -180,7 +180,7 @@ def save_acf_if_literary(
     site_id: str,
     file_slug: str,
     html_content: str,
-    tenant_output_dir: Path,
+    site_output_dir: Path,
 ) -> Path | None:
     """
     Détecte si l'article traite d'une œuvre littéraire.
@@ -190,12 +190,12 @@ def save_acf_if_literary(
     Ne remplace pas un fichier ACF existant (pour ne pas écraser les corrections manuelles).
 
     Args:
-        tenant_output_dir: dossier de sortie du tenant (tenants/{id}/outputs/).
+        site_output_dir: dossier de sortie du site (sites/{id}/outputs/).
     """
     if site_id != 'superprof-ressources':
         return None
 
-    acf_dir = tenant_output_dir / 'acf'
+    acf_dir = site_output_dir / 'acf'
     out = acf_dir / f'{file_slug}_acf.json'
     if out.exists():
         return None  # déjà créé (manuellement ou lors d'un run précédent)

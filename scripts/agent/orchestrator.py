@@ -57,7 +57,7 @@ class RefreshOrchestrator:
     6. Sync - Mettre à jour le Sheets
     """
 
-    # Mapping blog_id (or domain) → semantic category for SemanticChecker
+    # Mapping site_slug (or domain) → semantic category for SemanticChecker
     BLOG_CATEGORY_MAP = {
         "enseigna": "education",
         "enseigna.fr": "education",
@@ -80,9 +80,9 @@ class RefreshOrchestrator:
         """
         self.base_path = base_path or Path(__file__).parent.parent.parent
 
-        # Résolveur de chemins par tenant (point unique — Phase 4)
-        from _shared.core.tenant_paths import TenantPaths
-        self._tenant_paths = TenantPaths(base_path=self.base_path)
+        # Résolveur de chemins par site (point unique — Phase 4)
+        from _shared.core.site_paths import SitePaths
+        self._site_paths = SitePaths(base_path=self.base_path)
 
         # Initialiser le cache
         self.doc_cache = DocumentCache(self.base_path)
@@ -138,7 +138,7 @@ class RefreshOrchestrator:
         self._serp_analyzers: dict[str, SERPAnalyzer] = {}
         self._wp_api_clients: dict[str, Optional[WordPressAPIClient]] = {}
 
-        # Load sites.json for blog_id mapping (domain → id)
+        # Load sites.json for site_slug mapping (domain → id)
         self._sites_config = self._load_sites_config()
 
     def _load_sites_config(self) -> dict:
@@ -168,78 +168,78 @@ class RefreshOrchestrator:
 
         return mapping
 
-    def _normalize_blog_id(self, blog_id: str) -> str:
+    def _normalize_site_slug(self, site_slug: str) -> str:
         """
-        Normalise un blog_id pour obtenir le nom correct du fichier de configuration.
+        Normalise un site_slug pour obtenir le nom correct du fichier de configuration.
 
         Exemple: "enseigna.fr" → "enseigna"
 
         Args:
-            blog_id: ID du blog (peut être domain ou id)
+            site_slug: ID du blog (peut être domain ou id)
 
         Returns:
             ID normalisé pour les noms de fichiers
         """
-        # Si le blog_id est un domain, le mapper vers l'id
-        if blog_id in self._sites_config:
-            return self._sites_config[blog_id]
+        # Si le site_slug est un domain, le mapper vers l'id
+        if site_slug in self._sites_config:
+            return self._sites_config[site_slug]
         # Sinon, retourner tel quel
-        return blog_id
+        return site_slug
 
-    def _get_audit_engine(self, blog_id: str) -> AuditEngine:
+    def _get_audit_engine(self, site_slug: str) -> AuditEngine:
         """Récupère ou crée un AuditEngine pour un blog."""
-        if blog_id not in self._blog_engines:
-            # Normalize blog_id to get correct config
-            normalized_blog_id = self._normalize_blog_id(blog_id)
-            blog_config = self.doc_cache.get_blog_config(normalized_blog_id)
-            self._blog_engines[blog_id] = AuditEngine(blog_config)
-        return self._blog_engines[blog_id]
+        if site_slug not in self._blog_engines:
+            # Normalize site_slug to get correct config
+            normalized_site_slug = self._normalize_site_slug(site_slug)
+            site_config = self.doc_cache.get_blog_config(normalized_site_slug)
+            self._blog_engines[site_slug] = AuditEngine(site_config)
+        return self._blog_engines[site_slug]
 
-    def _get_gsc_analyzer(self, blog_id: str) -> GSCAnalyzer:
+    def _get_gsc_analyzer(self, site_slug: str) -> GSCAnalyzer:
         """Récupère ou crée un GSCAnalyzer pour un blog."""
-        if blog_id not in self._gsc_analyzers:
-            # Normalize blog_id to get correct config
-            normalized_blog_id = self._normalize_blog_id(blog_id)
-            blog_config = self.doc_cache.get_blog_config(normalized_blog_id)
-            gsc_property = blog_config.get("gsc_property", "")
-            self._gsc_analyzers[blog_id] = GSCAnalyzer(gsc_property)
-        return self._gsc_analyzers[blog_id]
+        if site_slug not in self._gsc_analyzers:
+            # Normalize site_slug to get correct config
+            normalized_site_slug = self._normalize_site_slug(site_slug)
+            site_config = self.doc_cache.get_blog_config(normalized_site_slug)
+            gsc_property = site_config.get("gsc_property", "")
+            self._gsc_analyzers[site_slug] = GSCAnalyzer(gsc_property)
+        return self._gsc_analyzers[site_slug]
 
-    def _get_serp_analyzer(self, blog_id: str) -> SERPAnalyzer:
+    def _get_serp_analyzer(self, site_slug: str) -> SERPAnalyzer:
         """Récupère ou crée un SERPAnalyzer pour un blog.
 
-        `serp_location` et `language` sont optionnels dans tenant.json : un tenant
+        `serp_location` et `language` sont optionnels dans site.json : un site
         qui ne les déclare pas cible France/fr (marchés historiques).
         """
-        if blog_id not in self._serp_analyzers:
-            # Normalize blog_id to get correct config
-            normalized_blog_id = self._normalize_blog_id(blog_id)
-            blog_config = self.doc_cache.get_blog_config(normalized_blog_id)
+        if site_slug not in self._serp_analyzers:
+            # Normalize site_slug to get correct config
+            normalized_site_slug = self._normalize_site_slug(site_slug)
+            site_config = self.doc_cache.get_blog_config(normalized_site_slug)
             # `or` et non .get(défaut) : le scaffold écrit "" quand le pays n'est
             # pas résolu, et une locale vide ferait échouer l'appel DataForSEO.
-            self._serp_analyzers[blog_id] = SERPAnalyzer(
-                location=blog_config.get("serp_location") or "France",
-                language=blog_config.get("language") or "fr",
+            self._serp_analyzers[site_slug] = SERPAnalyzer(
+                location=site_config.get("serp_location") or "France",
+                language=site_config.get("language") or "fr",
             )
-        return self._serp_analyzers[blog_id]
+        return self._serp_analyzers[site_slug]
 
-    def _get_wp_api_client(self, blog_id: str) -> Optional[WordPressAPIClient]:
+    def _get_wp_api_client(self, site_slug: str) -> Optional[WordPressAPIClient]:
         """
         Retourne un WordPressAPIClient pour ce blog, ou None si non configuré.
 
-        Lit wp_api_config dans _shared/config/blogs/{blog_id}.json.
-        Le client est instancié une seule fois par blog_id (cache).
+        Lit wp_api_config dans _shared/config/blogs/{site_slug}.json.
+        Le client est instancié une seule fois par site_slug (cache).
         """
-        if blog_id in self._wp_api_clients:
-            return self._wp_api_clients[blog_id]
+        if site_slug in self._wp_api_clients:
+            return self._wp_api_clients[site_slug]
 
-        config_path = self._tenant_paths.blog_config(blog_id)
+        config_path = self._site_paths.site_config(site_slug)
         client = None
         try:
             with open(config_path, "r", encoding="utf-8") as f:
-                blog_config = json.load(f)
+                site_config = json.load(f)
 
-            wp_cfg = blog_config.get("wp_api_config")
+            wp_cfg = site_config.get("wp_api_config")
             if wp_cfg:
                 client = WordPressAPIClient(
                     api_base_url=wp_cfg["api_base_url"],
@@ -251,13 +251,13 @@ class RefreshOrchestrator:
             pass
         except (KeyError, ValueError) as e:
             logging.getLogger("RefreshOrchestrator").warning(
-                f"wp_api_config invalid for {blog_id}: {e}"
+                f"wp_api_config invalid for {site_slug}: {e}"
             )
 
-        self._wp_api_clients[blog_id] = client
+        self._wp_api_clients[site_slug] = client
         return client
 
-    def _fetch_html(self, url: str, blog_id: str = "") -> dict:
+    def _fetch_html(self, url: str, site_slug: str = "") -> dict:
         """
         Récupère le contenu HTML d'une URL.
 
@@ -267,7 +267,7 @@ class RefreshOrchestrator:
 
         Args:
             url: URL de l'article
-            blog_id: ID du blog pour sélection client WP API et temp cache
+            site_slug: ID du blog pour sélection client WP API et temp cache
 
         Returns:
             {
@@ -279,11 +279,11 @@ class RefreshOrchestrator:
         """
         logger = logging.getLogger("RefreshOrchestrator")
 
-        # Resolve blog_id to domain for OutputManager (expects "enseigna.fr" not "enseigna")
-        output_site_id = blog_id
-        if blog_id and "." not in blog_id:
+        # Resolve site_slug to domain for OutputManager (expects "enseigna.fr" not "enseigna")
+        output_site_id = site_slug
+        if site_slug and "." not in site_slug:
             for domain, sid in self._sites_config.items():
-                if sid == blog_id and "." in domain:
+                if sid == site_slug and "." in domain:
                     output_site_id = domain
                     break
 
@@ -297,7 +297,7 @@ class RefreshOrchestrator:
                 logger.debug(f"Skipping temp cache: {e}")
 
         # --- Stratégie 1 : WordPress REST API ---
-        wp_client = self._get_wp_api_client(blog_id)
+        wp_client = self._get_wp_api_client(site_slug)
         if wp_client:
             try:
                 post_data = wp_client.get_post_by_url(url)
@@ -337,7 +337,7 @@ class RefreshOrchestrator:
             full_html = resp.text
 
             clean_body, extraction_meta = self.content_extractor.extract_article_body(
-                full_html, output_site_id or blog_id, url=url
+                full_html, output_site_id or site_slug, url=url
             )
             assets_baseline = self.content_extractor._extract_assets_baseline(clean_body)
             word_count = len(clean_body.split())
@@ -376,7 +376,7 @@ class RefreshOrchestrator:
         except Exception:
             return ""
 
-    def _extract_content_metrics(self, html_or_extraction: any, url: str, blog_id: str) -> dict:
+    def _extract_content_metrics(self, html_or_extraction: any, url: str, site_slug: str) -> dict:
         """
         Extrait les métriques de contenu (word count, images, liens internes).
 
@@ -387,7 +387,7 @@ class RefreshOrchestrator:
         Args:
             html_or_extraction: Contenu HTML (str) OU résultat d'extraction (dict)
             url: URL de l'article
-            blog_id: ID du blog
+            site_slug: ID du blog
 
         Returns:
             Dictionnaire avec word_count_before, images_count, internal_links_count, tables_count
@@ -416,8 +416,8 @@ class RefreshOrchestrator:
                 logger.warning("No HTML content to extract metrics from")
                 return self._get_empty_metrics()
 
-            blog_config = self.doc_cache.get_blog_config(blog_id)
-            domain = blog_config.get("domain", "")
+            site_config = self.doc_cache.get_blog_config(site_slug)
+            domain = site_config.get("domain", "")
 
             analyzer = HTMLAnalyzer(domain)
             html_result = analyzer.analyze(html, url)
@@ -456,7 +456,7 @@ class RefreshOrchestrator:
     def process_url(
         self,
         url: str,
-        blog_id: str,
+        site_slug: str,
         html_content: str,
         force_action: Optional[str] = None,
         custom_prompt: Optional[str] = None,
@@ -468,7 +468,7 @@ class RefreshOrchestrator:
 
         Args:
             url: URL de l'article
-            blog_id: Identifiant du blog
+            site_slug: Identifiant du blog
             html_content: Contenu HTML de la page
             force_action: Action forcée (bypass decision engine)
             custom_prompt: Prompt personnalisé (4 niveaux) remplace les guidelines du cache
@@ -499,7 +499,7 @@ class RefreshOrchestrator:
             # modèle actuel, la décision de refresh vient des signaux data (GSC :
             # baisse trafic → FULL_REFRESH) et la véracité factuelle est garantie en
             # amont de la génération par la skill `recherche-sources` (sources
-            # réelles vérifiées) + le prompt tenant. Plus de blocage éditorial.
+            # réelles vérifiées) + le prompt site. Plus de blocage éditorial.
 
             # =========================================================
             # STEP 2: AUDIT
@@ -509,12 +509,12 @@ class RefreshOrchestrator:
                 with timed(timer, "sheets_write"):
                     self.sheets_client.update_refresh_status(url, "AUDITING")
 
-            audit_engine = self._get_audit_engine(blog_id)
+            audit_engine = self._get_audit_engine(site_slug)
             with timed(timer, "gsc_fetch"):
                 audit_report = audit_engine.full_audit(url, html_content, provided_keyword=provided_keyword)
             audit_dict = audit_engine.to_dict(audit_report)
             # Inject semantic category for ghostwriter semantic field loading
-            audit_dict["category"] = self.BLOG_CATEGORY_MAP.get(blog_id, "")
+            audit_dict["category"] = self.BLOG_CATEGORY_MAP.get(site_slug, "")
 
             if self.workflow_tracker:
                 self.workflow_tracker.advance_step(url, "audit")
@@ -532,7 +532,7 @@ class RefreshOrchestrator:
                 if not main_kw:
                     try:
                         from scripts.audit.keyword_resolver import KeywordResolver
-                        main_kw, _kw_src = KeywordResolver().resolve(blog_id, url=url)
+                        main_kw, _kw_src = KeywordResolver().resolve(site_slug, url=url)
                         if main_kw:
                             logger.info(f"[STEP 2.5] main_keyword résolu '{main_kw}' (source={_kw_src})")
                     except Exception as _kw_e:
@@ -651,7 +651,7 @@ class RefreshOrchestrator:
 
                 return RefreshWorkflowResult(
                     url=url,
-                    blog_id=blog_id,
+                    site_slug=site_slug,
                     success=True,
                     action_taken="NO_ACTION",
                     audit_score=audit_report.overall_score,
@@ -677,7 +677,7 @@ class RefreshOrchestrator:
 
                 return RefreshWorkflowResult(
                     url=url,
-                    blog_id=blog_id,
+                    site_slug=site_slug,
                     success=True,
                     action_taken="REDIRECT_301_SUGGESTED",
                     audit_score=audit_report.overall_score,
@@ -695,14 +695,14 @@ class RefreshOrchestrator:
             # Vérifie si un article avec un titre similaire existe déjà
             # dans la base Notion. Non-bloquant.
             try:
-                notion_db_id = self._get_notion_commandes_db_id(blog_id)
+                notion_db_id = self._get_notion_commandes_db_id(site_slug)
                 if notion_db_id:
                     if not self.notion_client:
                         self.notion_client = NotionClient()
                     if self.notion_client.is_configured:
                         commandes = self.notion_client.get_commandes(
                             database_id=notion_db_id,
-                            blog_id=blog_id,
+                            site_slug=site_slug,
                         )
                         current_title = audit_dict.get("title", "")
                         notion_match = self.notion_client.find_title_match(
@@ -739,8 +739,8 @@ class RefreshOrchestrator:
 
             # Configurer la stratégie
             prompts_path = self.base_path / "_shared" / "config" / "prompts_dispatch.json"
-            blog_config = self.doc_cache.get_blog_config(blog_id)
-            strategy_selector = StrategySelector(prompts_path, blog_config)
+            site_config = self.doc_cache.get_blog_config(site_slug)
+            strategy_selector = StrategySelector(prompts_path, site_config)
 
             strategy_config = strategy_selector.select_strategy(
                 primary_action,
@@ -791,7 +791,7 @@ class RefreshOrchestrator:
 
             return RefreshWorkflowResult(
                 url=url,
-                blog_id=blog_id,
+                site_slug=site_slug,
                 success=True,
                 action_taken=primary_action,
                 audit_score=audit_report.overall_score,
@@ -832,7 +832,7 @@ class RefreshOrchestrator:
 
             return RefreshWorkflowResult(
                 url=url,
-                blog_id=blog_id,
+                site_slug=site_slug,
                 success=False,
                 action_taken="ERROR",
                 audit_score=0,
@@ -881,10 +881,10 @@ class RefreshOrchestrator:
             keyword=keyword,
         )
 
-    def _ytg_gate_enabled(self, blog_id: str) -> bool:
-        """Lit ytg.gate depuis _shared/config/blogs/{blog_id}.json (défaut: False)."""
+    def _ytg_gate_enabled(self, site_slug: str) -> bool:
+        """Lit ytg.gate depuis _shared/config/blogs/{site_slug}.json (défaut: False)."""
         try:
-            cfg_path = self._tenant_paths.blog_config(blog_id)
+            cfg_path = self._site_paths.site_config(site_slug)
             if not cfg_path.exists():
                 return False
             with open(cfg_path, encoding="utf-8") as f:
@@ -892,7 +892,7 @@ class RefreshOrchestrator:
         except Exception:
             return False
 
-    def _get_notion_commandes_db_id(self, blog_id: str) -> Optional[str]:
+    def _get_notion_commandes_db_id(self, site_slug: str) -> Optional[str]:
         """Lit notion_commandes_db_id depuis sites.json pour ce blog."""
         sites = []
         try:
@@ -905,7 +905,7 @@ class RefreshOrchestrator:
             return None
 
         for site in sites:
-            if site.get("id") == blog_id:
+            if (site.get("site_slug") or site.get("id")) == site_slug:
                 return site.get("notion_commandes_db_id") or None
         return None
 
@@ -913,7 +913,7 @@ class RefreshOrchestrator:
     # NEW: v2.0 Single-Sheet Architecture Batch Operations
     # =========================================================================
 
-    def batch_keyword_discovery(self, blog_id: Optional[str] = None, post_type: Optional[str] = None) -> dict:
+    def batch_keyword_discovery(self, site_slug: Optional[str] = None, post_type: Optional[str] = None) -> dict:
         """
         STEP 0: Keyword Discovery — Remplit main_keyword (col D) pour les URLs où il est vide.
 
@@ -923,7 +923,7 @@ class RefreshOrchestrator:
         3. Extraction heuristique du slug URL (dernier recours)
 
         Args:
-            blog_id: Filter by blog_id (optional)
+            site_slug: Filter by site_slug (optional)
             post_type: Filter by post_type (optional)
 
         Returns:
@@ -932,7 +932,7 @@ class RefreshOrchestrator:
         if not self.sheets_client:
             return {"processed": 0, "dataforseo": 0, "gsc": 0, "slug": 0, "failed": 0, "errors": ["No sheets client"]}
 
-        rows = self.sheets_client.read_rows_missing_keyword(blog_id)
+        rows = self.sheets_client.read_rows_missing_keyword(site_slug)
 
         logger = logging.getLogger("RefreshOrchestrator")
 
@@ -955,7 +955,7 @@ class RefreshOrchestrator:
 
             try:
                 # === SOURCE 1: DataForSEO ranked_keywords ===
-                serp_analyzer = self._get_serp_analyzer(row.blog_id)
+                serp_analyzer = self._get_serp_analyzer(row.site_slug)
                 dfs_result = serp_analyzer.discover_main_keyword(row.blogpost_url)
                 if dfs_result and dfs_result.get("keyword"):
                     keyword = dfs_result["keyword"]
@@ -970,7 +970,7 @@ class RefreshOrchestrator:
                 # tendances inutile ici) et sûre malgré le plafond ~20 du MCP.
                 if not keyword:
                     try:
-                        gsc_analyzer = self._get_gsc_analyzer(row.blog_id)
+                        gsc_analyzer = self._get_gsc_analyzer(row.site_slug)
                         main_kw = gsc_analyzer.fetch_main_keyword(row.blogpost_url)
                         if main_kw:
                             keyword = main_kw
@@ -1053,7 +1053,7 @@ class RefreshOrchestrator:
     def batch_keyword_re_discovery(
         self,
         min_volume: int = 10,
-        blog_id: Optional[str] = None,
+        site_slug: Optional[str] = None,
         post_type: Optional[str] = None,
     ) -> dict:
         """
@@ -1066,7 +1066,7 @@ class RefreshOrchestrator:
 
         Args:
             min_volume: Seuil minimum de volume (défaut 50)
-            blog_id: Filtrer par blog_id (optionnel)
+            site_slug: Filtrer par site_slug (optionnel)
             post_type: Filtrer par post_type (optionnel)
 
         Returns:
@@ -1075,7 +1075,7 @@ class RefreshOrchestrator:
         if not self.sheets_client:
             return {"processed": 0, "low_volume": 0, "updated": 0, "unchanged": 0, "errors": ["No sheets client"]}
 
-        rows = self.sheets_client.read_rows_with_keyword(blog_id)
+        rows = self.sheets_client.read_rows_with_keyword(site_slug)
 
         logger = logging.getLogger("RefreshOrchestrator")
 
@@ -1095,7 +1095,7 @@ class RefreshOrchestrator:
             current_kw = row.main_keyword.strip()
 
             try:
-                serp_analyzer = self._get_serp_analyzer(row.blog_id)
+                serp_analyzer = self._get_serp_analyzer(row.site_slug)
 
                 # Étape 1 : vérifier le volume du keyword existant
                 current_volume = serp_analyzer.check_keyword_volume(current_kw)
@@ -1122,7 +1122,7 @@ class RefreshOrchestrator:
                 # SOURCE 2 : GSC
                 if not new_keyword:
                     try:
-                        gsc_analyzer = self._get_gsc_analyzer(row.blog_id)
+                        gsc_analyzer = self._get_gsc_analyzer(row.site_slug)
                         perf = gsc_analyzer._fetch_performance_direct(row.blogpost_url)
                         if perf and perf.main_keyword and perf.main_keyword != current_kw:
                             new_keyword = perf.main_keyword
@@ -1244,7 +1244,7 @@ class RefreshOrchestrator:
 
         return keyword
 
-    def batch_audit_gsc(self, blog_id: Optional[str] = None, post_type: Optional[str] = None) -> dict:
+    def batch_audit_gsc(self, site_slug: Optional[str] = None, post_type: Optional[str] = None) -> dict:
         """
         Batch audit GSC pour lignes where audit_gsc = AUDITING.
 
@@ -1254,7 +1254,7 @@ class RefreshOrchestrator:
         - Column W: error_message (if FAILED)
 
         Args:
-            blog_id: Filter by blog_id (optional)
+            site_slug: Filter by site_slug (optional)
             post_type: Filter by post_type - "CHILD", "PARENT", "STANDALONE" (optional)
 
         Returns:
@@ -1274,7 +1274,7 @@ class RefreshOrchestrator:
         _gsc_logger = logging.getLogger("RefreshOrchestrator")
 
         # Read rows where audit_gsc = AUDITING
-        rows = self.sheets_client.read_pending_for_gsc_audit(blog_id)
+        rows = self.sheets_client.read_pending_for_gsc_audit(site_slug)
 
         # Filter by post_type if specified
         if post_type:
@@ -1294,7 +1294,7 @@ class RefreshOrchestrator:
             results["processed"] += 1
 
             try:
-                gsc_analyzer = self._get_gsc_analyzer(row.blog_id)
+                gsc_analyzer = self._get_gsc_analyzer(row.site_slug)
 
                 # Run GSC audit
                 gsc_result = gsc_analyzer.analyze(row.blogpost_url)
@@ -1359,7 +1359,7 @@ class RefreshOrchestrator:
 
         return results
 
-    def batch_audit_serp(self, blog_id: Optional[str] = None, post_type: Optional[str] = None) -> dict:
+    def batch_audit_serp(self, site_slug: Optional[str] = None, post_type: Optional[str] = None) -> dict:
         """
         Batch audit SERP pour lignes where audit_serp = AUDITING.
 
@@ -1369,7 +1369,7 @@ class RefreshOrchestrator:
         - Column W: error_message (if FAILED)
 
         Args:
-            blog_id: Filter by blog_id (optional)
+            site_slug: Filter by site_slug (optional)
             post_type: Filter by post_type - "CHILD", "PARENT", "STANDALONE" (optional)
 
         Returns:
@@ -1378,7 +1378,7 @@ class RefreshOrchestrator:
         if not self.sheets_client:
             return {"processed": 0, "success": 0, "failed": 0, "errors": ["No sheets client"]}
 
-        rows = self.sheets_client.read_pending_for_serp_audit(blog_id)
+        rows = self.sheets_client.read_pending_for_serp_audit(site_slug)
 
         # Filter by post_type if specified
         if post_type:
@@ -1395,14 +1395,14 @@ class RefreshOrchestrator:
             results["processed"] += 1
 
             try:
-                serp_analyzer = self._get_serp_analyzer(row.blog_id)
+                serp_analyzer = self._get_serp_analyzer(row.site_slug)
                 keyword = row.main_keyword.strip() if row.main_keyword else ""
 
                 if not keyword:
                     raise ValueError(f"main_keyword is required for SERP analysis (URL: {row.blogpost_url[:50]})")
 
                 # Run SERP audit
-                serp_result = serp_analyzer.analyze(keyword, row.blog_id)
+                serp_result = serp_analyzer.analyze(keyword, row.site_slug)
 
                 # Extract data from SERPAnalysisResult
                 paa_questions = []
@@ -1460,7 +1460,7 @@ class RefreshOrchestrator:
 
         return results
 
-    def batch_decision(self, blog_id: Optional[str] = None, post_type: Optional[str] = None) -> dict:
+    def batch_decision(self, site_slug: Optional[str] = None, post_type: Optional[str] = None) -> dict:
         """
         Batch decision pour lignes where audit_gsc=DONE AND audit_serp=DONE.
 
@@ -1469,7 +1469,7 @@ class RefreshOrchestrator:
         - Columns R-V: Content metrics + cannibalization
 
         Args:
-            blog_id: Filter by blog_id (optional)
+            site_slug: Filter by site_slug (optional)
             post_type: Filter by post_type - "CHILD", "PARENT", "STANDALONE" (optional)
 
         Returns:
@@ -1485,7 +1485,7 @@ class RefreshOrchestrator:
         if not self.sheets_client:
             return {"processed": 0, "no_action": 0, "partial_refresh": 0, "refresh_titles": 0, "full_refresh": 0, "errors": []}
 
-        rows = self.sheets_client.read_pending_for_decision(blog_id)
+        rows = self.sheets_client.read_pending_for_decision(site_slug)
 
         # Filter by post_type if specified
         if post_type:
@@ -1505,12 +1505,12 @@ class RefreshOrchestrator:
 
             try:
                 # SCRAPING OBLIGATOIRE: Fetch actual HTML content (NEW: autonomous scraping)
-                extraction_result = self._fetch_html(row.blogpost_url, row.blog_id)
+                extraction_result = self._fetch_html(row.blogpost_url, row.site_slug)
                 if not extraction_result.get("clean_body"):
                     raise ValueError(f"Failed to fetch HTML for {row.blogpost_url}")
 
                 # Extract real content metrics from scraped HTML (NEW: uses assets_baseline)
-                content_metrics = self._extract_content_metrics(extraction_result, row.blogpost_url, row.blog_id)
+                content_metrics = self._extract_content_metrics(extraction_result, row.blogpost_url, row.site_slug)
 
                 # Extract title from HTML (h1 tag)
                 from bs4 import BeautifulSoup
@@ -1632,15 +1632,15 @@ class RefreshOrchestrator:
         seo_guidelines = self.doc_cache.get_combined_guidelines() or ""
         site_prompt = ""
         try:
-            # Normalize blog_id to get correct file name (e.g., "enseigna.fr" → "enseigna")
-            normalized_blog_id = self._normalize_blog_id(row.blog_id)
-            site_prompt = self.doc_cache.get_prompt(f"sites/{normalized_blog_id}.md") or ""
+            # Normalize site_slug to get correct file name (e.g., "enseigna.fr" → "enseigna")
+            normalized_site_slug = self._normalize_site_slug(row.site_slug)
+            site_prompt = self.doc_cache.get_prompt(f"sites/{normalized_site_slug}.md") or ""
         except:
             pass
 
         # Prepare audit data
         audit_data = {
-            "blog_id": row.blog_id,
+            "site_slug": row.site_slug,
             "url": row.blogpost_url,
             "title": row.title,
             "main_keyword": row.main_keyword,
@@ -1652,9 +1652,9 @@ class RefreshOrchestrator:
             "people_also_ask": row.people_also_ask[:500] if row.people_also_ask else "",
             "secondary_keywords": row.secondary_keywords[:500] if row.secondary_keywords else "",
             "url_slug": url_slug,
-            "output_dir": f"tenants/{row.blog_id}/outputs",
+            "output_dir": f"sites/{row.site_slug}/outputs",
             # Semantic field: category for SemanticChecker._load_semantic_field()
-            "category": self.BLOG_CATEGORY_MAP.get(row.blog_id, ""),
+            "category": self.BLOG_CATEGORY_MAP.get(row.site_slug, ""),
         }
 
         # Inject full asset tags from extraction_result for ghostwriter
@@ -1679,7 +1679,7 @@ class RefreshOrchestrator:
         guidelines_file = context_dir / "guidelines.txt"
         with open(guidelines_file, 'w', encoding='utf-8') as f:
             f.write(f"GUIDELINES SYSTÈME:\n{seo_guidelines[:3000]}\n\n")
-            f.write(f"GUIDELINES SITE {row.blog_id}:\n{site_prompt[:1500]}\n")
+            f.write(f"GUIDELINES SITE {row.site_slug}:\n{site_prompt[:1500]}\n")
 
         batch_folder = dated_batch_folder_name()
         html_subdir = f"html/{batch_folder}"
@@ -1690,17 +1690,17 @@ class RefreshOrchestrator:
             "Lis les données d'audit dans audit_data.json",
             "Lis les guidelines dans guidelines.txt",
             "Génère le HTML optimisé en respectant la RÈGLE D'OR",
-            f"Sauvegarde le résultat dans tenants/{row.blog_id}/outputs/{html_subdir}/{output_slug}_refreshed.html",
-            f"Sauvegarde les métadonnées dans tenants/{row.blog_id}/outputs/metadata/{output_slug}_metadata.json",
+            f"Sauvegarde le résultat dans sites/{row.site_slug}/outputs/{html_subdir}/{output_slug}_refreshed.html",
+            f"Sauvegarde les métadonnées dans sites/{row.site_slug}/outputs/metadata/{output_slug}_metadata.json",
         ]
-        if row.blog_id == "superprof-ressources":
-            refreshed_html_path = f"tenants/{row.blog_id}/outputs/{html_subdir}/{output_slug}_refreshed.html"
+        if row.site_slug == "superprof-ressources":
+            refreshed_html_path = f"sites/{row.site_slug}/outputs/{html_subdir}/{output_slug}_refreshed.html"
             instructions.append(
                 f"Exécute en Bash depuis la racine du projet (extraction CSV des tableaux, "
                 f"OBLIGATOIRE avant l'étape suivante, même si le rapport de génération dit "
                 f"que les tableaux ont été traités) : "
                 f".venv/bin/python content_writer.py batch extract-tables "
-                f"--site-id {row.blog_id} --file {refreshed_html_path}"
+                f"--site-id {row.site_slug} --file {refreshed_html_path}"
             )
             instructions.append(
                 f"Exécute en Bash depuis la racine du projet : "
@@ -1721,8 +1721,8 @@ class RefreshOrchestrator:
                     "guidelines": str(guidelines_file.absolute())
                 },
                 "output": {
-                    "refreshed_html": f"tenants/{row.blog_id}/outputs/{html_subdir}/{output_slug}_refreshed.html",
-                    "metadata": f"tenants/{row.blog_id}/outputs/metadata/{output_slug}_metadata.json"
+                    "refreshed_html": f"sites/{row.site_slug}/outputs/{html_subdir}/{output_slug}_refreshed.html",
+                    "metadata": f"sites/{row.site_slug}/outputs/metadata/{output_slug}_metadata.json"
                 }
             },
             "instructions": instructions,
@@ -1771,7 +1771,7 @@ class RefreshOrchestrator:
 
             # STEP 2: Check if Claude Code should be invoked
             # Define expected output paths using OutputManager (title-based naming)
-            outputs = self.output_mgr.get_output_files(row.blog_id, output_slug, title=row.title)
+            outputs = self.output_mgr.get_output_files(row.site_slug, output_slug, title=row.title)
             refreshed_file = outputs["refreshed_html"]
             metadata_file = outputs["metadata"]
 
@@ -1833,7 +1833,7 @@ class RefreshOrchestrator:
             # Fallback: return original HTML
             return original_html, row.title
 
-    def batch_title_optimization(self, blog_id: Optional[str] = None, post_type: Optional[str] = None) -> dict:
+    def batch_title_optimization(self, site_slug: Optional[str] = None, post_type: Optional[str] = None) -> dict:
         """
         Batch title optimization: génère new_h1_title (col P) et extrait H2s actuels (col Q).
 
@@ -1841,7 +1841,7 @@ class RefreshOrchestrator:
         Traite les URLs avec action_blogpost remplie ET new_h1_title (col P) vide.
 
         Args:
-            blog_id: Filter by blog_id (optional)
+            site_slug: Filter by site_slug (optional)
             post_type: Filter by post_type (optional, for backwards compat)
 
         Returns:
@@ -1864,13 +1864,13 @@ class RefreshOrchestrator:
             if len(row) < 7:
                 continue
 
-            row_blog_id = row[0] if len(row) > 0 else ""
+            row_site_slug = row[0] if len(row) > 0 else ""
             row_post_type = row[5] if len(row) > 5 else ""
             action = row[6] if len(row) > 6 else ""
             current_h1 = row[15] if len(row) > 15 else ""
 
-            # Filter: blog_id
-            if blog_id and row_blog_id != blog_id:
+            # Filter: site_slug
+            if site_slug and row_site_slug != site_slug:
                 continue
 
             # Filter: post_type
@@ -1891,7 +1891,7 @@ class RefreshOrchestrator:
 
             try:
                 # STEP 1: Scrape HTML to extract current H2 structure
-                extraction_result = self._fetch_html(url, row_blog_id)
+                extraction_result = self._fetch_html(url, row_site_slug)
                 h2_titles_json = "[]"
 
                 if extraction_result.get("clean_body"):
@@ -1930,7 +1930,7 @@ class RefreshOrchestrator:
                 optimized_title = self.title_optimizer.optimize_title(
                     original_title=title,
                     main_keyword=keyword,
-                    blog_id=row_blog_id,
+                    site_slug=row_site_slug,
                     post_type=row_post_type,
                     gsc_metrics=gsc_metrics,
                 )
@@ -1963,12 +1963,12 @@ class RefreshOrchestrator:
     def _enseigna_rows_for_refresh(self, action: str) -> list:
         """
         Adapte les EnseignaAvisRow (onglets Avis/Versus réels) à l'interface
-        attendue par la boucle de `batch_refresh` (row.blog_id, row.title, etc.),
+        attendue par la boucle de `batch_refresh` (row.site_slug, row.title, etc.),
         sans dupliquer la logique de génération/validation qui suit.
         """
         @dataclass
         class _EnseignaRefreshRow:
-            blog_id: str = "enseigna"
+            site_slug: str = "enseigna"
             blogpost_url: str = ""
             main_keyword: str = ""
             title: str = ""
@@ -1994,7 +1994,7 @@ class RefreshOrchestrator:
             for r in avis_rows
         ]
 
-    def batch_refresh(self, action: str, blog_id: Optional[str] = None, post_type: Optional[str] = None, limit: Optional[int] = None) -> dict:
+    def batch_refresh(self, action: str, site_slug: Optional[str] = None, post_type: Optional[str] = None, limit: Optional[int] = None) -> dict:
         """
         Batch refresh pour lignes where action_blogpost = action.
 
@@ -2009,7 +2009,7 @@ class RefreshOrchestrator:
 
         Args:
             action: Refresh action type
-            blog_id: Filter by blog_id (optional)
+            site_slug: Filter by site_slug (optional)
             post_type: Filter by post_type - "CHILD", "PARENT", "STANDALONE" (optional)
 
         Returns:
@@ -2029,10 +2029,10 @@ class RefreshOrchestrator:
 
         # Enseigna n'a pas d'onglet Refreshs_Audit (architecture V2) — router vers
         # les onglets réels Avis/Versus via l'adaptateur dédié.
-        if blog_id == "enseigna":
+        if site_slug == "enseigna":
             rows = self._enseigna_rows_for_refresh(action)
         else:
-            rows = self.sheets_client.read_pending_for_refresh(action, blog_id)
+            rows = self.sheets_client.read_pending_for_refresh(action, site_slug)
 
         # Filter by post_type if specified
         if post_type:
@@ -2055,12 +2055,12 @@ class RefreshOrchestrator:
 
             try:
                 # STEP 1: Fetch original HTML (NEW: autonomous scraping with extraction)
-                extraction_result = self._fetch_html(row.blogpost_url, row.blog_id)
+                extraction_result = self._fetch_html(row.blogpost_url, row.site_slug)
                 if not extraction_result.get("clean_body"):
                     raise ValueError(f"Failed to fetch HTML for {row.blogpost_url}")
 
                 # STEP 2: Extract original assets (BASELINE FOR RULE OF GOLD)
-                original_metrics = self._extract_content_metrics(extraction_result, row.blogpost_url, row.blog_id)
+                original_metrics = self._extract_content_metrics(extraction_result, row.blogpost_url, row.site_slug)
                 original_images = original_metrics.get("images_count", 0)
                 original_links = original_metrics.get("internal_links_count", 0)
 
@@ -2110,7 +2110,7 @@ class RefreshOrchestrator:
                     optimized_title = self.title_optimizer.optimize_title(
                         original_title=row.title,
                         main_keyword=row.main_keyword,
-                        blog_id=row.blog_id,
+                        site_slug=row.site_slug,
                         post_type=row.post_type,
                         gsc_metrics={
                             "impressions": row.impressions_30d,
@@ -2138,7 +2138,7 @@ class RefreshOrchestrator:
                 }
 
                 # STEP 4: Extract metrics from refreshed content
-                refreshed_metrics = self._extract_content_metrics(refreshed_html, row.blogpost_url, row.blog_id)
+                refreshed_metrics = self._extract_content_metrics(refreshed_html, row.blogpost_url, row.site_slug)
                 refreshed_images = refreshed_metrics.get("images_count", 0)
                 refreshed_links = refreshed_metrics.get("internal_links_count", 0)
 
@@ -2167,7 +2167,7 @@ class RefreshOrchestrator:
                             )
                             assets_restored = 1
                             # Re-extract metrics after restoration
-                            refreshed_metrics = self._extract_content_metrics(refreshed_html, row.blogpost_url, row.blog_id)
+                            refreshed_metrics = self._extract_content_metrics(refreshed_html, row.blogpost_url, row.site_slug)
                     except Exception as asset_err:
                         # If asset validation fails, log but continue
                         self.logger = __import__("logging").getLogger("RefreshOrchestrator")
@@ -2205,7 +2205,7 @@ class RefreshOrchestrator:
                                 try:
                                     from scripts.audit.keyword_resolver import KeywordResolver
                                     resolved_kw, kw_src = KeywordResolver().resolve(
-                                        row.blog_id, url=row.blogpost_url
+                                        row.site_slug, url=row.blogpost_url
                                     )
                                     if resolved_kw:
                                         logger.info(
@@ -2279,10 +2279,10 @@ class RefreshOrchestrator:
 
                                 # Gate optionnel (config blog ytg.gate) : si le contenu
                                 # n'est pas OPTIMAL, ne pas marquer DONE → à revoir avant WP.
-                                if ytg_verdict != "OPTIMAL" and self._ytg_gate_enabled(blog_id):
+                                if ytg_verdict != "OPTIMAL" and self._ytg_gate_enabled(site_slug):
                                     ytg_gate_block = True
                                     logger.warning(
-                                        f"[STEP 5.6] YTG GATE actif ({blog_id}) — "
+                                        f"[STEP 5.6] YTG GATE actif ({site_slug}) — "
                                         f"{row.blogpost_url[:60]} passe en révision (pas DONE)"
                                     )
 
@@ -2306,7 +2306,7 @@ class RefreshOrchestrator:
                 new_status = "NEEDS_REVIEW" if ytg_gate_block else "DONE"
 
                 # STEP 8: Update sheet with new titles
-                if blog_id == "enseigna":
+                if site_slug == "enseigna":
                     update_ok = self.sheets_client.update_refresh_status_enseigna(
                         url=row.blogpost_url,
                         refresh_date=datetime.now().strftime("%Y-%m-%d"),
@@ -2350,7 +2350,7 @@ class RefreshOrchestrator:
                                 title=refreshed_titles.get("new_h1_title") or row.title or "Sans titre",
                                 url=row.blogpost_url,
                                 strategy=action,
-                                blog_id=row.blog_id,
+                                site_slug=row.site_slug,
                                 impressions=row.impressions_30d,
                                 clicks=row.clicks_30d,
                                 indexed=_indexed,
@@ -2372,7 +2372,7 @@ class RefreshOrchestrator:
                 results["errors"].append(error_msg)
                 logger.error(f"[batch_refresh] Exception pour {row.blogpost_url[:60]}: {error_msg}")
                 # Écriture partielle: marquer BLOCKED avec l'erreur dans la spreadsheet
-                if blog_id == "enseigna":
+                if site_slug == "enseigna":
                     # Avis/Versus n'ont pas de colonne status/BLOCKED — ne pas écrire
                     # refresh_date laisse la ligne éligible au prochain run.
                     logger.info(f"[batch_refresh] Enseigna: pas de refresh_date écrit (échec) pour {row.blogpost_url[:60]}")
@@ -2388,7 +2388,7 @@ class RefreshOrchestrator:
 
         return results
 
-    def _prepare_workflow_statuses(self, blog_id: Optional[str] = None, post_type: Optional[str] = None) -> int:
+    def _prepare_workflow_statuses(self, site_slug: Optional[str] = None, post_type: Optional[str] = None) -> int:
         """
         Prépare les URLs pour le workflow automatisé en initialisant les statuts intermédiaires.
 
@@ -2409,8 +2409,8 @@ class RefreshOrchestrator:
 
             for i, row in enumerate(data[1:], start=2):
                 if len(row) > 8:
-                    # Filter by blog_id if specified
-                    if blog_id and (len(row) < 1 or row[0] != blog_id):
+                    # Filter by site_slug if specified
+                    if site_slug and (len(row) < 1 or row[0] != site_slug):
                         continue
 
                     # Filter by post_type if specified (column F, index 5)
@@ -2437,7 +2437,7 @@ class RefreshOrchestrator:
             print(f"[WARNING] Erreur lors de la préparation des statuts: {e}")
             return 0
 
-    def batch_workflow_auto(self, blog_id: Optional[str] = None, auto_refresh: bool = True, post_type: Optional[str] = None) -> dict:
+    def batch_workflow_auto(self, site_slug: Optional[str] = None, auto_refresh: bool = True, post_type: Optional[str] = None) -> dict:
         """
         Workflow automatisé complet en 5 étapes séquentielles.
 
@@ -2448,7 +2448,7 @@ class RefreshOrchestrator:
         5. batch_refresh (auto) → Colonnes H, P-Q (si auto_refresh=True)
 
         Args:
-            blog_id: Filter by blog_id (optional)
+            site_slug: Filter by site_slug (optional)
             auto_refresh: Si True, exécute automatiquement batch_refresh selon les actions (défaut: True)
             post_type: Filter by post_type - "CHILD", "PARENT", "STANDALONE" (optional)
 
@@ -2482,8 +2482,8 @@ class RefreshOrchestrator:
             print(f"\n{'='*70}")
             print(f"🚀 WORKFLOW AUTOMATISÉ - Démarrage")
             print(f"{'='*70}")
-            if blog_id:
-                print(f"📌 Blog filter: {blog_id}")
+            if site_slug:
+                print(f"📌 Blog filter: {site_slug}")
             if post_type:
                 print(f"📌 Post type filter: {post_type}")
             print()
@@ -2495,14 +2495,14 @@ class RefreshOrchestrator:
                 print(f"[STEP 0/6] 🔧 Préparation workflow (reset + initialisation statuts)...")
 
                 # 0.1: Reset des anciens statuts (REFONTE Feb 2026)
-                reset_stats = self.sheets_client._reset_and_prepare_statuses(blog_id, post_type=post_type)
+                reset_stats = self.sheets_client._reset_and_prepare_statuses(site_slug, post_type=post_type)
                 if reset_stats["status_reset"] > 0:
                     print(f"  ✓ {reset_stats['status_reset']} statut(s) réinitialisé(s) à TODO")
 
                 # 0.2: Préparation transitions de workflow
                 # Pour les URLs avec audit_gsc=DONE mais audit_serp vide/incomplet,
                 # initialiser audit_serp à "AUDITING" pour que l'étape 3 les traite
-                prepared_count = self._prepare_workflow_statuses(blog_id, post_type=post_type)
+                prepared_count = self._prepare_workflow_statuses(site_slug, post_type=post_type)
                 if prepared_count > 0:
                     print(f"  ✓ {prepared_count} URL(s) préparée(s) pour audit SERP")
                 print()
@@ -2514,7 +2514,7 @@ class RefreshOrchestrator:
             # STEP 2: Audit GSC (H, J-L, W)
             # ================================================================
             print(f"[STEP 2/6] 📊 Audit GSC (colonnes H, J-L, W)...")
-            step2_result = self.batch_audit_gsc(blog_id, post_type=post_type)
+            step2_result = self.batch_audit_gsc(site_slug, post_type=post_type)
             workflow_result["step2_audit_gsc"] = step2_result
 
             if step2_result["failed"] > 0:
@@ -2530,7 +2530,7 @@ class RefreshOrchestrator:
             # STEP 3: Audit SERP (I, M-N)
             # ================================================================
             print(f"[STEP 3/6] 🔍 Audit SERP (colonnes I, M-N)...")
-            step3_result = self.batch_audit_serp(blog_id, post_type=post_type)
+            step3_result = self.batch_audit_serp(site_slug, post_type=post_type)
             workflow_result["step3_audit_serp"] = step3_result
 
             if step3_result["failed"] > 0:
@@ -2543,7 +2543,7 @@ class RefreshOrchestrator:
             # STEP 4: Decision Engine (F, Q-U)
             # ================================================================
             print(f"[STEP 4/6] 🎯 Decision Engine (colonnes F, Q-U)...")
-            step4_result = self.batch_decision(blog_id, post_type=post_type)
+            step4_result = self.batch_decision(site_slug, post_type=post_type)
             workflow_result["step4_decision"] = step4_result
 
             if step4_result.get("errors"):
@@ -2560,7 +2560,7 @@ class RefreshOrchestrator:
             # STEP 5: Title Optimization (O-P) - Nouveaux H1 + H2 structure
             # ================================================================
             print(f"[STEP 5/6] 🏷️ Title Optimization (colonnes O-P)...")
-            step5_result = self.batch_title_optimization(blog_id, post_type=post_type)
+            step5_result = self.batch_title_optimization(site_slug, post_type=post_type)
             workflow_result["step5_title_optimization"] = step5_result
 
             if step5_result["failed"] > 0:
@@ -2585,7 +2585,7 @@ class RefreshOrchestrator:
                 for action_name, count in refresh_actions:
                     if count > 0:
                         print(f"  🔄 Refresh: {action_name} ({count} articles)...")
-                        refresh_result = self.batch_refresh(action=action_name, blog_id=blog_id, post_type=post_type)
+                        refresh_result = self.batch_refresh(action=action_name, site_slug=site_slug, post_type=post_type)
                         workflow_result["step6_refresh"][action_name] = refresh_result
 
                         print(f"     ✅ {refresh_result['success']} succès, "

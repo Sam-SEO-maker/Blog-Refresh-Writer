@@ -2,7 +2,7 @@
 Commandes de refresh pour une URL unique.
 
 Usage:
-    cw refresh <url> --blog enseigna [--strategy FULL_REFRESH]
+    cw refresh <url> --site enseigna [--strategy FULL_REFRESH]
 """
 
 import os
@@ -17,7 +17,7 @@ from cli.options import blog_option
 @dataclass
 class MinimalRow:
     """Minimal row object for standalone refresh (no spreadsheet)."""
-    blog_id: str
+    site_slug: str
     blogpost_url: str
     title: str = ""
     main_keyword: str = ""
@@ -81,7 +81,7 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
 
     # Fetch content via WP API (ou HTTP scraping fallback)
     click.echo("[2/6] Récupération contenu...")
-    fetch_result = orchestrator._fetch_html(url, blog_id=blog)
+    fetch_result = orchestrator._fetch_html(url, site_slug=blog)
     if not fetch_result.get("clean_body"):
         click.echo("  ✗ Impossible de récupérer le contenu", err=True)
         raise click.Abort()
@@ -93,7 +93,7 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
     try:
         result = orchestrator.process_url(
             url=url,
-            blog_id=blog,
+            site_slug=blog,
             html_content=fetch_result["clean_body"],
             force_action=strategy,
             custom_prompt=None,
@@ -135,7 +135,7 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
         # Prepare context directory
         click.echo("[5/6] Préparation contexte pour génération...")
         row = MinimalRow(
-            blog_id=blog,
+            site_slug=blog,
             blogpost_url=url,
             title=title,
             main_keyword=keyword or result.main_keyword or "",
@@ -178,8 +178,8 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
 
         # Compose generation prompt via ghostwriter
         click.echo("[6/6] Composition prompt de génération...")
-        from _shared.core.tenant_paths import TenantPaths
-        output_dir = TenantPaths(base_path=Path.cwd()).output_dir(blog)
+        from _shared.core.site_paths import SitePaths
+        output_dir = SitePaths(base_path=Path.cwd()).output_dir(blog)
         output_dir.mkdir(parents=True, exist_ok=True)
         (output_dir / "html").mkdir(parents=True, exist_ok=True)
         (output_dir / "json").mkdir(parents=True, exist_ok=True)
@@ -187,7 +187,7 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
         generation_info = orchestrator.ghostwriter.generate_from_context(
             context_dir=context_dir,
             output_dir=output_dir,
-            blog_id=blog
+            site_slug=blog
         )
 
         if generation_info["status"] == "ready_for_generation":
@@ -239,7 +239,7 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
         raise click.Abort()
 
 
-def _maybe_run_ytg_qc(blog_id: str, url: str,
+def _maybe_run_ytg_qc(site_slug: str, url: str,
                       main_keyword: str = "", guide_id: str = "") -> None:
     """
     Lance le QC sémantique YTG sur l'article si un HTML généré existe déjà.
@@ -259,16 +259,16 @@ def _maybe_run_ytg_qc(blog_id: str, url: str,
     )
 
     slug = url.strip("/").split("/")[-1]
-    files = discover_generated_html(blog_id, slug_filter=slug)
+    files = discover_generated_html(site_slug, slug_filter=slug)
     if not files:
         click.echo("\n[YTG QC] HTML pas encore généré — lancer APRÈS génération :")
-        click.echo(f"         cw ytg qc --blog {blog_id} --slug {slug}")
+        click.echo(f"         cw ytg qc --site {site_slug} --slug {slug}")
         return
 
     # Charger le bloc ytg de la config blog
     import json
-    from _shared.core.tenant_paths import TenantPaths
-    cfg_path = TenantPaths(base_path=Path.cwd()).blog_config(blog_id)
+    from _shared.core.site_paths import SitePaths
+    cfg_path = SitePaths(base_path=Path.cwd()).site_config(site_slug)
     ytg_cfg = {}
     if cfg_path.exists():
         try:
@@ -283,7 +283,7 @@ def _maybe_run_ytg_qc(blog_id: str, url: str,
         engine = YTGQualityCheck()
         html = files[0].read_text(encoding="utf-8")
         res = engine.check_html(
-            blog_id, url=url, html=html, ytg_config=ytg_cfg,
+            site_slug, url=url, html=html, ytg_config=ytg_cfg,
             main_keyword=main_keyword or "", guide_id=guide_id or "",
         )
         res.html_path = str(files[0])

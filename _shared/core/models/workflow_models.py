@@ -14,7 +14,7 @@ from .enums import TaskPriority
 class RefreshWorkflowResult:
     """Résultat complet d'un workflow de refresh."""
     url: str
-    blog_id: str
+    site_slug: str
     success: bool
     action_taken: str
     audit_score: int
@@ -56,7 +56,7 @@ class ScheduledTask:
     """Tâche planifiée avec priorité."""
     priority: int
     url: str = field(compare=False)
-    blog_id: str = field(compare=False)
+    site_slug: str = field(compare=False)
     action: str = field(compare=False)
     scheduled_at: str = field(compare=False)
     metadata: dict = field(default_factory=dict, compare=False)

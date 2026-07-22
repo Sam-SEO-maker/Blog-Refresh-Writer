@@ -49,7 +49,7 @@ def url_to_context_slug(url: str) -> str:
 class YTGQCResult:
     """Résultat d'un QC sémantique YTG sur un article."""
     url: str
-    blog_id: str
+    site_slug: str
     main_keyword: str = ""
     keyword_source: str = ""
     guide_id: str = ""
@@ -145,7 +145,7 @@ class YTGQualityCheck:
 
     def check_html(
         self,
-        blog_id: str,
+        site_slug: str,
         url: str,
         html: str,
         *,
@@ -159,7 +159,7 @@ class YTGQualityCheck:
         Analyse un HTML généré contre son guide YTG et rend un verdict.
 
         Args:
-            blog_id: identifiant du blog (enseigna, superprof-ressources, …).
+            site_slug: identifiant du blog (enseigna, superprof-ressources, …).
             url: URL de l'article (pour résoudre le mot-clé et le slug de contexte).
             html: contenu HTML généré à analyser.
             main_keyword: mot-clé déjà connu (sinon résolu via KeywordResolver).
@@ -168,7 +168,7 @@ class YTGQualityCheck:
             keyword_sources: ordre de priorité des sources de mot-clé (optionnel).
         """
         cfg = ytg_config or {}
-        result = YTGQCResult(url=url, blog_id=blog_id)
+        result = YTGQCResult(url=url, site_slug=site_slug)
 
         # 1. YTG activé pour ce blog ?
         if cfg.get("enabled") is False:
@@ -189,7 +189,7 @@ class YTGQualityCheck:
         if not main_keyword:
             resolver = self._get_resolver()
             main_keyword, keyword_source = resolver.resolve(
-                blog_id, url=url, sources=keyword_sources or cfg.get("keyword_sources")
+                site_slug, url=url, sources=keyword_sources or cfg.get("keyword_sources")
             )
         result.main_keyword = main_keyword
         result.keyword_source = keyword_source
@@ -273,7 +273,7 @@ class YTGQualityCheck:
             except Exception:
                 data = {}
         elif not data:
-            data = {"url": result.url, "blog_id": result.blog_id}
+            data = {"url": result.url, "site_slug": result.site_slug}
 
         data["ytg_qc"] = result.to_dict()
 
@@ -292,21 +292,21 @@ class YTGQualityCheck:
 # ---------------------------------------------------------------------------
 
 def discover_generated_html(
-    blog_id: str,
+    site_slug: str,
     slug_filter: str = "",
 ) -> list[Path]:
     """
-    Liste les `*_refreshed.html` générés d'un blog sous `_shared/outputs/{blog_id}/html/**`.
+    Liste les `*_refreshed.html` générés d'un blog sous `_shared/outputs/{site_slug}/html/**`.
 
     ⚠️ Structure réelle vérifiée : les HTML sont dans des sous-dossiers de batch
     (ex: html/articles_7_juillet_2026/), pas dans html_child_posts/html_parent_posts.
 
     Args:
-        blog_id: identifiant du blog (dossier sous _shared/outputs/).
+        site_slug: identifiant du blog (dossier sous _shared/outputs/).
         slug_filter: si fourni, ne retient que les fichiers dont le nom contient ce slug.
     """
-    from _shared.core.tenant_paths import TenantPaths
-    html_root = TenantPaths(base_path=PROJECT_ROOT).output_dir(blog_id) / "html"
+    from _shared.core.site_paths import SitePaths
+    html_root = SitePaths(base_path=PROJECT_ROOT).output_dir(site_slug) / "html"
     if not html_root.exists():
         return []
 

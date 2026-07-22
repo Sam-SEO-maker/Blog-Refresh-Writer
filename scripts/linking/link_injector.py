@@ -50,8 +50,8 @@ class LinkInjector:
         self.anchor_gen = AnchorGenerator()
         self.validator = InjectionValidator(self.domain)
 
-        from _shared.core.tenant_paths import TenantPaths
-        self.outputs_dir = TenantPaths(base_path=self.base_path).output_dir(site_id)
+        from _shared.core.site_paths import SitePaths
+        self.outputs_dir = SitePaths(base_path=self.base_path).output_dir(site_id)
         self.html_dir = self.outputs_dir / "html"
         self.json_dir = self.outputs_dir / "json"
 
@@ -519,7 +519,7 @@ class LinkInjector:
                 with open(config_path, "r", encoding="utf-8") as f:
                     sites_config = json.load(f)
                 for site in sites_config.get("sites", []):
-                    if site.get("domain") == site_id or site.get("id") == site_id:
+                    if site.get("domain") == site_id or (site.get("site_slug") or site.get("id")) == site_id:
                         return site.get("domain", site_id)
         except Exception:
             pass

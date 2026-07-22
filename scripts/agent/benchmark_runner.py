@@ -81,7 +81,7 @@ def read_urls_from_sheet(
 
 
 def run_benchmark(
-    blog_id: str,
+    site_slug: str,
     source_sheet: str,
     row_range: str,
     spreadsheet_id: Optional[str] = None,
@@ -95,14 +95,14 @@ def run_benchmark(
 
     # Resolve spreadsheet_id from blog config if not provided
     if not spreadsheet_id:
-        from _shared.core.tenant_paths import TenantPaths
-        config_path = TenantPaths(base_path=base_path).blog_config(blog_id)
+        from _shared.core.site_paths import SitePaths
+        config_path = SitePaths(base_path=base_path).site_config(site_slug)
         if not config_path.exists():
             raise FileNotFoundError(f"Blog config not found: {config_path}")
-        blog_config = json.loads(config_path.read_text())
-        spreadsheet_id = blog_config.get("sheets_config", {}).get("spreadsheet_id")
+        site_config = json.loads(config_path.read_text())
+        spreadsheet_id = site_config.get("sheets_config", {}).get("spreadsheet_id")
         if not spreadsheet_id:
-            raise ValueError(f"No spreadsheet_id found in config for blog '{blog_id}'")
+            raise ValueError(f"No spreadsheet_id found in config for blog '{site_slug}'")
 
     orchestrator = RefreshOrchestrator(base_path=base_path, spreadsheet_id=spreadsheet_id)
 
@@ -113,7 +113,7 @@ def run_benchmark(
     logger.info("Selected %d URL(s) from %s!%s", len(urls), source_sheet, row_range)
 
     report = BatchTimingReport(
-        blog_id=blog_id,
+        site_slug=site_slug,
         source_sheet=source_sheet,
         row_range=row_range,
     )
@@ -125,7 +125,7 @@ def run_benchmark(
     per_url_dir.mkdir(parents=True, exist_ok=True)
 
     # Pre-build shared clients for GSC_Perfs upserts (superprof-ressources only)
-    gsc_perfs_enabled = blog_id == "superprof-ressources"
+    gsc_perfs_enabled = site_slug == "superprof-ressources"
     gsc_perfs_clients = None
     if gsc_perfs_enabled:
         try:
@@ -146,7 +146,7 @@ def run_benchmark(
 
     for row_idx, url, main_keyword in urls:
         logger.info("[BENCHMARK] (%d) %s", row_idx, url)
-        timer = OperationTimer(url=url, blog_id=blog_id, row_index=row_idx)
+        timer = OperationTimer(url=url, site_slug=site_slug, row_index=row_idx)
 
         # Captured process wall-clock — written to GSC_Perfs cols N/O
         process_started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -155,7 +155,7 @@ def run_benchmark(
 
         timer.start()
         try:
-            extraction = orchestrator._fetch_html(url, blog_id)
+            extraction = orchestrator._fetch_html(url, site_slug)
             html = extraction.get("clean_body") or ""
             if not html:
                 timer.success = False
@@ -163,7 +163,7 @@ def run_benchmark(
             else:
                 result = orchestrator.process_url(
                     url=url,
-                    blog_id=blog_id,
+                    site_slug=site_slug,
                     html_content=html,
                     timer=timer,
                 )
@@ -191,7 +191,7 @@ def run_benchmark(
             if html:
                 try:
                     minimal_row = RefreshAuditRow(
-                        blog_id=blog_id,
+                        site_slug=site_slug,
                         blogpost_url=url,
                         main_keyword=main_keyword,
                         title="",
@@ -237,7 +237,7 @@ def run_benchmark(
 
     report.stop()
 
-    aggregate_path = output_dir / f"{report.run_id}_{blog_id}_benchmark.json"
+    aggregate_path = output_dir / f"{report.run_id}_{site_slug}_benchmark.json"
     report.dump(aggregate_path)
 
     summary = report.render_console_summary()

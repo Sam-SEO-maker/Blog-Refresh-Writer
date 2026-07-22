@@ -1,6 +1,6 @@
 ---
 description: Valide la qualité SEO d'un content_plan.md (hiérarchie titres, couverture PAA, preuves) — déterministe, sans génération.
-argument-hint: <url> --blog <id> [--plan-file path] [--json]
+argument-hint: <url> --site <site-slug> [--plan-file path] [--json]
 allowed-tools: Bash(python3 content_writer.py plan check:*), Bash(python3 content_writer.py plan init:*), Read
 ---
 

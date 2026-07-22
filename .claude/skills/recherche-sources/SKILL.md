@@ -14,7 +14,7 @@ disable-model-invocation: false
 Constitue un socle de **sources vérifiées** pour un sujet/URL, en amont de la
 génération. Objectif : nourrir le E-E-A-T avec des références réelles (académiques,
 institutionnelles, données chiffrées récentes), **jamais fabriquées**. Ce fichier
-porte la **méthode** (transverse, tous tenants) ; le détail vit dans `references/`
+porte la **méthode** (transverse, tous sites) ; le détail vit dans `references/`
 (à lire au besoin) :
 
 - `references/source-quality.md`, grille de qualité par type de source + exemples ✅/❌.
@@ -23,13 +23,13 @@ porte la **méthode** (transverse, tous tenants) ; le détail vit dans `referenc
   (concurrents, agrégateurs, tous les Wikipédia) + règle des sous-domaines,
   exceptions (Règle d'Or, article avis dont le sujet EST la plateforme) et substituts.
 
-L'**annuaire** des domaines d'autorité (donnée, par tenant) vit côté tenant, ex.
-`tenants/superprof-ressources/sources/authority-map.md` : la skill le consomme au
+L'**annuaire** des domaines d'autorité (donnée, par site) vit côté site, ex.
+`sites/superprof-ressources/sources/authority-map.md` : la skill le consomme au
 tier 1, elle ne le remplace pas.
 
 > **Statut : chantier en cours.** Le socle se construit « par le haut » (un annuaire
-> matière → autorités par tenant, cf. tier 1) puis s'enrichit article par article
-> (tier 3, l'agent propose → l'humain valide). Sans annuaire pour un tenant donné, la
+> matière → autorités par site, cf. tier 1) puis s'enrichit article par article
+> (tier 3, l'agent propose → l'humain valide). Sans annuaire pour un site donné, la
 > skill opère en mode « web seul » (tier 2-3) et amorce l'annuaire au passage.
 
 ## Étape 0 — Charger la blacklist (obligatoire, AVANT toute recherche)
@@ -52,7 +52,7 @@ plateforme) sont définies dans `references/blacklisted-domains.md` et prévalen
 ## Recherche en cascade (3 tiers)
 
 ### Tier 1 — Annuaire des domaines d'autorité (prioritaire)
-Piocher d'abord dans `tenants/{tenant}/sources/` : l'**annuaire** validé par un
+Piocher d'abord dans `sites/<site-slug>/sources/` : l'**annuaire** validé par un
 humain, réutilisable d'un article à l'autre. Pour `superprof-ressources`,
 `authority-map.md` donne les domaines d'autorité **par matière**. Démarche :
 
@@ -62,7 +62,7 @@ humain, réutilisable d'un article à l'autre. Pour `superprof-ressources`,
 3. Cibler ces domaines au tier 2.
 
 > ⚠️ L'annuaire dit **où** chercher (domaines), jamais **quelle page exacte** : ne
-> pas inventer d'URL de page. Si le tenant n'a pas encore de dossier `sources/`,
+> pas inventer d'URL de page. Si le site n'a pas encore de dossier `sources/`,
 > passer directement au tier 2 sans inventer de chemin ni de contenu.
 
 ### Tier 2 — Recherche web ciblée (résolution effective)
@@ -87,7 +87,7 @@ Bonnes pratiques de requête :
 
 ### Tier 3 — Enrichissement de l'annuaire
 Un **domaine d'autorité** nouvellement confirmé au tier 2 est **proposé** pour ajout à
-l'annuaire du tenant (`tenants/{tenant}/sources/authority-map.md`), validation humaine
+l'annuaire du site (`sites/<site-slug>/sources/authority-map.md`), validation humaine
 avant intégration. C'est ce qui fait grossir le tier 1 au fil des articles. Ajouter un
 domaine (où chercher), pas une URL de page (qui reste propre à un article).
 
@@ -139,7 +139,7 @@ rempli et flux d'injection** : `references/brief-schema.md`.
 
 ## Dépendances à construire (backlog, ne pas bloquer dessus)
 
-1. Étendre l'annuaire `tenants/{tenant}/sources/authority-map.md` aux autres tenants
+1. Étendre l'annuaire `sites/<site-slug>/sources/authority-map.md` aux autres sites
    (existe pour `superprof-ressources`).
 2. Script de constitution semi-auto (agent propose → humain valide).
 3. Câblage déterministe du brief vers le générateur : aujourd'hui il circule en

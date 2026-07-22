@@ -291,7 +291,7 @@ class IntentAnalysisResult:
 class AuditReport:
     """Rapport d'audit complet pour une URL."""
     url: str
-    blog_id: str
+    site_slug: str
     audit_date: str
 
     # Résultats des analyseurs

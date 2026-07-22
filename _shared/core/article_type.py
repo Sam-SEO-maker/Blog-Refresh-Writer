@@ -5,7 +5,7 @@ Point unique de vérité pour router un article vers son sous-dossier de sortie
 celle déjà appliquée en prod pour peupler les onglets Sheet "Avis"/"Versus"
 (cf. scripts/audit/enseigna_refresh_list.py, `_bucket`).
 
-Aujourd'hui seul le tenant `enseigna` distingue avis/versus ; les autres tenants
+Aujourd'hui seul le site `enseigna` distingue avis/versus ; les autres sites
 n'ont pas de sous-typage → `classify_article_type` renvoie None (sortie à plat).
 """
 
@@ -21,7 +21,7 @@ def _slug(url: str) -> str:
     return path.rsplit("/", 1)[-1] if path else ""
 
 
-def classify_article_type(url: str, blog_id: Optional[str] = None) -> Optional[str]:
+def classify_article_type(url: str, site_slug: Optional[str] = None) -> Optional[str]:
     """Retourne "avis", "versus" ou None selon le slug de l'URL.
 
     Règle (enseigna) — identique à enseigna_refresh_list._bucket :
@@ -29,7 +29,7 @@ def classify_article_type(url: str, blog_id: Optional[str] = None) -> Optional[s
       - slug contenant `avis`                → "avis"
       - sinon                                → None (pas de sous-typage)
 
-    blog_id est accepté pour une future divergence par tenant ; ignoré tant que
+    site_slug est accepté pour une future divergence par site ; ignoré tant que
     seul enseigna sous-type.
     """
     slug = _slug(url).lower()

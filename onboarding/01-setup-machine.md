@@ -1,16 +1,16 @@
 # 01 — Set up your machine
 
 Goal: get a working copy of Content Writer on your computer that contains **only your
-market**, with Python ready to run. No prior developer experience required — follow the
+site**, with Python ready to run. No prior developer experience required — follow the
 steps in order.
 
-> Throughout, `<your-id>` means your market's **`tenant_id`** — the exact identifier
+> Throughout, `<site-slug>` means your site's **`site_slug`** — the exact identifier
 > shown in the catalog (e.g. `en-ae-blog`, `es-es-ressources`, `en-uk-ressources`). It's
-> one thing under three names you'll see: the `tenant_id` field in the catalog, the
-> `<your-id>` placeholder in this guide, and the name of your folder `tenants/<your-id>/`.
-> Wherever a command says `<your-id>`, type your `tenant_id` verbatim. Don't know it yet?
-> The maintainer can tell you, or you'll list it with `tenant list` in
-> [02 — Onboard my tenant](02-onboard-my-tenant.md).
+> one thing under three names you'll see: the `site_slug` field in the catalog, the
+> `<site-slug>` placeholder in this guide, and the name of your folder `sites/<site-slug>/`.
+> Wherever a command says `<site-slug>`, type your `site_slug` verbatim. Don't know it yet?
+> The maintainer can tell you, or you'll list it with `site list` in
+> [02 — Onboard my site](02-onboard-my-site.md).
 
 ## 1. Prerequisites
 
@@ -54,24 +54,24 @@ python3 --version   # → Python 3.10 or higher
 git --version
 ```
 
-## 5. Clone the repo — your market only (sparse-checkout)
+## 5. Clone the repo — your site only (sparse-checkout)
 
 **Do not clone the whole repo.** Use the onboarding script so your disk only holds the
-shared engine plus your tenant. From an empty folder where you keep your projects:
+shared engine plus your site. From an empty folder where you keep your projects:
 
 ```bash
-# Get the script (one-off download), then run it with your tenant id:
+# Get the script (one-off download), then run it with your site id:
 curl -fsSL https://raw.githubusercontent.com/Sam-SEO-maker/content-writer/main/onboarding/scripts/setup_sparse.sh -o setup_sparse.sh
-bash setup_sparse.sh <your-id>
+bash setup_sparse.sh <site-slug>
 cd content-writer
 ```
 
 This clones the repo, enables sparse-checkout, and materialises the engine +
-`tenants/<your-id>/`. The other markets are never written to your disk. Open this
+`sites/<site-slug>/`. The other sites are never written to your disk. Open this
 `content-writer` folder in VS Code (*File → Open Folder*).
 
-> If your tenant folder doesn't exist yet, that's expected — you'll create it in
-> [02 — Onboard my tenant](02-onboard-my-tenant.md). The engine is enough to continue.
+> If your site folder doesn't exist yet, that's expected — you'll create it in
+> [02 — Onboard my site](02-onboard-my-site.md). The engine is enough to continue.
 
 ## 6. Create the Python environment and install dependencies
 
@@ -87,7 +87,7 @@ Confirm the tool runs:
 
 ```bash
 python3 content_writer.py --help
-python3 content_writer.py tenant list   # shows every market; [x] = already onboarded
+python3 content_writer.py site list   # shows every site; [x] = already onboarded
 ```
 
 ## 7. Configure the shared credentials (`.env`)
@@ -95,7 +95,7 @@ python3 content_writer.py tenant list   # shows every market; [x] = already onbo
 `.env` is the private file that holds your secrets (passwords, API logins). It doesn't
 exist yet — you **create** it by copying the provided template `.env.example`, which
 lists every variable with empty/placeholder values as a guide. You'll fill the **shared**
-credentials now; your blog's WordPress credentials come later in step 02, once your tenant
+credentials now; your blog's WordPress credentials come later in step 02, once your site
 exists (there's nothing to fill for them yet).
 
 ```bash
@@ -121,13 +121,13 @@ Now open the new `.env` in VS Code (`Cmd/Ctrl+P`, type `.env`) and set:
   authentication lives on the server side. No file, no Google credential.
 
 That's all for now. **Your blog's WordPress login is set up in
-[02 — Onboard my tenant](02-onboard-my-tenant.md)**, right after your tenant is created —
+[02 — Onboard my site](02-onboard-my-site.md)**, right after your site is created —
 you can't do it before then, so don't look for it here.
 
 `.env` is git-ignored — it stays on your machine and is never shared.
 
 ## You're set up
 
-Your machine now has the engine + your market, Python ready, and the shared credentials
-in place. Next: **[02 — Onboard my tenant](02-onboard-my-tenant.md)** — you'll create
-your market and finish its WordPress credentials there.
+Your machine now has the engine + your site, Python ready, and the shared credentials
+in place. Next: **[02 — Onboard my site](02-onboard-my-site.md)** — you'll create
+your site and finish its WordPress credentials there.

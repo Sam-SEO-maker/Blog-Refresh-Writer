@@ -23,8 +23,8 @@ from bs4 import BeautifulSoup
 from scripts.utils.table_csv_extractor import _parse_table
 from scripts.utils.output_manager import dated_batch_folder_name
 
-from _shared.core.tenant_paths import TenantPaths
-OUT = TenantPaths().output_dir("superprof-ressources")
+from _shared.core.site_paths import SitePaths
+OUT = SitePaths().output_dir("superprof-ressources")
 HTML = OUT / "html"
 CSVDIR = OUT / "csv"
 ZIPDIR = OUT / "csv_zips"

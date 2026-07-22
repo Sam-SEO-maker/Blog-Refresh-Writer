@@ -3,7 +3,7 @@ Title Optimizer Module
 
 Génère des titres optimisés SEO en utilisant Claude (Max).
 Intègre les métriques GSC/SERP pour des recommandations data-driven.
-Configuration scalable : lit les guidelines depuis tenants/{blog_id}/prompts/site.md
+Configuration scalable : lit les guidelines depuis sites/{site_slug}/prompts/site.md
 """
 
 from datetime import datetime
@@ -20,7 +20,7 @@ class TitleOptimizer:
     Génère des titres optimisés basés sur :
     - Métriques GSC (impressions, clicks, CTR, position)
     - Analyse SERP (TOP 3 format, structure)
-    - Caractéristiques de l'article (keyword, post_type, blog_id)
+    - Caractéristiques de l'article (keyword, post_type, site_slug)
     - Guidelines éditoriales du blog
     """
 
@@ -48,7 +48,7 @@ class TitleOptimizer:
         self,
         original_title: str,
         main_keyword: str,
-        blog_id: str,
+        site_slug: str,
         post_type: str = "",  # kept for backwards compat, unused
         gsc_metrics: Optional[dict] = None,
         serp_metrics: Optional[dict] = None,
@@ -59,7 +59,7 @@ class TitleOptimizer:
         Args:
             original_title: Titre original
             main_keyword: Mot-clé principal
-            blog_id: ID du blog (pour guidelines)
+            site_slug: ID du blog (pour guidelines)
             gsc_metrics: Métriques GSC (impressions, clicks, ctr, position)
             serp_metrics: Métriques SERP (format TOP 3, length, structure)
 
@@ -85,10 +85,10 @@ class TitleOptimizer:
             title = re.sub(year_pattern, str(self.current_year), title)
 
         # Step 3: Analyze title structure and optimize
-        guidelines = self._load_blog_config(blog_id)
+        guidelines = self._load_blog_config(site_slug)
 
         # Step 4: Apply intelligent optimizations based on blog and keywords
-        title = self._enhance_for_blog(title, blog_id, main_keyword)
+        title = self._enhance_for_blog(title, site_slug, main_keyword)
 
         # Step 5: Apply optimizations based on metrics
         if gsc_metrics:
@@ -98,14 +98,14 @@ class TitleOptimizer:
             title = self._optimize_for_serp(title, serp_metrics, main_keyword)
 
         # Step 6: Format title according to blog guidelines
-        title = self._format_title(title, blog_id)
+        title = self._format_title(title, site_slug)
 
         # Step 7: Ensure length is optimal
         title = self._enforce_length(title, guidelines["max_length"])
 
         return title
 
-    def _load_blog_config(self, blog_id: str) -> dict:
+    def _load_blog_config(self, site_slug: str) -> dict:
         """
         Charge la configuration du blog depuis _shared/config/sites.json ou defaults.
 
@@ -115,8 +115,8 @@ class TitleOptimizer:
             Configuration du blog (tone, style, audience, title_suffix, etc.)
         """
         # Vérifier le cache
-        if blog_id in self._blog_config_cache:
-            return self._blog_config_cache[blog_id]
+        if site_slug in self._blog_config_cache:
+            return self._blog_config_cache[site_slug]
 
         # Charger depuis sites.json si disponible
         sites_config_path = self.base_path / "_shared" / "config" / "sites.json"
@@ -126,7 +126,7 @@ class TitleOptimizer:
                     sites_data = json.load(f)
                     # Chercher le blog dans le array "sites"
                     for site in sites_data.get("sites", []):
-                        if site.get("id") == blog_id:
+                        if (site.get("site_slug") or site.get("id")) == site_slug:
                             # Merger avec defaults
                             merged_config = {**self.DEFAULT_GUIDELINES}
                             # Utiliser content_type pour déterminer le suffix
@@ -139,14 +139,14 @@ class TitleOptimizer:
                             title_suffix = self._determine_title_suffix(content_type, site.get("registre"))
                             merged_config["title_suffix"] = title_suffix
 
-                            self._blog_config_cache[blog_id] = merged_config
+                            self._blog_config_cache[site_slug] = merged_config
                             return merged_config
             except Exception:
                 pass
 
         # Retourner defaults
         config = dict(self.DEFAULT_GUIDELINES)
-        self._blog_config_cache[blog_id] = config
+        self._blog_config_cache[site_slug] = config
         return config
 
     def _determine_title_suffix(self, content_type: str, registre: str) -> str:
@@ -171,7 +171,7 @@ class TitleOptimizer:
             return "Guide Complet"
 
     def _enhance_for_blog(
-        self, title: str, blog_id: str, main_keyword: str
+        self, title: str, site_slug: str, main_keyword: str
     ) -> str:
         """
         Améliore intelligemment le titre en fonction de la configuration du blog.
@@ -179,7 +179,7 @@ class TitleOptimizer:
         Stratégie : ajouter un suffix SEULEMENT si ça tient dans le max_length.
         Sinon, garder le titre tel quel (sera formaté après).
         """
-        config = self._load_blog_config(blog_id)
+        config = self._load_blog_config(site_slug)
 
         # Remove trailing punctuation for manipulation
         title = title.rstrip("?!.")
@@ -258,7 +258,7 @@ class TitleOptimizer:
 
         return title
 
-    def _format_title(self, title: str, blog_id: str) -> str:
+    def _format_title(self, title: str, site_slug: str) -> str:
         """
         Formate le titre selon les guidelines du blog.
 
@@ -310,7 +310,7 @@ class TitleOptimizer:
         self,
         original_title: str,
         main_keyword: str,
-        blog_id: str,
+        site_slug: str,
         current_content_sample: str,
         post_type: str = "",  # kept for backwards compat, unused
         gsc_metrics: Optional[dict] = None,
@@ -318,12 +318,12 @@ class TitleOptimizer:
         """
         Génère un prompt pour Claude (Max) pour optimisation manuelle si besoin.
         """
-        guidelines = self._load_blog_config(blog_id)
+        guidelines = self._load_blog_config(site_slug)
 
         prompt = f"""
 ## Optimiser un Titre SEO
 
-**Blog**: {blog_id}
+**Blog**: {site_slug}
 **Ton**: {guidelines['tone']}
 **Audience**: {guidelines['audience']}
 

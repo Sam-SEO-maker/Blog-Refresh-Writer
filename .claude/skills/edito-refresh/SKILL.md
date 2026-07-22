@@ -2,18 +2,18 @@
 name: edito-refresh
 description: >-
   Règles éditoriales SEO/GEO/E-E-A-T transverses pour faire ranker les articles
-  (tous tenants). Consignes actionnables appliquées à chaque refresh : réponse
+  (tous sites). Consignes actionnables appliquées à chaque refresh : réponse
   directe en début de H2, statistiques et citations sourcées, densité sémantique
   par occurrences (pas en %), sources institutionnelles, structure GEO-ready,
   fraîcheur. Le détail (9 stratégies GEO, paires ❌/✅ E-E-A-T, SOSEO/DSEO) vit
   dans references/, chargé à la demande. Complète format-wordpress (forme) et la
-  skill du tenant (structure/ton spécifiques).
+  skill du site (structure/ton spécifiques).
 disable-model-invocation: false
 ---
 
 # Règles éditoriales : SEO / GEO / E-E-A-T (transverses)
 
-Règles de **fond** communes à tous les tenants, appliquées à chaque refresh pour
+Règles de **fond** communes à tous les sites, appliquées à chaque refresh pour
 maximiser le ranking (SERP + moteurs génératifs). Ce fichier porte l'actionnable ;
 le détail et les exemples vivent dans `references/` (à lire au besoin) :
 
@@ -21,8 +21,8 @@ le détail et les exemples vivent dans `references/` (à lire au besoin) :
 - `references/eeat-framework.md`, les 4 piliers E-E-A-T avec paires ❌/✅ et signaux.
 - `references/semantic-density.md`, modèle SOSEO/DSEO (densité par occurrences).
 
-> Les **valeurs chiffrées par tenant** (longueur min/max, nb de liens externes)
-> vivent dans `config/tenant.json` (`seo_settings`). Ce guide fixe les règles
+> Les **valeurs chiffrées par site** (longueur min/max, nb de liens externes)
+> vivent dans `config/site.json` (`seo_settings`). Ce guide fixe les règles
 > transverses ; il ne redéfinit pas ces chiffres.
 
 ## 1. Réponse directe (extraction IA)
@@ -40,17 +40,17 @@ avant tout développement. Idem pour chaque question de FAQ (réponse 50-100 mot
 
 ## 3. Sources institutionnelles
 
-- **≥ 3 sources institutionnelles** citées avec lien (uniforme, tous tenants).
-- Les **domaines d'autorité** sont un savoir **par marché/tenant**, pas transverse :
-  annuaire du tenant `tenants/{id}/sources/authority-map.md` (par matière + socle
+- **≥ 3 sources institutionnelles** citées avec lien (uniforme, tous sites).
+- Les **domaines d'autorité** sont un savoir **par site**, pas transverse :
+  annuaire du site `sites/<site-slug>/sources/authority-map.md` (par matière + socle
   transverse), consommé via la skill `recherche-sources`. Les *types* de domaines à
   viser (gouvernemental, académique, statistique) : `references/eeat-framework.md`.
-- **Jamais de lien vers Wikipédia** (tous tenants) : citer la source primaire que
+- **Jamais de lien vers Wikipédia** (tous sites) : citer la source primaire que
   Wikipédia agrège (étude, texte officiel, institution), jamais l'article encyclopédique.
   Wikipédia n'est pas une source d'autorité E-E-A-T et affaiblit le signal.
 - **Pas de bloc « Sources » / bio auteur dans le HTML** : l'auteur et ses credentials
   sont gérés par WordPress (profil), hors du corps de l'article. (Exception format
-  tenant : Superprof Ressources a son propre bloc Sources Gutenberg, voir sa skill.)
+  site : Superprof Ressources a son propre bloc Sources Gutenberg, voir sa skill.)
 
 ## 4. Densité sémantique : par occurrences, PAS en pourcentage
 
@@ -84,7 +84,7 @@ sémantique) sans **suroptimiser** (répétition). Plafonds :
 
 Réponse directe post-H2 → développement sourcé → citation d'expert → liste de points.
 Template de paragraphe et structure d'article complète : `references/geo-strategies.md`.
-La **structure d'ensemble** (blocs, ordre, intro) est définie par la skill du tenant,
+La **structure d'ensemble** (blocs, ordre, intro) est définie par la skill du site,
 qui prime sur ce rappel.
 
 ## 8. Structure du plan (renvoi)

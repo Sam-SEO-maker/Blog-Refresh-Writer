@@ -1,11 +1,11 @@
 """Génère le catalogue des blogs Superprof depuis les propriétés GSC.
 
-Le **catalogue** (`_shared/config/superprof_blogs_catalog.json`) liste TOUS les
+Le **catalogue** (`_shared/config/superprof_sites_catalog.json`) liste TOUS les
 blogs Superprof actifs (éditoriaux `/blog/` + sites Ressources), qu'ils soient
-onboardés ou non comme tenants Content Writer. C'est le « menu » qu'un responsable
-pays consulte pour découvrir ce qu'il peut onboarder (`cw tenant init <id>`).
+onboardés ou non comme sites Content Writer. C'est le « menu » qu'un responsable
+pays consulte pour découvrir ce qu'il peut onboarder (`cw site init <id>`).
 
-À NE PAS confondre avec le **registre** `sites.json` (tenants réellement onboardés,
+À NE PAS confondre avec le **registre** `sites.json` (sites réellement onboardés,
 chargés par le moteur au runtime). Catalogue = carte ; registre = commande.
 
 Source = propriétés GSC (`mcp gsc-remote list_properties`), la liste vivante des
@@ -29,10 +29,10 @@ import sys
 from pathlib import Path
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-CATALOG_PATH = _PROJECT_ROOT / "_shared" / "config" / "superprof_blogs_catalog.json"
+CATALOG_PATH = _PROJECT_ROOT / "_shared" / "config" / "superprof_sites_catalog.json"
 
 # Les 6 sites Ressources confirmés (cf. RECENSEMENT_BLOGS_SUPERPROF.md).
-# gsc_property → (tenant_id conventionnel, country, language, url_base)
+# gsc_property → (site_slug conventionnel, country, language, url_base)
 RESSOURCES_SITES = {
     "https://www.superprof.fr/ressources/":   ("superprof-ressources", "FR", "fr", "/ressources/"),
     "https://www.superprof.es/apuntes/":      ("es-es-ressources", "ES", "es", "/apuntes/"),
@@ -87,7 +87,7 @@ _SUBDOMAIN_META = {
     # Suisse : deux blogs distincts et vivants. `www` sert le marché
     # francophone (vérifié sur le contenu 2026-07-17), `de.` le germanophone —
     # sans cette entrée, _TLD_META['ch']=('CH','de') donne à `www` le même
-    # tenant_id que `de.` et la déduplication en perd un.
+    # site_slug que `de.` et la déduplication en perd un.
     "superprof.ch": ("CH", "fr"),
     "super-prof.me": ("ME", "sr"),     # Monténégro (domaine à trait d'union)
     "super-prof.nl": ("NL", "nl"),     # Pays-Bas (domaine à trait d'union)
@@ -164,7 +164,7 @@ def build_catalog(urls: list[str]) -> dict:
         if u in RESSOURCES_SITES:
             tid, country, lang, url_base = RESSOURCES_SITES[u]
             ressources.append({
-                "tenant_id": tid, "type": "ressources", "country": country,
+                "site_slug": tid, "type": "ressources", "country": country,
                 "language": lang, "gsc_property": u, "url_base": url_base,
                 "onboardable": True,
             })
@@ -178,39 +178,38 @@ def build_catalog(urls: list[str]) -> dict:
             # id conventionnel : {lang}-{country}-blog (country ISO-2 en minuscules).
             country_slug = country.lower() if len(country) <= 3 else country.lower().replace("-", "")
             blogs.append({
-                "tenant_id": f"{lang or 'xx'}-{country_slug}-blog",
+                "site_slug": f"{lang or 'xx'}-{country_slug}-blog",
                 "type": "blog", "country": country, "language": lang,
                 "gsc_property": u, "url_base": "/blog/", "onboardable": True,
             })
 
-    # Dédup par tenant_id : plusieurs propriétés GSC peuvent viser le même marché
+    # Dédup par site_slug : plusieurs propriétés GSC peuvent viser le même marché
     # (ex. www.superprof.ch/blog/ et de.superprof.ch/blog/ → de-ch-blog). On garde
     # la 1re rencontrée (ordre stable) et on liste les doublons dans le rapport.
     dedup, dup_ids = {}, []
     for b in blogs:
-        if b["tenant_id"] in dedup:
-            dup_ids.append(f"{b['tenant_id']} ({b['gsc_property']})")
+        if b["site_slug"] in dedup:
+            dup_ids.append(f"{b['site_slug']} ({b['gsc_property']})")
             continue
-        dedup[b["tenant_id"]] = b
+        dedup[b["site_slug"]] = b
     blogs = list(dedup.values())
 
-    ressources.sort(key=lambda x: x["tenant_id"])
-    blogs.sort(key=lambda x: x["tenant_id"])
+    ressources.sort(key=lambda x: x["site_slug"])
+    blogs.sort(key=lambda x: x["site_slug"])
     return {
         "_comment": (
-            "Catalogue des blogs Superprof (généré depuis GSC list_properties). "
-            "NE PAS confondre avec sites.json (tenants onboardés, lu au runtime). "
+            "Catalogue des sites Superprof (généré depuis GSC list_properties). "
+            "NE PAS confondre avec sites.json (sites onboardés, lu au runtime). "
             "Régénérer : python -m scripts.utils.build_superprof_catalog --from-file <props>."
         ),
-        "ressources_sites": ressources,
-        "blogs": blogs,
-        "counts": {"ressources": len(ressources), "blogs": len(blogs),
+        "sites": ressources + blogs,
+        "counts": {"ressources": len(ressources), "blog": len(blogs),
                    "blog_duplicates_dropped": len(dup_ids)},
     }
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Génère superprof_blogs_catalog.json depuis GSC")
+    ap = argparse.ArgumentParser(description="Génère superprof_sites_catalog.json depuis GSC")
     ap.add_argument("--from-file", required=True,
                     help="Fichier contenant la sortie de mcp gsc-remote list_properties.")
     ap.add_argument("--apply", action="store_true", help="Écrit le catalogue (sinon stdout).")

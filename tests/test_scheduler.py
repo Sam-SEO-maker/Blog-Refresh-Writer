@@ -23,7 +23,7 @@ class TestTaskScheduler:
         """Test ajout d'une tâche."""
         self.scheduler.add_task(
             url="https://example.com/article",
-            blog_id="enseigna",
+            site_slug="enseigna",
             action="AUDIT",
             priority=TaskPriority.MEDIUM,
         )
@@ -36,19 +36,19 @@ class TestTaskScheduler:
         # Ajouter dans l'ordre inverse
         self.scheduler.add_task(
             url="https://example.com/low",
-            blog_id="test",
+            site_slug="test",
             action="AUDIT",
             priority=TaskPriority.LOW,
         )
         self.scheduler.add_task(
             url="https://example.com/critical",
-            blog_id="test",
+            site_slug="test",
             action="AUDIT",
             priority=TaskPriority.CRITICAL,
         )
         self.scheduler.add_task(
             url="https://example.com/medium",
-            blog_id="test",
+            site_slug="test",
             action="AUDIT",
             priority=TaskPriority.MEDIUM,
         )
@@ -70,8 +70,8 @@ class TestTaskScheduler:
         """Test pas de doublons."""
         url = "https://example.com/unique"
 
-        self.scheduler.add_task(url=url, blog_id="test", action="AUDIT")
-        self.scheduler.add_task(url=url, blog_id="test", action="AUDIT")  # Doublon
+        self.scheduler.add_task(url=url, site_slug="test", action="AUDIT")
+        self.scheduler.add_task(url=url, site_slug="test", action="AUDIT")  # Doublon
 
         assert self.scheduler.size() == 1
 
@@ -84,7 +84,7 @@ class TestTaskScheduler:
         """Test peek sans retirer."""
         self.scheduler.add_task(
             url="https://example.com/article",
-            blog_id="test",
+            site_slug="test",
             action="AUDIT",
         )
 
@@ -101,7 +101,7 @@ class TestTaskScheduler:
         for i in range(5):
             self.scheduler.add_task(
                 url=f"https://example.com/article-{i}",
-                blog_id="test",
+                site_slug="test",
                 action="AUDIT",
             )
 
@@ -114,7 +114,7 @@ class TestTaskScheduler:
         """Test batch plus grand que la file."""
         self.scheduler.add_task(
             url="https://example.com/only",
-            blog_id="test",
+            site_slug="test",
             action="AUDIT",
         )
 
@@ -126,9 +126,9 @@ class TestTaskScheduler:
     def test_add_batch(self):
         """Test ajout batch."""
         tasks = [
-            {"url": "https://example.com/1", "blog_id": "test", "action": "AUDIT"},
-            {"url": "https://example.com/2", "blog_id": "test", "priority": 1},
-            {"url": "https://example.com/3", "blog_id": "test"},
+            {"url": "https://example.com/1", "site_slug": "test", "action": "AUDIT"},
+            {"url": "https://example.com/2", "site_slug": "test", "priority": 1},
+            {"url": "https://example.com/3", "site_slug": "test"},
         ]
 
         self.scheduler.add_batch(tasks)
@@ -140,7 +140,7 @@ class TestTaskScheduler:
         for i in range(3):
             self.scheduler.add_task(
                 url=f"https://example.com/{i}",
-                blog_id="test",
+                site_slug="test",
                 action="AUDIT",
             )
 
@@ -153,7 +153,7 @@ class TestTaskScheduler:
         """Test métadonnées sur les tâches."""
         self.scheduler.add_task(
             url="https://example.com/article",
-            blog_id="test",
+            site_slug="test",
             action="AUDIT",
             metadata={"source": "manual", "priority_reason": "urgent"},
         )
@@ -240,19 +240,19 @@ class TestSchedulerStats:
         """Test stats avec tâches."""
         self.scheduler.add_task(
             url="https://example.com/critical",
-            blog_id="test",
+            site_slug="test",
             action="AUDIT",
             priority=TaskPriority.CRITICAL,
         )
         self.scheduler.add_task(
             url="https://example.com/medium1",
-            blog_id="test",
+            site_slug="test",
             action="AUDIT",
             priority=TaskPriority.MEDIUM,
         )
         self.scheduler.add_task(
             url="https://example.com/medium2",
-            blog_id="test",
+            site_slug="test",
             action="AUDIT",
             priority=TaskPriority.MEDIUM,
         )
@@ -267,12 +267,12 @@ class TestSchedulerStats:
         """Test compteur processed."""
         self.scheduler.add_task(
             url="https://example.com/1",
-            blog_id="test",
+            site_slug="test",
             action="AUDIT",
         )
         self.scheduler.add_task(
             url="https://example.com/2",
-            blog_id="test",
+            site_slug="test",
             action="AUDIT",
         )
 
@@ -289,7 +289,7 @@ class TestSchedulerStats:
         for i in range(5):
             self.scheduler.add_task(
                 url=f"https://example.com/{i}",
-                blog_id="test",
+                site_slug="test",
                 action="AUDIT",
                 priority=TaskPriority.MEDIUM,
             )

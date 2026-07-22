@@ -47,9 +47,9 @@ class OperationRecord:
 class OperationTimer:
     """Per-URL timer. Accumulates named operations via a context manager."""
 
-    def __init__(self, url: str = "", blog_id: str = "", row_index: Optional[int] = None):
+    def __init__(self, url: str = "", site_slug: str = "", row_index: Optional[int] = None):
         self.url = url
-        self.blog_id = blog_id
+        self.site_slug = site_slug
         self.row_index = row_index
         self._records: Dict[str, OperationRecord] = {}
         self._process_started_perf: Optional[float] = None
@@ -115,7 +115,7 @@ class OperationTimer:
 
     def to_dict(self) -> dict:
         return {
-            "blog_id": self.blog_id,
+            "site_slug": self.site_slug,
             "url": self.url,
             "row_index": self.row_index,
             "process_started_at": self.process_started_at,
@@ -142,7 +142,7 @@ class TimingReport:
 class BatchTimingReport:
     """Aggregates timers from a batch run."""
 
-    blog_id: str
+    site_slug: str
     source_sheet: str
     row_range: str
     run_id: str = field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d_%H%M%S"))
@@ -195,7 +195,7 @@ class BatchTimingReport:
         successes = sum(1 for t in self.timers if t.success)
         return {
             "run_id": self.run_id,
-            "blog_id": self.blog_id,
+            "site_slug": self.site_slug,
             "source": {"sheet": self.source_sheet, "rows": self.row_range},
             "batch_started_at": self.batch_started_at,
             "batch_ended_at": self.batch_ended_at,
@@ -224,7 +224,7 @@ class BatchTimingReport:
     def render_console_summary(self) -> str:
         agg = self.aggregate()
         lines = []
-        lines.append(f"═══ Benchmark Summary — {self.blog_id} ═══")
+        lines.append(f"═══ Benchmark Summary — {self.site_slug} ═══")
         lines.append(
             f"Batch: {self.batch_started_at} → {self.batch_ended_at} "
             f"({_fmt_duration(self.batch_duration_sec)})"

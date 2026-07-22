@@ -9,13 +9,13 @@ from scripts.scraping.content_extractor import ContentExtractor
 
 @pytest.fixture
 def temp_config_dir(tmp_path):
-    """Crée un base_path temporaire avec un tenant au layout monorepo.
+    """Crée un base_path temporaire avec un site au layout monorepo.
 
-    ContentExtractor charge les configs via TenantPaths (tenants/{id}/config/
-    tenant.json), plus depuis un dossier plat blogs/.
+    ContentExtractor charge les configs via SitePaths (sites/{id}/config/
+    site.json), plus depuis un dossier plat blogs/.
     """
-    tenant_cfg_dir = tmp_path / "tenants" / "test-blog.fr" / "config"
-    tenant_cfg_dir.mkdir(parents=True)
+    site_cfg_dir = tmp_path / "sites" / "test-blog.fr" / "config"
+    site_cfg_dir.mkdir(parents=True)
 
     test_config = {
         "id": "test-blog.fr",
@@ -28,7 +28,7 @@ def temp_config_dir(tmp_path):
         }
     }
 
-    with (tenant_cfg_dir / "tenant.json").open("w", encoding="utf-8") as f:
+    with (site_cfg_dir / "site.json").open("w", encoding="utf-8") as f:
         json.dump(test_config, f)
 
     return tmp_path
@@ -45,7 +45,7 @@ class TestContentExtractor:
         assert extractor.blog_configs["test-blog.fr"]["id"] == "test-blog.fr"
 
     def test_init_missing_config_dir(self):
-        """Test initialization avec un base_path sans tenants/"""
+        """Test initialization avec un base_path sans sites/"""
         extractor = ContentExtractor(base_path=Path("/nonexistent/path"))
 
         # Should handle missing directory gracefully

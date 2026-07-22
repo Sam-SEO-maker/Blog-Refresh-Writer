@@ -17,7 +17,7 @@ from _shared.core.utils.timing import (
 
 
 def test_measure_accumulates_duration():
-    timer = OperationTimer(url="https://example.com", blog_id="x")
+    timer = OperationTimer(url="https://example.com", site_slug="x")
     timer.start()
     with timer.measure("gsc_fetch"):
         time.sleep(0.05)
@@ -59,7 +59,7 @@ def test_timed_context_none_safe():
 
 
 def test_timing_report_dump(tmp_path: Path):
-    timer = OperationTimer(url="https://a", blog_id="b", row_index=3)
+    timer = OperationTimer(url="https://a", site_slug="b", row_index=3)
     timer.start()
     with timer.measure("x"):
         pass
@@ -74,10 +74,10 @@ def test_timing_report_dump(tmp_path: Path):
 
 
 def test_batch_aggregate_and_summary(tmp_path: Path):
-    report = BatchTimingReport(blog_id="b", source_sheet="GSC_Perfs", row_range="2:3")
+    report = BatchTimingReport(site_slug="b", source_sheet="GSC_Perfs", row_range="2:3")
     report.start()
     for url in ("https://a", "https://b"):
-        t = OperationTimer(url=url, blog_id="b")
+        t = OperationTimer(url=url, site_slug="b")
         t.start()
         with t.measure("gsc_fetch"):
             time.sleep(0.02)

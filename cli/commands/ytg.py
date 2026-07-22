@@ -4,7 +4,7 @@ Commandes YourTextGuru (YTG).
 Usage:
     cw ytg create-guide --keyword "bienfaits yoga"
     cw ytg check-guide --guide-id ABC123
-    cw ytg batch-prefetch --spreadsheet-id ID [--blog moments-yoga]
+    cw ytg batch-prefetch --spreadsheet-id ID [--site moments-yoga]
     cw ytg analyze --guide-id ABC123 --html-file path/to/article.html
 """
 
@@ -222,7 +222,7 @@ def batch_prefetch(spreadsheet_id, blog, lang, country, create_missing):
 
     click.echo("[2/3] Lecture des onglets réels du blog...")
     if not blog:
-        click.echo("[ERREUR] --blog est requis (onglets réels différents par blog).", err=True)
+        click.echo("[ERREUR] --site est requis (onglets réels différents par blog).", err=True)
         sys.exit(1)
     layout = _SHEET_LAYOUT.get(blog)
     if not layout:
@@ -252,7 +252,7 @@ def batch_prefetch(spreadsheet_id, blog, lang, country, create_missing):
                 continue
             seen_urls.add(u)
             sheet_rows.append({
-                "blog_id": blog,
+                "site_slug": blog,
                 "url": row_url,
                 "main_keyword": row_kw,
                 "row_idx": i,
@@ -306,7 +306,7 @@ def batch_prefetch(spreadsheet_id, blog, lang, country, create_missing):
                     raw = analyzer.get_guide_status(guide_id)
                     if raw and analyzer._is_ready(raw):
                         result = analyzer._parse_guide_result(guide_id, kw, raw)
-                        _save_ytg_to_audit(audit_file, audit_data, result, url, row["blog_id"])
+                        _save_ytg_to_audit(audit_file, audit_data, result, url, row["site_slug"])
                         click.echo(
                             f"  [MATCH] {kw[:45]:<45} → guide {guide_id} "
                             f"({len(result.semantic_terms)} termes)"
@@ -328,7 +328,7 @@ def batch_prefetch(spreadsheet_id, blog, lang, country, create_missing):
                 try:
                     result = analyzer.create_and_wait(kw, language=lang, country=country)
                     if result:
-                        _save_ytg_to_audit(audit_file, audit_data, result, url, row["blog_id"])
+                        _save_ytg_to_audit(audit_file, audit_data, result, url, row["site_slug"])
                         click.echo(
                             f"           OK — guide {result.guide_id} "
                             f"({len(result.semantic_terms)} termes, "
@@ -395,14 +395,14 @@ def _save_ytg_to_audit(
     audit_data: dict,
     result,
     url: str,
-    blog_id: str,
+    site_slug: str,
 ) -> None:
     """Écrit les données YTG dans audit_data.json (création si nécessaire)."""
     if not audit_file:
         return
 
     if not audit_data:
-        audit_data = {"url": url, "blog_id": blog_id}
+        audit_data = {"url": url, "site_slug": site_slug}
 
     audit_data["ytg_guide_id"] = result.guide_id
     audit_data["semantic_field_override"] = result.semantic_terms
@@ -480,13 +480,13 @@ def analyze(guide_id, html_file):
 # QC sémantique multi-blog (systématique avant intégration WP)
 # ---------------------------------------------------------------------------
 
-def _load_blog_ytg_config(blog_id: str) -> dict:
-    """Lit le bloc `ytg` de _shared/config/blogs/{blog_id}.json (défaut si absent)."""
+def _load_blog_ytg_config(site_slug: str) -> dict:
+    """Lit le bloc `ytg` de _shared/config/blogs/{site_slug}.json (défaut si absent)."""
     from pathlib import Path
 
     base = Path(__file__).resolve().parent.parent.parent
-    from _shared.core.tenant_paths import TenantPaths
-    cfg_path = TenantPaths(base_path=base).blog_config(blog_id)
+    from _shared.core.site_paths import SitePaths
+    cfg_path = SitePaths(base_path=base).site_config(site_slug)
     if not cfg_path.exists():
         click.echo(f"[ERREUR] Config blog introuvable: {cfg_path}", err=True)
         sys.exit(1)
@@ -494,7 +494,7 @@ def _load_blog_ytg_config(blog_id: str) -> dict:
         return json.load(f).get("ytg", {}) or {}
 
 
-def _infer_url_from_html_path(blog_id: str, path) -> str:
+def _infer_url_from_html_path(site_slug: str, path) -> str:
     """Reconstitue une URL plausible depuis le nom de fichier (pour résoudre le KW)."""
     from pathlib import Path
 
@@ -510,12 +510,12 @@ def _infer_url_from_html_path(blog_id: str, path) -> str:
         "enseigna": "https://enseigna.fr/{slug}/",
         "superprof-ressources": "https://www.superprof.fr/ressources/{slug}/",
     }
-    tpl = domain_map.get(blog_id, "https://example.com/{slug}/")
+    tpl = domain_map.get(site_slug, "https://example.com/{slug}/")
     return tpl.format(slug=slug)
 
 
 @ytg.command(name='qc')
-@blog_option(required=True, dest='blog_id')
+@blog_option(required=True, dest='site_slug')
 @click.option('--slug', default='', help='Filtrer sur un slug d\'article précis')
 @click.option('--keyword', 'keyword', default='',
               help='Mot-clé principal forcé (override le résolveur). Nécessite --slug '
@@ -524,7 +524,7 @@ def _infer_url_from_html_path(blog_id: str, path) -> str:
               help='Signaler les articles A_CORRIGER pour correction ciblée (corrector)')
 @click.option('--json-out', 'json_out', is_flag=True, default=False,
               help='Écrire le rapport récap dans _shared/outputs/{blog}/ytg_qc_report.json')
-def qc(blog_id, slug, keyword, fix, json_out):
+def qc(site_slug, slug, keyword, fix, json_out):
     """
     QC sémantique YTG sur les HTML générés d'un blog, AVANT intégration WP.
 
@@ -544,9 +544,9 @@ def qc(blog_id, slug, keyword, fix, json_out):
     )
     from scripts.audit.ytg_corrector import RateLimiter
 
-    ytg_cfg = _load_blog_ytg_config(blog_id)
+    ytg_cfg = _load_blog_ytg_config(site_slug)
     if ytg_cfg.get("enabled") is False:
-        click.echo(f"[YTG QC] Désactivé pour '{blog_id}' (ytg.enabled=false). Rien à faire.")
+        click.echo(f"[YTG QC] Désactivé pour '{site_slug}' (ytg.enabled=false). Rien à faire.")
         return
 
     analyzer = YTGAnalyzer()
@@ -554,9 +554,9 @@ def qc(blog_id, slug, keyword, fix, json_out):
         click.echo("[ERREUR] YTG_API_KEY manquant.", err=True)
         sys.exit(1)
 
-    files = discover_generated_html(blog_id, slug_filter=slug)
+    files = discover_generated_html(site_slug, slug_filter=slug)
     if not files:
-        click.echo(f"[YTG QC] Aucun HTML généré trouvé pour '{blog_id}'"
+        click.echo(f"[YTG QC] Aucun HTML généré trouvé pour '{site_slug}'"
                    + (f" (slug '{slug}')" if slug else "") + ".")
         return
 
@@ -571,7 +571,7 @@ def qc(blog_id, slug, keyword, fix, json_out):
         )
         sys.exit(1)
 
-    click.echo(f"\n[YTG QC] {blog_id} — {len(files)} article(s) à analyser\n")
+    click.echo(f"\n[YTG QC] {site_slug} — {len(files)} article(s) à analyser\n")
 
     qc_engine = YTGQualityCheck(analyzer=analyzer, rate_limiter=RateLimiter())
     counts = {VERDICT_OPTIMAL: 0, VERDICT_A_CORRIGER: 0, VERDICT_BLOQUE: 0, VERDICT_SKIP: 0}
@@ -580,9 +580,9 @@ def qc(blog_id, slug, keyword, fix, json_out):
 
     for path in files:
         html = path.read_text(encoding="utf-8")
-        url = _infer_url_from_html_path(blog_id, path)
+        url = _infer_url_from_html_path(site_slug, path)
         res = qc_engine.check_html(
-            blog_id, url=url, html=html, ytg_config=ytg_cfg,
+            site_slug, url=url, html=html, ytg_config=ytg_cfg,
             main_keyword=keyword or None,
         )
         res.html_path = str(path)
@@ -616,9 +616,9 @@ def qc(blog_id, slug, keyword, fix, json_out):
                    "à revoir avant push WP.")
 
     if json_out:
-        from _shared.core.tenant_paths import TenantPaths
+        from _shared.core.site_paths import SitePaths
         _root = Path(__file__).resolve().parent.parent.parent
-        out = TenantPaths(base_path=_root).output_dir(blog_id) / "ytg_qc_report.json"
+        out = SitePaths(base_path=_root).output_dir(site_slug) / "ytg_qc_report.json"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         click.echo(f"\n[YTG QC] Rapport écrit: {out}")
@@ -628,7 +628,7 @@ def qc(blog_id, slug, keyword, fix, json_out):
 
         click.echo(f"\n[YTG QC] --fix : préparation de {len(to_fix)} correction(s)…")
         autocorrector = YTGAutoCorrector(
-            blog_id, analyzer=analyzer, rate_limiter=RateLimiter()
+            site_slug, analyzer=analyzer, rate_limiter=RateLimiter()
         )
         items = [
             {
@@ -645,9 +645,9 @@ def qc(blog_id, slug, keyword, fix, json_out):
             click.echo("[YTG QC] Aucune tâche de correction préparée (analyse par terme KO).")
             return
 
-        from _shared.core.tenant_paths import TenantPaths
-        manifest = (TenantPaths(base_path=Path(__file__).resolve().parent.parent.parent)
-                    .output_dir(blog_id) / "ytg_fix_manifest.json")
+        from _shared.core.site_paths import SitePaths
+        manifest = (SitePaths(base_path=Path(__file__).resolve().parent.parent.parent)
+                    .output_dir(site_slug) / "ytg_fix_manifest.json")
         click.echo(f"[YTG QC] {len(tasks)} tâche(s) de correction prête(s).")
         click.echo(f"[YTG QC] Manifest : {manifest}")
         click.echo(

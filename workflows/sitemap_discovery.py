@@ -12,13 +12,13 @@ Fonctionnalités :
 
 Usage:
     # Découvrir les nouvelles URLs pour un blog
-    python sitemap_discovery.py --blog enseigna.fr --detect-new
+    python sitemap_discovery.py --site enseigna.fr --detect-new
 
     # Trouver le contenu obsolète (> 6 mois)
-    python sitemap_discovery.py --blog enseigna.fr --find-stale --months 6
+    python sitemap_discovery.py --site enseigna.fr --find-stale --months 6
 
     # Exporter vers Google Sheets
-    python sitemap_discovery.py --blog enseigna.fr --find-stale --export-to-sheets
+    python sitemap_discovery.py --site enseigna.fr --find-stale --export-to-sheets
 
     # Tous les blogs d'un coup
     python sitemap_discovery.py --all-blogs --find-stale --months 12
@@ -42,19 +42,19 @@ from scripts.sheets import SheetsClient
 from _shared.core.models import StaleContent
 
 
-# Blog IDs valides (CLAUDE.md multi-tenant architecture)
+# Blog IDs valides (CLAUDE.md multi-site architecture)
 VALID_BLOGS = [
     "enseigna.fr",
     "superprof.fr",
 ]
 
 
-def discover_new_urls(blog_id: str) -> Dict:
+def discover_new_urls(site_slug: str) -> Dict:
     """
     Découvre les nouvelles URLs publiées depuis le dernier crawl.
 
     Args:
-        blog_id: Identifiant du blog
+        site_slug: Identifiant du blog
 
     Returns:
         {
@@ -64,12 +64,12 @@ def discover_new_urls(blog_id: str) -> Dict:
             "total_previous": int
         }
     """
-    print(f"\n📡 Découverte nouvelles URLs pour {blog_id}...")
+    print(f"\n📡 Découverte nouvelles URLs pour {site_slug}...")
 
     try:
-        # Nettoyer le blog_id (retirer .fr/.com si présent)
-        blog_id_clean = blog_id.replace(".fr", "").replace(".com", "")
-        fetcher = load_fetcher_from_blog_config(blog_id_clean)
+        # Nettoyer le site_slug (retirer .fr/.com si présent)
+        site_slug_clean = site_slug.replace(".fr", "").replace(".com", "")
+        fetcher = load_fetcher_from_blog_config(site_slug_clean)
         result = fetcher.fetch_and_detect_new(force_refresh=True)
 
         print(f"  ✅ URLs actuelles: {result.total_current}")
@@ -101,24 +101,24 @@ def discover_new_urls(blog_id: str) -> Dict:
         }
 
 
-def find_stale_content(blog_id: str, months: int = 6, min_priority: int = 3) -> List[StaleContent]:
+def find_stale_content(site_slug: str, months: int = 6, min_priority: int = 3) -> List[StaleContent]:
     """
     Identifie les URLs obsolètes nécessitant un refresh.
 
     Args:
-        blog_id: Identifiant du blog
+        site_slug: Identifiant du blog
         months: Nombre de mois pour considérer le contenu obsolète
         min_priority: Priorité minimale (1-5)
 
     Returns:
         Liste de StaleContent triée par priorité
     """
-    print(f"\n🔍 Recherche contenu obsolète pour {blog_id} (> {months} mois)...")
+    print(f"\n🔍 Recherche contenu obsolète pour {site_slug} (> {months} mois)...")
 
     try:
-        # Nettoyer le blog_id (retirer .fr/.com si présent)
-        blog_id_clean = blog_id.replace(".fr", "").replace(".com", "")
-        analyzer = load_analyzer_from_blog_config(blog_id_clean)
+        # Nettoyer le site_slug (retirer .fr/.com si présent)
+        site_slug_clean = site_slug.replace(".fr", "").replace(".com", "")
+        analyzer = load_analyzer_from_blog_config(site_slug_clean)
         stale = analyzer.find_stale_content(
             months=months,
             min_priority=min_priority,
@@ -157,7 +157,7 @@ def find_stale_content(blog_id: str, months: int = 6, min_priority: int = 3) -> 
 
 
 def export_to_sheets(
-    blog_id: str,
+    site_slug: str,
     stale_content: List[StaleContent],
     spreadsheet_id: str,
     dry_run: bool = False
@@ -166,7 +166,7 @@ def export_to_sheets(
     Exporte les URLs obsolètes vers Google Sheets pour audit.
 
     Args:
-        blog_id: Identifiant du blog
+        site_slug: Identifiant du blog
         stale_content: Liste des URLs obsolètes
         spreadsheet_id: ID du Google Sheet
         dry_run: Si True, simule l'export sans écrire
@@ -183,7 +183,7 @@ def export_to_sheets(
     if dry_run:
         print(f"  🔍 MODE DRY-RUN: Simulation d'export de {len(stale_content)} URLs")
         print(f"  Les URLs seraient ajoutées dans la feuille 'Refreshs_Audit'")
-        print(f"  Colonnes remplies: blog_id, blogpost_url, status, main_keyword")
+        print(f"  Colonnes remplies: site_slug, blogpost_url, status, main_keyword")
         return len(stale_content)
 
     try:
@@ -195,12 +195,12 @@ def export_to_sheets(
         print(f"  ℹ️  Fonctionnalité d'export direct en cours d'implémentation")
         print(f"  En attendant, voici les données à ajouter manuellement:")
         print(f"\n  Format CSV pour import:")
-        print(f"  blog_id,blogpost_url,status,main_keyword")
+        print(f"  site_slug,blogpost_url,status,main_keyword")
 
         for item in stale_content[:50]:  # Limite à 50 pour affichage
             # Extraire un mot-clé approximatif du slug
             keyword = item.slug.replace("-", " ") if item.slug else ""
-            print(f"  {blog_id},{item.url},à_faire,{keyword}")
+            print(f"  {site_slug},{item.url},à_faire,{keyword}")
 
         if len(stale_content) > 50:
             print(f"  ... et {len(stale_content) - 50} URLs supplémentaires")
@@ -219,16 +219,16 @@ def main():
         epilog="""
 Exemples:
   # Découvrir nouvelles URLs
-  python sitemap_discovery.py --blog enseigna.fr --detect-new
+  python sitemap_discovery.py --site enseigna.fr --detect-new
 
   # Trouver contenu obsolète (> 6 mois)
-  python sitemap_discovery.py --blog enseigna.fr --find-stale --months 6
+  python sitemap_discovery.py --site enseigna.fr --find-stale --months 6
 
   # Avec priorité haute uniquement
-  python sitemap_discovery.py --blog enseigna.fr --find-stale --min-priority 4
+  python sitemap_discovery.py --site enseigna.fr --find-stale --min-priority 4
 
   # Exporter vers Google Sheets (dry-run)
-  python sitemap_discovery.py --blog superprof.fr --find-stale --export-to-sheets --dry-run
+  python sitemap_discovery.py --site superprof.fr --find-stale --export-to-sheets --dry-run
 
   # Tous les blogs d'un coup
   python sitemap_discovery.py --all-blogs --find-stale --months 12
@@ -238,7 +238,7 @@ Exemples:
     # Blog selection
     blog_group = parser.add_mutually_exclusive_group(required=True)
     blog_group.add_argument(
-        "--blog",
+        "--site",
         choices=VALID_BLOGS,
         help="Identifiant du blog"
     )
@@ -310,19 +310,19 @@ Exemples:
 
     all_stale = []
 
-    for blog_id in blogs:
+    for site_slug in blogs:
         print(f"\n{'='*70}")
-        print(f"📍 BLOG: {blog_id}")
+        print(f"📍 BLOG: {site_slug}")
         print(f"{'='*70}")
 
         # Action 1: Détecter nouvelles URLs
         if args.detect_new:
-            discover_new_urls(blog_id)
+            discover_new_urls(site_slug)
 
         # Action 2: Trouver contenu obsolète
         if args.find_stale:
-            stale = find_stale_content(blog_id, args.months, args.min_priority)
-            all_stale.extend([(blog_id, item) for item in stale])
+            stale = find_stale_content(site_slug, args.months, args.min_priority)
+            all_stale.extend([(site_slug, item) for item in stale])
 
     # Export global
     if args.export_to_sheets and all_stale:
@@ -332,15 +332,15 @@ Exemples:
 
         # Grouper par blog
         by_blog = {}
-        for blog_id, item in all_stale:
-            if blog_id not in by_blog:
-                by_blog[blog_id] = []
-            by_blog[blog_id].append(item)
+        for site_slug, item in all_stale:
+            if site_slug not in by_blog:
+                by_blog[site_slug] = []
+            by_blog[site_slug].append(item)
 
         total_exported = 0
-        for blog_id, items in by_blog.items():
-            print(f"\n  📍 {blog_id}: {len(items)} URLs")
-            exported = export_to_sheets(blog_id, items, args.spreadsheet_id, args.dry_run)
+        for site_slug, items in by_blog.items():
+            print(f"\n  📍 {site_slug}: {len(items)} URLs")
+            exported = export_to_sheets(site_slug, items, args.spreadsheet_id, args.dry_run)
             total_exported += exported
 
         print(f"\n  ✅ Total exporté: {total_exported} URLs")

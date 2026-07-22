@@ -29,4 +29,4 @@ associé à chaque section. Améliorer contenu, structure et E-E-A-T.
 - **Forme** (préservation des assets / Règle d'Or, HTML clean, listes, tableaux,
   callouts colorés interdits, rédaction narrative vs annuaire) → skill `format-wordpress`.
 - **Structure d'ensemble** (intro, ordre des blocs, tableau récap éventuel) →
-  skill du tenant. Ne pas imposer de structure ni de couleurs codées en dur ici.
+  skill du site. Ne pas imposer de structure ni de couleurs codées en dur ici.

@@ -4,14 +4,14 @@ Output Manager Module
 Centralized handler for all file outputs in the autonomous "Scrape & Refresh" workflow.
 
 Architecture:
-- Scrape cache: tenants/{tenant_id}/outputs/_scrape_cache/ (scraped HTML for comparison)
+- Scrape cache: sites/{site_slug}/outputs/_scrape_cache/ (scraped HTML for comparison)
 - Permanent outputs:
-  - tenants/{tenant_id}/outputs/html/ (refreshed HTML files)
-  - tenants/{tenant_id}/outputs/metadata/ (metadata and audit JSON files)
-  - tenants/{tenant_id}/outputs/editorial_audits/ (editorial audit markdown files)
+  - sites/{site_slug}/outputs/html/ (refreshed HTML files)
+  - sites/{site_slug}/outputs/metadata/ (metadata and audit JSON files)
+  - sites/{site_slug}/outputs/editorial_audits/ (editorial audit markdown files)
 
-Multi-tenant support : dossiers indexés par `tenant_id` (clé de sites.json),
-p.ex. `enseigna`, `superprof-ressources`. Registre ouvert (tout tenant présent
+Multi-site support : dossiers indexés par `site_slug` (clé de sites.json),
+p.ex. `enseigna`, `superprof-ressources`. Registre ouvert (tout site présent
 dans sites.json est valide) — plus de whitelist de domaines codée en dur.
 """
 
@@ -63,12 +63,12 @@ class OutputManager:
     Manages all file outputs for the autonomous workflow.
 
     Ensures:
-    - Single output location per tenant (tenants/{id}/outputs/)
-    - Temporary cache for scraped HTML (tenants/{id}/outputs/_scrape_cache/)
+    - Single output location per site (sites/{id}/outputs/)
+    - Temporary cache for scraped HTML (sites/{id}/outputs/_scrape_cache/)
     - Consistent directory structure
     - Validation before writes
     - Atomic file operations
-    - Multi-tenant isolation
+    - Multi-site isolation
     """
 
     def __init__(self, base_path: Optional[Path] = None):
@@ -79,25 +79,25 @@ class OutputManager:
             base_path: Project root (defaults to auto-detect)
         """
         self.base_path = base_path or Path(__file__).parent.parent.parent
-        # Racines résolues via le point unique TenantPaths (Phase 4.0) : un futur
-        # déplacement vers tenants/{id}/ ne changera que TenantPaths, pas ici.
-        from _shared.core.tenant_paths import TenantPaths
-        self._tenant_paths = TenantPaths(base_path=self.base_path)
+        # Racines résolues via le point unique SitePaths (Phase 4.0) : un futur
+        # déplacement vers sites/{id}/ ne changera que SitePaths, pas ici.
+        from _shared.core.site_paths import SitePaths
+        self._site_paths = SitePaths(base_path=self.base_path)
 
-        # Ensure base directories exist (outputs sont désormais par tenant)
-        self._tenant_paths.tenants_root.mkdir(parents=True, exist_ok=True)
+        # Ensure base directories exist (outputs sont désormais par site)
+        self._site_paths.sites_root.mkdir(parents=True, exist_ok=True)
 
     def init_workspace(self, purge_temp: bool = True) -> Dict[str, int]:
         """
         Initialize workspace: purge temp cache and ensure outputs structure.
 
         Cette fonction garantit:
-        1. le _scrape_cache de chaque tenant est purgé (si purge_temp=True)
-        2. tenants/{id}/outputs/ existe pour chaque site
-        3. tenants/{id}/outputs/editorial_audits/ existe
+        1. le _scrape_cache de chaque site est purgé (si purge_temp=True)
+        2. sites/{id}/outputs/ existe pour chaque site
+        3. sites/{id}/outputs/editorial_audits/ existe
 
         Args:
-            purge_temp: Si True, supprime le _scrape_cache de chaque tenant
+            purge_temp: Si True, supprime le _scrape_cache de chaque site
 
         Returns:
             {
@@ -112,9 +112,9 @@ class OutputManager:
             "subdirs_created": 0
         }
 
-        # Purge scrape cache — le _scrape_cache de chaque tenant.
+        # Purge scrape cache — le _scrape_cache de chaque site.
         if purge_temp:
-            for _tenant_id, output_dir in self._tenant_paths.output_dirs():
+            for _site_slug, output_dir in self._site_paths.output_dirs():
                 cache_dir = output_dir / "_scrape_cache"
                 if not cache_dir.exists():
                     continue
@@ -123,9 +123,9 @@ class OutputManager:
             logger.info(f"Purged scrape cache: {stats['temp_files_removed']} files removed")
 
         # Ensure outputs structure for all sites
-        for site_id in self._known_tenant_ids():
-            # Create site output directory (tenants/{id}/outputs/)
-            site_dir = self._tenant_paths.output_dir(site_id)
+        for site_id in self._known_site_slugs():
+            # Create site output directory (sites/{id}/outputs/)
+            site_dir = self._site_paths.output_dir(site_id)
             if not site_dir.exists():
                 site_dir.mkdir(parents=True, exist_ok=True)
                 stats["output_dirs_created"] += 1
@@ -146,14 +146,14 @@ class OutputManager:
         return stats
 
     # Domaines historiques tolérés en ENTRÉE (rétrocompat appelants), remappés
-    # vers le tenant_id canonique. Les sorties sont toujours écrites par id.
-    _DOMAIN_TO_TENANT_ID = {
+    # vers le site_slug canonique. Les sorties sont toujours écrites par id.
+    _DOMAIN_TO_SITE_SLUG = {
         "enseigna.fr": "enseigna",
         "superprof.fr": "superprof-ressources",
     }
 
-    def _known_tenant_ids(self) -> set:
-        """IDs de tenants connus, lus directement depuis sites.json (registre plat).
+    def _known_site_slugs(self) -> set:
+        """IDs de sites connus, lus directement depuis sites.json (registre plat).
 
         Lecture JSON brute plutôt que via SiteConfig(**data) : les entrées de
         sites.json portent des champs métier (subject_category, ymyl_level…) que
@@ -162,25 +162,25 @@ class OutputManager:
         try:
             sites_path = self.base_path / "_shared" / "config" / "sites.json"
             data = json.loads(sites_path.read_text(encoding="utf-8"))
-            return {s["id"] for s in data.get("sites", []) if "id" in s}
+            return {(s.get("site_slug") or s.get("id")) for s in data.get("sites", []) if ("site_slug" in s or "id" in s)}
         except Exception:
             return set()
 
     def _normalize_site_id(self, site_id: str) -> str:
-        """Normalise vers le tenant_id canonique (remappe un domaine hérité)."""
-        return self._DOMAIN_TO_TENANT_ID.get(site_id, site_id)
+        """Normalise vers le site_slug canonique (remappe un domaine hérité)."""
+        return self._DOMAIN_TO_SITE_SLUG.get(site_id, site_id)
 
     def _validate_site_id(self, site_id: str) -> str:
-        """Valide et retourne le tenant_id canonique (id-based, ouvert au registre)."""
+        """Valide et retourne le site_slug canonique (id-based, ouvert au registre)."""
         normalized = self._normalize_site_id(site_id)
-        known = self._known_tenant_ids()
+        known = self._known_site_slugs()
         # Si le registre est lisible, on valide contre lui ; sinon on laisse passer
-        # (un tenant factice sans entrée registre ne doit pas être bloqué par un
-        # whitelist codé en dur — cf. objectif « tenant sans modif code »).
+        # (un site factice sans entrée registre ne doit pas être bloqué par un
+        # whitelist codé en dur — cf. objectif « site sans modif code »).
         if known and normalized not in known:
             raise ValueError(
                 f"Invalid site_id '{site_id}'. "
-                f"Must be a tenant registered in sites.json: {', '.join(sorted(known))}"
+                f"Must be a site registered in sites.json: {', '.join(sorted(known))}"
             )
         return normalized
 
@@ -233,8 +233,8 @@ class OutputManager:
     # =========================================================================
 
     def _temp_dir(self, site_id: str) -> Path:
-        """Dossier de cache scrapé du tenant (site_id normalisé)."""
-        return self._tenant_paths.scrape_cache_dir(self._validate_site_id(site_id))
+        """Dossier de cache scrapé du site (site_id normalisé)."""
+        return self._site_paths.scrape_cache_dir(self._validate_site_id(site_id))
 
     def save_temp_html(self, site_id: str, url_slug: str, html_content: str) -> Path:
         """
@@ -302,10 +302,10 @@ class OutputManager:
                 return file_count
             return 0
         else:
-            # Clear all sites : itère le _scrape_cache de chaque tenant présent
-            # sur disque (via output_dirs) — robuste à un tenant retiré du registre.
+            # Clear all sites : itère le _scrape_cache de chaque site présent
+            # sur disque (via output_dirs) — robuste à un site retiré du registre.
             total = 0
-            for _tenant_id, output_dir in self._tenant_paths.output_dirs():
+            for _site_slug, output_dir in self._site_paths.output_dirs():
                 temp_dir = output_dir / "_scrape_cache"
                 if temp_dir.is_dir():
                     file_count = sum(1 for _ in temp_dir.rglob("*.html"))
@@ -330,7 +330,7 @@ class OutputManager:
         """
         site_id = self._validate_site_id(site_id)
 
-        site_dir = self._tenant_paths.output_dir(site_id)
+        site_dir = self._site_paths.output_dir(site_id)
         site_dir.mkdir(parents=True, exist_ok=True)
 
         # Ensure html/, metadata/, editorial_audits/ subdirectories exist
@@ -359,7 +359,7 @@ class OutputManager:
             article_type: sous-type d'article routant la sortie HTML dans un
                 sous-dossier `html/{article_type}/` (ex. enseigna : "avis" |
                 "versus"). None → écriture à la racine `html/` (comportement
-                historique, tenants sans sous-typage).
+                historique, sites sans sous-typage).
 
         Returns:
             Path to saved file
@@ -398,7 +398,7 @@ class OutputManager:
         from scripts.utils.acf_extractor import save_acf_if_literary
         acf_path = save_acf_if_literary(
             site_id, file_slug, html_content,
-            tenant_output_dir=self._tenant_paths.output_dir(site_id),
+            site_output_dir=self._site_paths.output_dir(site_id),
         )
         if acf_path:
             logger.info(f"[ACF] fiche de lecture détectée → {acf_path}")
@@ -477,7 +477,7 @@ class OutputManager:
         """
         Save editorial audit markdown report.
 
-        Stocké dans: tenants/{site_id}/outputs/editorial_audits/{url_slug}_editorial_audit.md
+        Stocké dans: sites/{site_id}/outputs/editorial_audits/{url_slug}_editorial_audit.md
 
         Args:
             site_id: Blog identifier
@@ -587,18 +587,18 @@ class OutputManager:
             "total_output_size_mb": 0.0
         }
 
-        # Temp cache stats — le _scrape_cache de chaque tenant
-        for tenant_id, output_dir in self._tenant_paths.output_dirs():
+        # Temp cache stats — le _scrape_cache de chaque site
+        for site_slug, output_dir in self._site_paths.output_dirs():
             cache_dir = output_dir / "_scrape_cache"
             if cache_dir.is_dir():
                 files = list(cache_dir.rglob("*.html"))
-                stats["temp_cache"][tenant_id] = len(files)
+                stats["temp_cache"][site_slug] = len(files)
                 stats["total_temp_size_mb"] += sum(f.stat().st_size for f in files) / (1024 * 1024)
 
-        # Output stats — un dossier outputs/ par tenant (tenants/{id}/outputs/)
-        for tenant_id, output_dir in self._tenant_paths.output_dirs():
+        # Output stats — un dossier outputs/ par site (sites/{id}/outputs/)
+        for site_slug, output_dir in self._site_paths.output_dirs():
             files = [f for f in output_dir.rglob("*") if f.is_file()]
-            stats["outputs"][tenant_id] = len(files)
+            stats["outputs"][site_slug] = len(files)
             stats["total_output_size_mb"] += sum(f.stat().st_size for f in files) / (1024 * 1024)
 
         return stats

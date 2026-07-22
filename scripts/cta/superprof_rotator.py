@@ -340,9 +340,9 @@ class SuperprofRotator:
         return weighted[-1][0]
 
     @staticmethod
-    def normalize_site_id(blog_id: str) -> str:
-        """Normalise un blog_id en site_id (retire TLD, www, etc.)."""
-        site_id = blog_id.strip().lower()
+    def normalize_site_id(site_slug: str) -> str:
+        """Normalise un site_slug en site_id (retire TLD, www, etc.)."""
+        site_id = site_slug.strip().lower()
         # Retirer protocole
         for prefix in ("https://", "http://", "www."):
             if site_id.startswith(prefix):

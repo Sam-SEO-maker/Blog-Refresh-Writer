@@ -1,6 +1,6 @@
 ---
 description: Refresh SEO complet d'une URL (fetch WP REST/scrape → GSC/SERP/PAA/intent → décision → recherche sources → génération via subagent).
-argument-hint: <url> --blog <enseigna|superprof-ressources> [--strategy X] [--keyword K]
+argument-hint: <url> --site <enseigna|superprof-ressources> [--strategy X] [--keyword K]
 allowed-tools: Bash(python3 content_writer.py refresh:*), Bash(python3 content_writer.py finalize:*), Task, Read, Write, WebSearch, WebFetch, Skill
 ---
 
@@ -55,7 +55,7 @@ sur le sujet/URL (cascade : bibliothèque curée par matière si dispo → compl
 web `WebSearch`/`WebFetch` / `deep-research`). Produire un brief structuré
 (source → claim → url → année), sans jamais fabriquer de chiffre.
 
-> Tant que `tenants/{tenant}/sources/` n'existe pas (Phase 4), la skill opère en
+> Tant que `sites/<site-slug>/sources/` n'existe pas (Phase 4), la skill opère en
 > mode web seul.
 
 ## Étape 2bis — Outline éditorial optimisé (artefact vérifiable)
@@ -68,7 +68,7 @@ correction (si l'outline est mauvais) cent fois moins chère qu'une re-générat
 signaux (PAA, mot-clé, intent, assets) injectés depuis `audit_data.json` :
 
 ```bash
-python3 content_writer.py plan init <url> --blog <id>
+python3 content_writer.py plan init <url> --site <site-slug>
 ```
 
 Puis invoquer la skill **`seo-outline`** pour **remplir** cet outline (mapping
@@ -84,7 +84,7 @@ Une fois `content_plan.md` écrit, **le valider mécaniquement** (déterministe,
 token) avant de générer :
 
 ```bash
-python3 content_writer.py plan check <url> --blog <id>
+python3 content_writer.py plan check <url> --site <site-slug>
 ```
 
 - **OK** → passer à l'étape 3 ;
@@ -104,7 +104,7 @@ l'API payante) via l'outil Task. Lui transmettre :
   partir de ce plan, section par section),
 - **le brief de sources vérifiées de l'étape 2** (à injecter dans le contenu et
   dans `eeat_sources`, pas d'invention),
-- le `blog_id` (pour charger la bonne skill de rédaction),
+- le `site_slug` (pour charger la bonne skill de rédaction),
 - les chemins `Output HTML` / `Output JSON`,
 - la `Strategy` et les `Assets avant` (Règle d'Or : assets après ≥ avant).
 
@@ -117,7 +117,7 @@ sortie ; il **ne renvoie pas** de HTML dans le chat. Note le chemin du HTML brut
 Une fois le HTML brut écrit, chaîner save → assets → QC YTG → maillage :
 
 ```bash
-python3 content_writer.py finalize <url> --blog <id> --html-file <Output HTML> [--type <avis|versus>] [--keyword "<Mot-clé>"] [--guide-id <YTG guide>]
+python3 content_writer.py finalize <url> --site <site-slug> --html-file <Output HTML> [--type <avis|versus>] [--keyword "<Mot-clé>"] [--guide-id <YTG guide>]
 ```
 
 > **Mot-clé + guide YTG.** L'étape 1 (`cw refresh`) affiche `Mot-clé:` et
@@ -130,7 +130,7 @@ python3 content_writer.py finalize <url> --blog <id> --html-file <Output HTML> [
 > `Type: avis|versus` quand l'URL est classée (règle : slug `superprof-vs-*` →
 > versus ; slug contenant `avis` → avis ; sinon rien). Si un `Type:` est affiché,
 > **le reporter tel quel dans `--type`** : la sortie HTML est alors routée dans
-> `tenants/enseigna/outputs/html/{type}/` et le prompt versus (`vs_concurrent.md`)
+> `sites/enseigna/outputs/html/{type}/` et le prompt versus (`vs_concurrent.md`)
 > est déjà injecté à la génération. Sans `Type:`, ne pas passer `--type`.
 
 Cette commande (déterministe) :
@@ -151,5 +151,5 @@ Cette commande (déterministe) :
 ## Étape 5 — Rapport
 
 Rapporter : stratégie appliquée, sources retenues, chemins de sortie
-(`tenants/{tenant}/outputs/`), verdict YTG, verdict assets (avant/après), et
+(`sites/<site-slug>/outputs/`), verdict YTG, verdict assets (avant/après), et
 liens ajoutés. Objectif : URL → contenu + verdict + liens, sans reprise manuelle.

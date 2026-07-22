@@ -1,16 +1,16 @@
-"""Perfs SEO d'un blog/tenant via le MCP GSC (totaux + top keywords).
+"""Perfs SEO d'un blog/site via le MCP GSC (totaux + top keywords).
 
 Coup d'œil léger sur l'état d'un blog : totaux de trafic (clics, impressions,
 CTR, position moyenne) + top requêtes, récupérés via le MCP gsc-remote pour
-superprof.* (fallback service account), via le SA pour enseigna/tenants hors MCP.
+superprof.* (fallback service account), via le SA pour enseigna/sites hors MCP.
 Le routage est porté par `GSCAnalyzer` (voir `fetch_blog_performance`).
 
 Complémentaire de `gsc_state` (qui, lui, catégorise + pousse vers Sheet) : ici on
 affiche dans le chat et on dump un JSON local léger, sans dépendance Sheet.
 
 Usage :
-    python content_writer.py audit gsc-perf --market superprof-ressources
-    python content_writer.py audit gsc-perf --market enseigna --days 90 --dry-run
+    python content_writer.py audit gsc-perf --site superprof-ressources
+    python content_writer.py audit gsc-perf --site enseigna --days 90 --dry-run
 """
 
 import json
@@ -23,10 +23,10 @@ from scripts.audit.gsc_state import _site_gsc_property  # résolution gsc_proper
 
 
 def _property_for_url(url: str) -> "tuple[str, str]":
-    """Déduit (tenant_id, gsc_property) depuis une URL, sans argument tenant.
+    """Déduit (site_slug, gsc_property) depuis une URL, sans argument site.
 
-    On matche l'URL contre la `gsc_property` de chaque tenant (celle-ci peut être
-    un préfixe de chemin, ex. `https://www.superprof.fr/ressources/`). Le tenant
+    On matche l'URL contre la `gsc_property` de chaque site (celle-ci peut être
+    un préfixe de chemin, ex. `https://www.superprof.fr/ressources/`). Le site
     dont la property est un préfixe de l'URL, LE PLUS LONG, gagne — pour ne pas
     confondre `superprof.fr/ressources/` avec un futur `superprof.fr/blog/`.
     """
@@ -39,9 +39,9 @@ def _property_for_url(url: str) -> "tuple[str, str]":
         prop = s.get("gsc_property")
         if prop and url.startswith(prop):
             if not best or len(prop) > len(best[1]):
-                best = (s["id"], prop)
+                best = (s.get("site_slug") or s["id"], prop)
     if not best:
-        raise ValueError(f"Aucun tenant ne couvre cette URL dans sites.json : {url}")
+        raise ValueError(f"Aucun site ne couvre cette URL dans sites.json : {url}")
     return best
 
 
@@ -54,7 +54,7 @@ def run_gsc_perf(
     """Récupère les perfs blog et dump un JSON local. Retourne le dict de perfs.
 
     Args:
-        blog: tenant id (résolu en gsc_property via sites.json).
+        blog: site id (résolu en gsc_property via sites.json).
         days: fenêtre en jours (défaut 28, unité native des tools MCP).
         top_kw: nombre de requêtes à ramener (plafonné ~20 côté MCP).
         dry_run: si True, n'écrit pas le dump local.
@@ -75,7 +75,7 @@ def run_gsc_perf(
 def run_gsc_page(url: str, days: int = 28, dry_run: bool = False) -> dict:
     """Perfs GSC d'une **URL précise** : requêtes sur lesquelles elle ranke.
 
-    Le tenant/property est déduit de l'URL (`_property_for_url`). Routage MCP
+    Le site/property est déduit de l'URL (`_property_for_url`). Routage MCP
     (superprof.*) avec fallback service account, porté par `GSCAnalyzer`.
 
     Retourne {url, site_id, source, days, keywords:[...], totals:{...}}.
@@ -125,9 +125,9 @@ def run_gsc_page(url: str, days: int = 28, dry_run: bool = False) -> dict:
 
 
 def _dump(blog: str, stem: str, payload: dict) -> str:
-    """Écrit un dump JSON dans outputs/{tenant}/audit/. Retourne le chemin."""
-    from _shared.core.tenant_paths import TenantPaths
-    out_dir = TenantPaths(base_path=REPO_ROOT).output_dir(blog) / "audit"
+    """Écrit un dump JSON dans outputs/{site}/audit/. Retourne le chemin."""
+    from _shared.core.site_paths import SitePaths
+    out_dir = SitePaths(base_path=REPO_ROOT).output_dir(blog) / "audit"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{stem}.json"
     with open(out_path, "w", encoding="utf-8") as f:

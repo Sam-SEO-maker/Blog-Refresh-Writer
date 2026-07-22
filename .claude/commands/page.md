@@ -11,11 +11,11 @@ elle se positionne, avec clics, impressions et position, sur la fenêtre donnée
 python3 content_writer.py audit gsc-page $ARGUMENTS
 ```
 
-Le tenant est déduit automatiquement de l'URL (aucun `--market` à passer).
+Le site est déduit automatiquement de l'URL (aucun `--site` à passer).
 Routage : superprof.* → MCP gsc-remote (fallback service account) ; le MCP
 plafonne l'affichage à ~20 requêtes.
 
 Options : `<url>` (requis), `--days` (défaut 28), `--dry-run` (pas de dump JSON).
 
-Pour les perfs du **blog entier**, utiliser `/blog --market <id>`.
+Pour les perfs du **blog entier**, utiliser `/blog --site <site-slug>`.
 Lecture seule. Rapporter un résumé compact (trafic + principales requêtes).

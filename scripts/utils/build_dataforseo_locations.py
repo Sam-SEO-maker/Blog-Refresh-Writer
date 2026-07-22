@@ -3,7 +3,7 @@
 `serp_location` doit être un `location_name` exact de DataForSEO : une valeur
 inventée fait échouer l'appel SERP. Ce script résout chaque pays du catalogue
 Superprof contre /v3/serp/google/locations et fige le résultat, pour que
-l'onboarding d'un tenant n'ait pas besoin du réseau.
+l'onboarding d'un site n'ait pas besoin du réseau.
 
 Usage : python3 scripts/utils/build_dataforseo_locations.py [--dry-run]
 
@@ -26,7 +26,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # Exécutable directement (python3 scripts/utils/build_dataforseo_locations.py)
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
-CATALOG_PATH = _PROJECT_ROOT / "_shared" / "config" / "superprof_blogs_catalog.json"
+CATALOG_PATH = _PROJECT_ROOT / "_shared" / "config" / "superprof_sites_catalog.json"
 OUTPUT_PATH = _PROJECT_ROOT / "_shared" / "config" / "dataforseo_locations.json"
 LOCATIONS_ENDPOINT = "https://api.dataforseo.com/v3/serp/google/locations"
 
@@ -92,7 +92,7 @@ def build_map(items: list[dict], countries: list[str]) -> tuple[dict, list[str]]
 
 def catalog_countries(catalog_path: Optional[Path] = None) -> list[str]:
     catalog = json.loads((catalog_path or CATALOG_PATH).read_text())
-    entries = catalog.get("blogs", []) + catalog.get("ressources_sites", [])
+    entries = catalog.get("sites", [])
     return sorted({e["country"] for e in entries if e.get("country")})
 
 
@@ -111,7 +111,7 @@ def main() -> int:
 
     doc = {
         "_comment": (
-            "country ISO (superprof_blogs_catalog.json) -> location_name DataForSEO. "
+            "country ISO (superprof_sites_catalog.json) -> location_name DataForSEO. "
             "Généré et validé contre /v3/serp/google/locations ; ne pas éditer à la main. "
             "Régénérer : python3 scripts/utils/build_dataforseo_locations.py. "
             "UK (catalogue) -> GB (ISO). HK/TW/PR n'existent pas en 'Country' chez "

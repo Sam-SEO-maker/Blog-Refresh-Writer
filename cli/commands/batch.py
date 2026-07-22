@@ -2,12 +2,12 @@
 Commandes de traitement batch.
 
 Usage:
-    cw batch keyword-discovery [--blog enseigna]
-    cw batch audit-gsc [--blog enseigna] [--limit 10]
-    cw batch audit-serp [--blog enseigna]
-    cw batch decision [--blog enseigna]
-    cw batch refresh --action FULL_REFRESH [--blog enseigna]
-    cw batch workflow-auto [--blog enseigna] [--no-auto-refresh]
+    cw batch keyword-discovery [--site enseigna]
+    cw batch audit-gsc [--site enseigna] [--limit 10]
+    cw batch audit-serp [--site enseigna]
+    cw batch decision [--site enseigna]
+    cw batch refresh --action FULL_REFRESH [--site enseigna]
+    cw batch workflow-auto [--site enseigna] [--no-auto-refresh]
 """
 
 import click
@@ -45,7 +45,7 @@ def keyword_discovery(spreadsheet_id, blog):
 
     click.echo("Découverte des mots-clés manquants...")
     try:
-        results = orchestrator.batch_keyword_discovery(blog_id=blog)
+        results = orchestrator.batch_keyword_discovery(site_slug=blog)
 
         click.echo(f"\n📊 RÉSULTATS:")
         click.echo(f"  Traités:     {results['processed']}")
@@ -95,7 +95,7 @@ def keyword_refresh(spreadsheet_id, blog, min_volume):
     try:
         results = orchestrator.batch_keyword_re_discovery(
             min_volume=min_volume,
-            blog_id=blog,
+            site_slug=blog,
         )
 
         click.echo(f"\n📊 RÉSULTATS:")
@@ -142,7 +142,7 @@ def audit_gsc(spreadsheet_id, blog, limit):
     # Run batch audit GSC
     click.echo("Exécution batch audit GSC...")
     try:
-        results = orchestrator.batch_audit_gsc(blog_id=blog)
+        results = orchestrator.batch_audit_gsc(site_slug=blog)
 
         click.echo(f"\n📊 RÉSULTATS:")
         click.echo(f"  Traités:  {results['processed']}")
@@ -184,7 +184,7 @@ def audit_serp(spreadsheet_id, blog):
     # Run batch audit SERP
     click.echo("Exécution batch audit SERP...")
     try:
-        results = orchestrator.batch_audit_serp(blog_id=blog)
+        results = orchestrator.batch_audit_serp(site_slug=blog)
 
         click.echo(f"\n📊 RÉSULTATS:")
         click.echo(f"  Traités:  {results['processed']}")
@@ -226,7 +226,7 @@ def decision(spreadsheet_id, blog):
     # Run batch decision
     click.echo("Exécution batch decision...")
     try:
-        results = orchestrator.batch_decision(blog_id=blog)
+        results = orchestrator.batch_decision(site_slug=blog)
 
         click.echo(f"\n📊 RÉSULTATS:")
         click.echo(f"  NO ACTION:        {results['no_action']}")
@@ -271,7 +271,7 @@ def refresh(spreadsheet_id, action, blog, limit):
     # Run batch refresh
     click.echo("Exécution batch refresh...")
     try:
-        results = orchestrator.batch_refresh(action=action, blog_id=blog, limit=limit)
+        results = orchestrator.batch_refresh(action=action, site_slug=blog, limit=limit)
 
         click.echo(f"\n📊 RÉSULTATS:")
         click.echo(f"  Traités:         {results['processed']}")
@@ -318,7 +318,7 @@ def workflow_auto(spreadsheet_id, blog, auto_refresh):
     click.echo("Exécution workflow automatisé...")
     try:
         results = orchestrator.batch_workflow_auto(
-            blog_id=blog,
+            site_slug=blog,
             auto_refresh=auto_refresh
         )
 
@@ -375,7 +375,7 @@ def benchmark(blog, source_sheet, rows, spreadsheet_id):
     Ce benchmark couvre uniquement la partie automatisée.
 
     Exemple:
-      cw batch benchmark --blog superprof-ressources --source-sheet GSC_Perfs --rows 2:16
+      cw batch benchmark --site superprof-ressources --source-sheet GSC_Perfs --rows 2:16
     """
     import logging
     logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -390,7 +390,7 @@ def benchmark(blog, source_sheet, rows, spreadsheet_id):
 
     try:
         report = run_benchmark(
-            blog_id=blog,
+            site_slug=blog,
             source_sheet=source_sheet,
             row_range=rows,
             spreadsheet_id=spreadsheet_id,
@@ -431,8 +431,8 @@ def extract_tables(site_id, input_dir, output_dir, single_file):
 
     from scripts.utils.table_csv_extractor import extract_tables_to_csv
 
-    from _shared.core.tenant_paths import TenantPaths
-    base_dir = TenantPaths(base_path=Path(__file__).parents[2]).output_dir(site_id)
+    from _shared.core.site_paths import SitePaths
+    base_dir = SitePaths(base_path=Path(__file__).parents[2]).output_dir(site_id)
     html_dir = input_dir or base_dir / "html"
     csv_dir = output_dir or base_dir / "csv"
 

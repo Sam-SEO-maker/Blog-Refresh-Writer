@@ -2,7 +2,7 @@
 name: seo-outline
 description: >-
   Comment construire un bon plan éditorial optimisé pour le SEO/GEO (tous
-  tenants), AVANT de rédiger. Transforme les signaux data-driven (PAA, user
+  sites), AVANT de rédiger. Transforme les signaux data-driven (PAA, user
   intent, top 10 SERP, mot-clé, brief de sources) en un outline H2/H3 traçable
   (content_plan.md) : couverture des questions, placement des preuves, gap
   concurrentiel, hiérarchie de titres saine (≥3 H2, pas d'orphelin, 2-4 H3 par
@@ -28,13 +28,13 @@ Pourquoi un outline séparé de la rédaction :
 > **Frontière avec les autres skills.** Le *fond* (réponse directe, densité,
 > sources, GEO) = `edito-refresh`. La *forme* (balises, HTML clean, liens
 > interdits dans les headings) = `format-wordpress`. La *structure d'ensemble*
-> (blocs, ordre, intro/FAQ) = la skill du tenant, qui **prime**. Cette skill-ci
+> (blocs, ordre, intro/FAQ) = la skill du site, qui **prime**. Cette skill-ci
 > ne redéfinit rien de tout ça : elle organise l'outline.
 
 ## Où écrire — le squelette est posé par `plan init`
 
 Ne pas deviner le chemin : lancer d'abord `python3 content_writer.py plan init <url>
---blog <id>`. Le CLI crée `content_plan.md` dans le bon `context_dir`, pré-rempli
+--site <site-slug>`. Le CLI crée `content_plan.md` dans le bon `context_dir`, pré-rempli
 d'un template + des signaux (PAA, mot-clé, intent, assets) extraits de
 `audit_data.json` en commentaires. Cette skill **remplit** ce squelette ; le CLI ne
 rédige aucune phrase. Une fois rempli, `plan check` valide (verdict OK / A_CORRIGER).
@@ -78,7 +78,7 @@ Une section par bloc, chacune traçable à un signal :
 
 ## Invariants de hiérarchie des titres (toujours vrais)
 
-La skill du tenant peut **resserrer** ces bornes, jamais les desserrer.
+La skill du site peut **resserrer** ces bornes, jamais les desserrer.
 
 - **≥ 3 H2** par article. En dessous, sujet sous-structuré pour l'extraction IA.
 - **Pas de H2 orphelin** : chaque H2 porte du contenu (jamais deux H2 collés, ni un

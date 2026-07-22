@@ -206,7 +206,7 @@ Légende:
 
 - [SheetsClient Implementation](./sheets_client.py#L964)
 - [Migration Script](./migrate_to_single_sheet.py#L289-L300)
-- [CLAUDE.md - Architecture](../../../CLAUDE.md#architecture-multi-tenant)
+- [CLAUDE.md - Architecture](../../../CLAUDE.md#architecture-multi-site)
 
 ---
 

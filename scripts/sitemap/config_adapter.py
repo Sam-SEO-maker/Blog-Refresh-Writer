@@ -12,12 +12,12 @@ from typing import Optional
 from _shared.core.models import SiteConfig
 
 
-def load_blog_config_as_site_config(blog_id: str, base_path: Optional[Path] = None) -> SiteConfig:
+def load_blog_config_as_site_config(site_slug: str, base_path: Optional[Path] = None) -> SiteConfig:
     """
     Charge un fichier de configuration blog et le convertit en SiteConfig.
 
     Args:
-        blog_id: Identifiant du blog (sans .fr/.com)
+        site_slug: Identifiant du blog (sans .fr/.com)
         base_path: Chemin racine du projet
 
     Returns:
@@ -30,9 +30,9 @@ def load_blog_config_as_site_config(blog_id: str, base_path: Optional[Path] = No
     if base_path is None:
         base_path = Path(__file__).parent.parent.parent
 
-    # Config tenant unique (layout monorepo) : tenants/{id}/config/tenant.json
-    from _shared.core.tenant_paths import TenantPaths
-    config_paths = [TenantPaths(base_path=base_path).blog_config(blog_id)]
+    # Config site unique (layout monorepo) : sites/{id}/config/site.json
+    from _shared.core.site_paths import SitePaths
+    config_paths = [SitePaths(base_path=base_path).site_config(site_slug)]
 
     config_file = None
     for path in config_paths:
@@ -41,15 +41,15 @@ def load_blog_config_as_site_config(blog_id: str, base_path: Optional[Path] = No
             break
 
     if not config_file:
-        raise FileNotFoundError(f"Configuration non trouvée pour blog_id: {blog_id}")
+        raise FileNotFoundError(f"Configuration non trouvée pour site_slug: {site_slug}")
 
     # Charger le JSON
     with open(config_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     # Extraire les champs nécessaires pour SiteConfig
-    blog_id_clean = data.get("blog_id", blog_id)
-    display_name = data.get("display_name", blog_id)
+    site_slug_clean = data.get("site_slug", site_slug)
+    display_name = data.get("display_name", site_slug)
     domain = data.get("domain")
     gsc_property = data.get("gsc_property", f"https://{domain}/")
 
@@ -65,11 +65,11 @@ def load_blog_config_as_site_config(blog_id: str, base_path: Optional[Path] = No
 
     # Validation
     if not domain:
-        raise ValueError(f"Champ 'domain' manquant dans la config de {blog_id}")
+        raise ValueError(f"Champ 'domain' manquant dans la config de {site_slug}")
 
     # Créer le SiteConfig
     return SiteConfig(
-        id=blog_id_clean,
+        id=site_slug_clean,
         name=display_name,
         domain=domain,
         gsc_property=gsc_property,
@@ -80,12 +80,12 @@ def load_blog_config_as_site_config(blog_id: str, base_path: Optional[Path] = No
     )
 
 
-def load_fetcher_from_blog_config(blog_id: str, base_path: Optional[Path] = None):
+def load_fetcher_from_blog_config(site_slug: str, base_path: Optional[Path] = None):
     """
     Charge un SitemapFetcher depuis la configuration blog.
 
     Args:
-        blog_id: Identifiant du blog
+        site_slug: Identifiant du blog
         base_path: Chemin racine du projet
 
     Returns:
@@ -97,16 +97,16 @@ def load_fetcher_from_blog_config(blog_id: str, base_path: Optional[Path] = None
     """
     from .fetcher import SitemapFetcher
 
-    site_config = load_blog_config_as_site_config(blog_id, base_path)
+    site_config = load_blog_config_as_site_config(site_slug, base_path)
     return SitemapFetcher(site_config, base_path=base_path)
 
 
-def load_analyzer_from_blog_config(blog_id: str, base_path: Optional[Path] = None):
+def load_analyzer_from_blog_config(site_slug: str, base_path: Optional[Path] = None):
     """
     Charge un SitemapAnalyzer depuis la configuration blog.
 
     Args:
-        blog_id: Identifiant du blog
+        site_slug: Identifiant du blog
         base_path: Chemin racine du projet
 
     Returns:
@@ -118,5 +118,5 @@ def load_analyzer_from_blog_config(blog_id: str, base_path: Optional[Path] = Non
     """
     from .analyzer import SitemapAnalyzer
 
-    fetcher = load_fetcher_from_blog_config(blog_id, base_path)
+    fetcher = load_fetcher_from_blog_config(site_slug, base_path)
     return SitemapAnalyzer(fetcher)

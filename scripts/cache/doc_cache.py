@@ -92,9 +92,9 @@ class DocumentCache:
 
     def _load_blog_configs(self):
         """Charge toutes les configurations de blogs."""
-        from _shared.core.tenant_paths import TenantPaths
-        for blog_id, config_file in TenantPaths(base_path=self.base_path).blog_config_files():
-            self._blog_configs[blog_id] = self._load_json(
+        from _shared.core.site_paths import SitePaths
+        for site_slug, config_file in SitePaths(base_path=self.base_path).site_config_files():
+            self._blog_configs[site_slug] = self._load_json(
                 str(config_file.relative_to(self.base_path))
             )
 
@@ -115,7 +115,7 @@ class DocumentCache:
         Retourne le guide opérationnel complet CLAUDE.md.
 
         Returns:
-            Contenu de CLAUDE.md (architecture multi-tenant, règles éditoriales, cocons, etc.)
+            Contenu de CLAUDE.md (architecture multi-site, règles éditoriales, cocons, etc.)
         """
         return self._cache.get("claude_guide", "")
 
@@ -137,19 +137,19 @@ class DocumentCache:
 
         return self._cache.get(cache_key, "")
 
-    def get_blog_config(self, blog_id: str) -> dict:
+    def get_blog_config(self, site_slug: str) -> dict:
         """
         Retourne la configuration d'un blog.
 
         Args:
-            blog_id: Identifiant du blog (ex: "enseigna")
+            site_slug: Identifiant du blog (ex: "enseigna")
 
         Returns:
             Configuration du blog
         """
-        return self._blog_configs.get(blog_id, {})
+        return self._blog_configs.get(site_slug, {})
 
-    def get_all_blog_ids(self) -> list[str]:
+    def get_all_site_slugs(self) -> list[str]:
         """
         Retourne la liste de tous les blog IDs.
 
@@ -193,7 +193,7 @@ class DocumentCache:
                 parts.append("# CLAUDE.md - Orientation\n\n")
                 parts.append(self._extract_key_sections(
                     claude,
-                    ["Règle d'Or", "Architecture multi-tenant"]
+                    ["Règle d'Or", "Architecture multi-site"]
                 ))
         return "".join(parts)
 

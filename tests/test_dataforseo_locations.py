@@ -11,19 +11,19 @@ from pathlib import Path
 import pytest
 
 from scripts.utils.build_dataforseo_locations import build_map
-from scripts.utils.tenant_onboard import (
+from scripts.utils.site_onboard import (
     LOCATIONS_PATH,
-    build_tenant_config,
+    build_site_config,
     resolve_serp_location,
 )
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
-_CATALOG = _PROJECT_ROOT / "_shared" / "config" / "superprof_blogs_catalog.json"
+_CATALOG = _PROJECT_ROOT / "_shared" / "config" / "superprof_sites_catalog.json"
 
 
 def _catalog_countries() -> set[str]:
     cat = json.loads(_CATALOG.read_text(encoding="utf-8"))
-    return {e["country"] for e in cat.get("blogs", []) + cat.get("ressources_sites", [])}
+    return {e["country"] for e in cat.get("sites", [])}
 
 
 def _table() -> dict:
@@ -33,7 +33,7 @@ def _table() -> dict:
 # --- Table livrée -----------------------------------------------------------
 
 def test_tous_les_pays_du_catalogue_sont_resolus():
-    """Un pays non résolu = tenant onboardé sans locale SERP."""
+    """Un pays non résolu = site onboardé sans locale SERP."""
     manquants = _catalog_countries() - set(_table())
 
     assert not manquants, f"pays sans location_name : {sorted(manquants)}"
@@ -105,14 +105,14 @@ def test_build_map_signale_les_non_resolus():
 
 def test_scaffold_pre_remplit_la_locale():
     entry = {
-        "tenant_id": "ja-jp-blog",
+        "site_slug": "ja-jp-blog",
         "gsc_property": "https://www.superprof.jp/blog/",
         "country": "JP",
         "language": "ja",
         "type": "blog",
     }
 
-    cfg = build_tenant_config(entry)
+    cfg = build_site_config(entry)
 
     assert cfg["serp_location"] == "Japan"
     assert cfg["language"] == "ja"
@@ -120,10 +120,10 @@ def test_scaffold_pre_remplit_la_locale():
 
 def test_suisse_deux_langues_meme_location():
     """CH sert un blog fr (www) et un blog de (de.) : même location, langues distinctes."""
-    from scripts.utils.tenant_onboard import load_catalog_entry
+    from scripts.utils.site_onboard import load_catalog_entry
 
-    fr = build_tenant_config(load_catalog_entry("fr-ch-blog"))
-    de = build_tenant_config(load_catalog_entry("de-ch-blog"))
+    fr = build_site_config(load_catalog_entry("fr-ch-blog"))
+    de = build_site_config(load_catalog_entry("de-ch-blog"))
 
     assert fr["serp_location"] == de["serp_location"] == "Switzerland"
     assert (fr["language"], de["language"]) == ("fr", "de")
@@ -131,13 +131,13 @@ def test_suisse_deux_langues_meme_location():
 
 def test_scaffold_pays_inconnu_laisse_la_locale_vide():
     entry = {
-        "tenant_id": "xx-zz-blog",
+        "site_slug": "xx-zz-blog",
         "gsc_property": "https://example.test/blog/",
         "country": "ZZ",
         "language": "xx",
         "type": "blog",
     }
 
-    cfg = build_tenant_config(entry)
+    cfg = build_site_config(entry)
 
     assert cfg["serp_location"] == ""

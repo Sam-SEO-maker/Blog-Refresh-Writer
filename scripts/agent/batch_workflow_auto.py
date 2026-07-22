@@ -28,7 +28,7 @@ class BatchConfig:
     max_retries: int = 3
     retry_delay: float = 2.0  # secondes
     timeout_per_url: float = 60.0  # secondes par URL
-    blog_id_filter: Optional[str] = None  # Filtrer par blog (optionnel)
+    site_slug_filter: Optional[str] = None  # Filtrer par blog (optionnel)
 
 
 @dataclass
@@ -36,7 +36,7 @@ class URLTask:
     """Une tâche d'audit pour une URL."""
     row_number: int
     url: str
-    blog_id: str
+    site_slug: str
     keyword: str
     status: str = "pending"  # pending, gsc_done, serp_done, decision_done, failed
     error_message: Optional[str] = None
@@ -112,15 +112,15 @@ class AutoBatchWorkflow:
 
             # Créer une tâche pour chaque ligne (sauf header)
             for row_idx, row in enumerate(data[1:], start=2):
-                if not row or len(row) < 3:  # Minimum: blog_id, url, keyword
+                if not row or len(row) < 3:  # Minimum: site_slug, url, keyword
                     continue
 
-                blog_id = row[0] if len(row) > 0 else ""
+                site_slug = row[0] if len(row) > 0 else ""
                 url = row[2] if len(row) > 2 else ""
                 keyword = row[3] if len(row) > 3 else ""
 
                 # Filtrer par blog si spécifié
-                if self.config.blog_id_filter and blog_id != self.config.blog_id_filter:
+                if self.config.site_slug_filter and site_slug != self.config.site_slug_filter:
                     continue
 
                 if not url or not keyword:
@@ -129,7 +129,7 @@ class AutoBatchWorkflow:
                 task = URLTask(
                     row_number=row_idx,
                     url=url,
-                    blog_id=blog_id,
+                    site_slug=site_slug,
                     keyword=keyword
                 )
                 self.tasks.append(task)
@@ -269,7 +269,7 @@ class AutoBatchWorkflow:
                 orchestrator = RefreshOrchestrator(
                     spreadsheet_id=self.config.spreadsheet_id
                 )
-                result = orchestrator.batch_audit_gsc(blog_id=self.config.blog_id_filter)
+                result = orchestrator.batch_audit_gsc(site_slug=self.config.site_slug_filter)
 
                 success_count = result.get("success", 0)
                 failed_count = result.get("failed", 0)
@@ -313,7 +313,7 @@ class AutoBatchWorkflow:
                 orchestrator = RefreshOrchestrator(
                     spreadsheet_id=self.config.spreadsheet_id
                 )
-                result = orchestrator.batch_audit_serp(blog_id=self.config.blog_id_filter)
+                result = orchestrator.batch_audit_serp(site_slug=self.config.site_slug_filter)
 
                 success_count = result.get("success", 0)
                 failed_count = result.get("failed", 0)
@@ -353,7 +353,7 @@ class AutoBatchWorkflow:
             orchestrator = RefreshOrchestrator(
                 spreadsheet_id=self.config.spreadsheet_id
             )
-            result = orchestrator.batch_decision(blog_id=self.config.blog_id_filter)
+            result = orchestrator.batch_decision(site_slug=self.config.site_slug_filter)
 
             self.progress.decision_done = (
                 result.get("no_action", 0) +
@@ -436,7 +436,7 @@ Décisions:
                     )
                     result = orchestrator.batch_refresh(
                         action=action_name,
-                        blog_id=self.config.blog_id_filter
+                        site_slug=self.config.site_slug_filter
                     )
 
                     success_count = result.get("success", 0)
@@ -615,7 +615,7 @@ async def main():
         max_parallel=5,
         max_retries=3,
         retry_delay=2.0,
-        # blog_id_filter="enseigna"  # Optionnel
+        # site_slug_filter="enseigna"  # Optionnel
     )
 
     workflow = AutoBatchWorkflow(config)

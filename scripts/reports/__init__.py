@@ -1,3 +1,3 @@
 """
-Reports module - Rapports planifiés multi-tenant.
+Reports module - Rapports planifiés multi-site.
 """

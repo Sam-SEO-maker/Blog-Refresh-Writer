@@ -2,7 +2,7 @@
 Commandes d'audit.
 
 Usage:
-    cw audit editorial <url> --blog enseigna
+    cw audit editorial <url> --site enseigna
     cw audit gsc <url>
     cw audit serp <url> --keyword "parcoursup"
     cw audit cannibalization <url>
@@ -177,7 +177,7 @@ def gsc_page(url, days, dry_run):
     try:
         r = run_gsc_page(url, days=days, dry_run=dry_run)
         t = r["totals"]
-        click.echo(f"  Tenant: {r['site_id']} | Source: {r['source']}")
+        click.echo(f"  Site: {r['site_id']} | Source: {r['source']}")
         click.echo(f"  Clics:       {t['clicks']:,}")
         click.echo(f"  Impressions: {t['impressions']:,}")
         click.echo(f"  CTR:         {t['ctr']}%")

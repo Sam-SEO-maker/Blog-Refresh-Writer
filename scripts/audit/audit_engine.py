@@ -34,18 +34,18 @@ class AuditEngine:
     pour produire un rapport d'audit complet.
     """
 
-    def __init__(self, blog_config: dict):
-        self.logger = logging.getLogger(f"AuditEngine[{blog_config.get('blog_id', 'unknown')}]")
+    def __init__(self, site_config: dict):
+        self.logger = logging.getLogger(f"AuditEngine[{site_config.get('site_slug', 'unknown')}]")
         """
         Initialise le moteur d'audit.
 
         Args:
-            blog_config: Configuration du blog (depuis config/blogs/{blog_id}.json)
+            site_config: Configuration du blog (depuis config/blogs/{site_slug}.json)
         """
-        self.blog_config = blog_config
+        self.site_config = site_config
 
-        self.domain = blog_config.get("domain", "")
-        self.gsc_property = blog_config.get("gsc_property", f"https://{self.domain}/")
+        self.domain = site_config.get("domain", "")
+        self.gsc_property = site_config.get("gsc_property", f"https://{self.domain}/")
 
         # Initialiser les analyseurs
         self.html_analyzer = HTMLAnalyzer(self.domain)
@@ -135,7 +135,7 @@ class AuditEngine:
 
         return AuditReport(
             url=url,
-            blog_id=self.blog_config.get("blog_id", ""),
+            site_slug=self.site_config.get("site_slug", ""),
             audit_date=audit_date,
             html_analysis=html_analysis,
             gsc_analysis=gsc_analysis,
@@ -478,7 +478,7 @@ class AuditEngine:
 
         return {
             "url": report.url,
-            "blog_id": report.blog_id,
+            "site_slug": report.site_slug,
             "main_keyword": main_keyword,  # Inclure au niveau racine pour decision engine
             "audit_date": report.audit_date,
             "overall_score": report.overall_score,

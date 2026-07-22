@@ -1,7 +1,7 @@
 """
-Google auth — credentials par tenant selon `auth_mode` (Phase 4bis-B).
+Google auth — credentials par site selon `auth_mode` (Phase 4bis-B).
 
-Deux modes, choisis par tenant (champ `auth_mode` de sa config, défaut service_account) :
+Deux modes, choisis par site (champ `auth_mode` de sa config, défaut service_account) :
 
 - `service_account` (défaut) : compte de service partagé (GOOGLE_SA_PATH). Zéro
   friction pour le mainteneur — fonctionne déjà sur ses propriétés GSC/Sheets.
@@ -26,14 +26,14 @@ _TOKEN_PATH = Path(
 ).expanduser()
 
 
-def resolve_auth_mode(tenant_id: Optional[str] = None) -> str:
-    """Lit `auth_mode` de la config du tenant. Défaut: 'service_account'."""
-    if not tenant_id:
+def resolve_auth_mode(site_slug: Optional[str] = None) -> str:
+    """Lit `auth_mode` de la config du site. Défaut: 'service_account'."""
+    if not site_slug:
         return "service_account"
     try:
-        from _shared.core.tenant_paths import TenantPaths
+        from _shared.core.site_paths import SitePaths
         import json
-        cfg_path = TenantPaths().blog_config(tenant_id)
+        cfg_path = SitePaths().site_config(site_slug)
         if cfg_path.exists():
             mode = json.loads(cfg_path.read_text(encoding="utf-8")).get("auth_mode")
             if mode in ("service_account", "oauth_user"):

@@ -5,7 +5,7 @@ Utilise l'API URL Inspection pour forcer la demande d'indexation des URLs
 après un refresh de contenu.
 
 Usage:
-    python scripts/indexing/request_indexing.py --spreadsheet-id <ID> --blog-id <blog>
+    python scripts/indexing/request_indexing.py --spreadsheet-id <ID> --site-id <blog>
     python scripts/indexing/request_indexing.py --url <URL> --site-property <property>
 """
 
@@ -174,7 +174,7 @@ def main():
 
     # Mode 2: Batch depuis spreadsheet
     parser.add_argument("--spreadsheet-id", type=str, help="ID du Google Spreadsheet")
-    parser.add_argument("--blog-id", type=str, help="Blog ID (enseigna, superprof-ressources, etc.)")
+    parser.add_argument("--site-id", type=str, help="Blog ID (enseigna, superprof-ressources, etc.)")
     parser.add_argument("--status-filter", type=str, default="CONTENT DONE",
                        help="Filtre sur colonne G (status)")
 
@@ -211,21 +211,21 @@ def main():
         from _shared.config.sites import SITE_CONFIGS
 
         # Charger le blog config pour obtenir le gsc_property
-        if args.blog_id:
-            blog_config = SITE_CONFIGS.get(args.blog_id)
-            if not blog_config:
-                print(f"❌ Blog ID inconnu: {args.blog_id}")
+        if args.site_slug:
+            site_config = SITE_CONFIGS.get(args.site_slug)
+            if not site_config:
+                print(f"❌ Blog ID inconnu: {args.site_slug}")
                 return
-            gsc_property = blog_config.get("gsc_property")
+            gsc_property = site_config.get("gsc_property")
         else:
-            print("❌ --blog-id requis pour le mode batch")
+            print("❌ --site-id requis pour le mode batch")
             return
 
         # Charger les URLs depuis le spreadsheet
         sheets_client = SheetsClient(args.spreadsheet_id)
         rows = sheets_client.read_pending_for_refresh(
             action=None,  # All actions
-            blog_id=args.blog_id
+            site_slug=args.site_slug
         )
 
         # Filtrer par status
@@ -235,7 +235,7 @@ def main():
             if row.status == args.status_filter
         ]
 
-        print(f"📊 {len(urls_to_index)} URLs à indexer (blog: {args.blog_id}, status: {args.status_filter})")
+        print(f"📊 {len(urls_to_index)} URLs à indexer (blog: {args.site_slug}, status: {args.status_filter})")
 
         if not urls_to_index:
             print("⚠️  Aucune URL à indexer")
@@ -266,7 +266,7 @@ def main():
 
     else:
         parser.print_help()
-        print("\n❌ Soit --url + --site-property, soit --spreadsheet-id + --blog-id requis")
+        print("\n❌ Soit --url + --site-property, soit --spreadsheet-id + --site-id requis")
 
 
 if __name__ == "__main__":

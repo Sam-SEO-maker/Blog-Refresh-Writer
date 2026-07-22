@@ -17,7 +17,7 @@ Le **Sitemap Discovery Tool** permet d'automatiser la découverte d'URLs à audi
 ✅ **Identification contenu obsolète** : Trouve les articles > X mois sans mise à jour
 ✅ **Priorisation automatique** : Score 1-5 basé sur l'âge du contenu
 ✅ **Cache intelligent** : Évite les crawls répétés, détecte les changements
-✅ **Multi-tenant** : Supporte les 6 blogs simultanément
+✅ **Multi-site** : Supporte les 6 blogs simultanément
 
 ---
 
@@ -36,7 +36,7 @@ scripts/sitemap/
 ### Stockage Cache
 
 ```
-_shared/temp/sitemaps/{blog_id}/sitemap_cache.json
+_shared/temp/sitemaps/{site_slug}/sitemap_cache.json
 ```
 
 Le cache contient :
@@ -53,7 +53,7 @@ Le cache contient :
 Détecte les articles publiés depuis le dernier crawl :
 
 ```bash
-python sitemap_discovery.py --blog enseigna --detect-new
+python sitemap_discovery.py --site enseigna --detect-new
 ```
 
 **Output** :
@@ -70,7 +70,7 @@ python sitemap_discovery.py --blog enseigna --detect-new
 Identifie les articles nécessitant un refresh :
 
 ```bash
-python sitemap_discovery.py --blog enseigna --find-stale --months 6
+python sitemap_discovery.py --site enseigna --find-stale --months 6
 ```
 
 **Output** :
@@ -89,7 +89,7 @@ python sitemap_discovery.py --blog enseigna --find-stale --months 6
 N'afficher que les priorités hautes :
 
 ```bash
-python sitemap_discovery.py --blog enseigna.fr --find-stale --months 12 --min-priority 4
+python sitemap_discovery.py --site enseigna.fr --find-stale --months 12 --min-priority 4
 ```
 
 ### 4. Tous les Blogs Simultanément
@@ -105,7 +105,7 @@ python sitemap_discovery.py --all-blogs --find-stale --months 6 --min-priority 3
 Fonctionnalité en cours d'implémentation :
 
 ```bash
-python sitemap_discovery.py --blog enseigna --find-stale --export-to-sheets --dry-run
+python sitemap_discovery.py --site enseigna --find-stale --export-to-sheets --dry-run
 ```
 
 ---
@@ -130,7 +130,7 @@ python sitemap_discovery.py --blog enseigna --find-stale --export-to-sheets --dr
 
 ```bash
 # Trouver tout le contenu > 6 mois
-python sitemap_discovery.py --blog enseigna --find-stale --months 6 --min-priority 3
+python sitemap_discovery.py --site enseigna --find-stale --months 6 --min-priority 3
 
 # Résultat : 128 URLs obsolètes
 # Action : Ajouter les priorités 5 et 4 (101 URLs) dans Google Sheets pour refresh
@@ -167,8 +167,8 @@ python sitemap_discovery.py --all-blogs --find-stale --months 12 --min-priority 
 
 ```bash
 # enseigna et enseigna : YMYL VERY HIGH
-python sitemap_discovery.py --blog enseigna --find-stale --months 4 --min-priority 4
-python sitemap_discovery.py --blog enseigna --find-stale --months 4 --min-priority 4
+python sitemap_discovery.py --site enseigna --find-stale --months 4 --min-priority 4
+python sitemap_discovery.py --site enseigna --find-stale --months 4 --min-priority 4
 
 # Action : Priorité absolue pour ces URLs (disclaimers, sources médicales)
 ```
@@ -236,7 +236,7 @@ Chaque blog peut spécifier l'URL de son sitemap dans sa config JSON :
 
 ```json
 {
-  "blog_id": "enseigna",
+  "site_slug": "enseigna",
   "domain": "enseigna",
   "sitemap_url": "https://enseigna/sitemap.xml",
   ...
@@ -271,7 +271,7 @@ Chaque blog peut spécifier l'URL de son sitemap dans sa config JSON :
 ### Exemple 1 : enseigna
 
 ```bash
-$ python sitemap_discovery.py --blog enseigna --find-stale --months 6
+$ python sitemap_discovery.py --site enseigna --find-stale --months 6
 
 🔍 Recherche contenu obsolète pour enseigna (> 6 mois)...
   ✅ URLs obsolètes trouvées: 128
@@ -296,7 +296,7 @@ $ python sitemap_discovery.py --blog enseigna --find-stale --months 6
 ### Exemple 2 : enseigna (YMYL)
 
 ```bash
-$ python sitemap_discovery.py --blog enseigna --find-stale --months 4 --min-priority 4
+$ python sitemap_discovery.py --site enseigna --find-stale --months 4 --min-priority 4
 
 🔍 Recherche contenu obsolète pour enseigna (> 4 mois)...
   ✅ URLs obsolètes trouvées: 45

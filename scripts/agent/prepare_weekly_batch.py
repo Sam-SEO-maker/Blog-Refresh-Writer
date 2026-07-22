@@ -32,7 +32,7 @@ for noisy in ("googleapiclient", "google", "urllib3", "scripts.scraping.content_
     logging.getLogger(noisy).setLevel(logging.WARNING)
 
 BLOG_ID = "superprof-ressources"
-# Onglet + colonne de statut lus depuis la config du tenant (§4bis-A) ; repli sur
+# Onglet + colonne de statut lus depuis la config du site (§4bis-A) ; repli sur
 # les littéraux historiques si le bloc `sheets` est absent.
 from _shared.core.sheets_config import get_primary_tab_name, get_status_col
 NGL_SHEET = get_primary_tab_name(BLOG_ID, default="New Growing List")
@@ -219,7 +219,7 @@ def main() -> int:
 
             # 3. Context bundle pour la Phase 2
             row = RefreshAuditRow(
-                blog_id=BLOG_ID,
+                site_slug=BLOG_ID,
                 blogpost_url=url,
                 main_keyword=info["main_keyword"],
                 title="",

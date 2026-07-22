@@ -45,7 +45,7 @@ class PromptComposer:
         Args:
             project_root: Racine du projet (par défaut: auto-détectée). Les stratégies
                 vivent désormais sous `_shared/strategies/` ; les overrides de site sont
-                résolus via TenantPaths depuis la racine.
+                résolus via SitePaths depuis la racine.
         """
         if project_root is None:
             current_file = Path(__file__).resolve()
@@ -70,7 +70,7 @@ class PromptComposer:
             subject: Sujet optionnel (ex: "education_reviews", "music_lessons")
             site_id: ID du site (ex: "enseigna") pour prompts site-specific
             content_type: Type de contenu optionnel (ex: "review", "guide") pour template
-            article_type: sous-type d'article du tenant (ex. enseigna : "avis" |
+            article_type: sous-type d'article du site (ex. enseigna : "avis" |
                 "versus"). "versus" ajoute le prompt vs_concurrent.md (niveau 4bis).
                 Distinct de content_type (qui pilote le template, niveau 5).
 
@@ -153,7 +153,7 @@ class PromptComposer:
         Niveau 2 (catégorie) : plus aucun prompt de catégorie sur disque.
 
         Les répertoires `categories/` et `subjects/` legacy ont été retirés ; la
-        structure/le ton spécifiques vivent désormais dans les skills du tenant.
+        structure/le ton spécifiques vivent désormais dans les skills du site.
         Conservé comme point d'extension (retourne toujours None).
         """
         return None
@@ -168,18 +168,18 @@ class PromptComposer:
         Returns:
             Contenu du prompt ou None
         """
-        # Résolution via le point unique TenantPaths (base = racine du projet).
-        from _shared.core.tenant_paths import TenantPaths
-        return self._load_prompt(TenantPaths(base_path=self.project_root).site_prompt(site_id))
+        # Résolution via le point unique SitePaths (base = racine du projet).
+        from _shared.core.site_paths import SitePaths
+        return self._load_prompt(SitePaths(base_path=self.project_root).site_prompt(site_id))
 
     def _load_vs_concurrent(self, site_id: str) -> Optional[str]:
-        """Charge le prompt du sous-type versus depuis tenants/{id}/prompts/vs_concurrent.md.
+        """Charge le prompt du sous-type versus depuis sites/{id}/prompts/vs_concurrent.md.
 
-        Returns None si le tenant n'a pas de prompt versus (cas normal pour la
-        plupart des tenants).
+        Returns None si le site n'a pas de prompt versus (cas normal pour la
+        plupart des sites).
         """
-        from _shared.core.tenant_paths import TenantPaths
-        return self._load_prompt(TenantPaths(base_path=self.project_root).vs_concurrent_prompt(site_id))
+        from _shared.core.site_paths import SitePaths
+        return self._load_prompt(SitePaths(base_path=self.project_root).vs_concurrent_prompt(site_id))
 
     def _load_template(self, content_type: str) -> Optional[str]:
         """

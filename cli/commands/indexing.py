@@ -2,9 +2,9 @@
 Commandes d'indexation.
 
 Usage:
-    cw indexing request --blog enseigna [--spreadsheet-id <ID>]
-    cw indexing scan --blog enseigna
-    cw indexing bulk-diagnostic --blog enseigna
+    cw indexing request --site enseigna [--spreadsheet-id <ID>]
+    cw indexing scan --site enseigna
+    cw indexing bulk-diagnostic --site enseigna
 """
 
 import click
@@ -36,17 +36,17 @@ def request(blog, spreadsheet_id):
     click.echo()
 
     # Get blog config
-    blog_config = SITE_CONFIGS.get(blog)
-    if not blog_config:
+    site_config = SITE_CONFIGS.get(blog)
+    if not site_config:
         click.echo(f"❌ Blog ID inconnu: {blog}", err=True)
         raise click.Abort()
 
-    gsc_property = blog_config.get("gsc_property")
+    gsc_property = site_config.get("gsc_property")
 
     # Get URLs with status = CONTENT DONE
     click.echo("[1/2] Lecture spreadsheet...")
     sheets_client = SheetsClient(spreadsheet_id)
-    rows = sheets_client.read_pending_for_refresh(action=None, blog_id=blog)
+    rows = sheets_client.read_pending_for_refresh(action=None, site_slug=blog)
     urls_to_index = [row.blogpost_url for row in rows if row.status == "CONTENT DONE"]
 
     if not urls_to_index:

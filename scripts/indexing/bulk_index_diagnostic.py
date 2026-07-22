@@ -8,7 +8,7 @@ et inscrit les URLs à problème dans le spreadsheet Refreshs_Audit.
 Usage:
     # Dry-run pour tester (10 URLs)
     python scripts/indexing/bulk_index_diagnostic.py \
-        --blog enseigna.fr \
+        --site enseigna.fr \
         --spreadsheet-id <SHEET_ID> \
         --limit 10 \
         --dry-run \
@@ -16,12 +16,12 @@ Usage:
 
     # Production (scan complet)
     python scripts/indexing/bulk_index_diagnostic.py \
-        --blog enseigna.fr \
+        --site enseigna.fr \
         --spreadsheet-id <SHEET_ID>
 
     # Update-only (URLs existantes seulement)
     python scripts/indexing/bulk_index_diagnostic.py \
-        --blog enseigna.fr \
+        --site enseigna.fr \
         --spreadsheet-id <SHEET_ID> \
         --update-only
 """
@@ -54,26 +54,26 @@ from _shared.core.models import SitemapURL
 # PHASE 1: Récupération des URLs via Sitemap
 # =========================================================================
 
-def fetch_all_urls_for_blog(blog_id: str, verbose: bool = False) -> List[str]:
+def fetch_all_urls_for_blog(site_slug: str, verbose: bool = False) -> List[str]:
     """
     Récupère toutes les URLs d'un blog depuis son sitemap.
 
     Args:
-        blog_id: Identifiant du blog (ex: "enseigna")
+        site_slug: Identifiant du blog (ex: "enseigna")
         verbose: Mode verbose pour logs détaillés
 
     Returns:
         Liste d'URLs (strings)
     """
     if verbose:
-        print(f"\n[Phase 1] Fetching URLs from sitemap for {blog_id}...")
+        print(f"\n[Phase 1] Fetching URLs from sitemap for {site_slug}...")
 
     try:
-        # Nettoyer le blog_id (retirer .fr/.com si présent)
-        blog_id_clean = blog_id.replace(".fr", "").replace(".com", "")
+        # Nettoyer le site_slug (retirer .fr/.com si présent)
+        site_slug_clean = site_slug.replace(".fr", "").replace(".com", "")
 
         # Charger le fetcher depuis la config
-        fetcher = load_fetcher_from_blog_config(blog_id_clean)
+        fetcher = load_fetcher_from_blog_config(site_slug_clean)
 
         # Récupérer les URLs (force_refresh pour avoir les données fraîches)
         sitemap_urls: List[SitemapURL] = fetcher.fetch(force_refresh=True)
@@ -102,7 +102,7 @@ def fetch_all_urls_for_blog(blog_id: str, verbose: bool = False) -> List[str]:
 # =========================================================================
 
 def diagnose_indexation_issues(
-    blog_id: str,
+    site_slug: str,
     urls: List[str],
     include_scenarios: List[str],
     delay: float = 1.0,
@@ -113,7 +113,7 @@ def diagnose_indexation_issues(
     Diagnostique l'indexation GSC pour chaque URL et filtre les problèmes.
 
     Args:
-        blog_id: Identifiant du blog
+        site_slug: Identifiant du blog
         urls: Liste des URLs à diagnostiquer
         include_scenarios: Scenarios à inclure (ex: ["URL_NOT_ON_GOOGLE", "DISCOVERED_NOT_INDEXED"])
         delay: Délai entre appels API GSC (secondes)
@@ -130,10 +130,10 @@ def diagnose_indexation_issues(
 
     # Charger la config blog pour obtenir gsc_property
     from scripts.sitemap.config_adapter import load_blog_config_as_site_config
-    blog_id_clean = blog_id.replace(".fr", "").replace(".com", "")
+    site_slug_clean = site_slug.replace(".fr", "").replace(".com", "")
 
     try:
-        site_config = load_blog_config_as_site_config(blog_id_clean)
+        site_config = load_blog_config_as_site_config(site_slug_clean)
         gsc_property = site_config.gsc_property
     except FileNotFoundError as e:
         print(f"  ❌ Error: {e}")
@@ -166,7 +166,7 @@ def diagnose_indexation_issues(
             # Filtrer les scenarios à inclure
             if scenario in include_scenarios:
                 issues.append({
-                    "blog_id": blog_id_clean,
+                    "site_slug": site_slug_clean,
                     "url": url,
                     "scenario": scenario,
                     "verdict": verdict,
@@ -260,7 +260,7 @@ def insert_or_update_in_spreadsheet(
 
     for i, issue in enumerate(issues, 1):
         url = issue["url"]
-        blog_id = issue["blog_id"]
+        site_slug = issue["site_slug"]
         scenario = issue["scenario"]
 
         if verbose:
@@ -294,7 +294,7 @@ def insert_or_update_in_spreadsheet(
 
                 # Créer nouvelle ligne avec structure complète (28 colonnes A-AB, post-suppression cocon_branch)
                 row = [
-                    blog_id,                    # A - blog_id
+                    site_slug,                    # A - site_slug
                     url,                        # B - blogpost_url
                     "",                         # C - main_keyword (vide)
                     "",                         # D - title (vide, sera scrapé par workflow)
@@ -353,7 +353,7 @@ def main():
 Exemples:
   # Dry-run pour tester (10 URLs)
   python scripts/indexing/bulk_index_diagnostic.py \\
-    --blog enseigna.fr \\
+    --site enseigna.fr \\
     --spreadsheet-id <SHEET_ID> \\
     --limit 10 \\
     --dry-run \\
@@ -361,12 +361,12 @@ Exemples:
 
   # Production (scan complet)
   python scripts/indexing/bulk_index_diagnostic.py \\
-    --blog enseigna.fr \\
+    --site enseigna.fr \\
     --spreadsheet-id <SHEET_ID>
 
   # Update-only (URLs existantes seulement)
   python scripts/indexing/bulk_index_diagnostic.py \\
-    --blog enseigna.fr \\
+    --site enseigna.fr \\
     --spreadsheet-id <SHEET_ID> \\
     --update-only
         """
@@ -374,7 +374,7 @@ Exemples:
 
     # Arguments obligatoires
     parser.add_argument(
-        "--blog",
+        "--site",
         type=str,
         required=True,
         help="Blog unique à traiter (enseigna.fr, superprof.fr, etc.)"
@@ -453,7 +453,7 @@ Exemples:
 
     # Phase 2: Diagnostiquer indexation GSC
     issues = diagnose_indexation_issues(
-        blog_id=args.blog,
+        site_slug=args.blog,
         urls=urls,
         include_scenarios=include_scenarios,
         delay=args.delay,

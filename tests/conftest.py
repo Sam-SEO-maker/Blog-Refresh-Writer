@@ -233,7 +233,7 @@ def decision_rules():
 def blog_config_enseigna():
     """Configuration du blog Enseigna."""
     return {
-        "blog_id": "enseigna",
+        "site_slug": "enseigna",
         "domain": "enseigna.fr",
         "gsc_property": "https://enseigna.fr/",
         "content_type": "review_comparatif",

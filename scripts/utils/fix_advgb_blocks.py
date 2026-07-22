@@ -21,8 +21,8 @@ import sys
 import uuid
 from pathlib import Path
 
-from _shared.core.tenant_paths import TenantPaths
-HTML_DIR = TenantPaths().output_dir("superprof-ressources") / "html"
+from _shared.core.site_paths import SitePaths
+HTML_DIR = SitePaths().output_dir("superprof-ressources") / "html"
 
 FILES = [
     "monnaie_franc_puissance", "ouvrage_brisou_pellen", "regles_bonne_conduite",

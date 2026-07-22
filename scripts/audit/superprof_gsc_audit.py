@@ -35,7 +35,7 @@ from _shared.core.models.sheets_models import SuperprofAuditRow
 # Constantes — single source of truth
 # -----------------------------------------------------------------------------
 
-# spreadsheet_id lu depuis la config du tenant (§4bis-A), repli littéral. Les
+# spreadsheet_id lu depuis la config du site (§4bis-A), repli littéral. Les
 # onglets ci-dessous sont spécifiques à cet audit (hors bloc `sheets` autoritatif).
 from _shared.core.sheets_config import get_spreadsheet_id
 SPREADSHEET_ID = get_spreadsheet_id("superprof-ressources", default="1Vutb06Fcm3awnANPbtLkI1EvhbE9d-TXrZRLTrmmLlQ")
@@ -52,8 +52,8 @@ SA_PATH = Path(
     )
 ).expanduser()
 
-from _shared.core.tenant_paths import TenantPaths
-OUTPUT_DIR = TenantPaths(base_path=Path(__file__).resolve().parents[2]).output_dir("superprof-ressources") / "audit"
+from _shared.core.site_paths import SitePaths
+OUTPUT_DIR = SitePaths(base_path=Path(__file__).resolve().parents[2]).output_dir("superprof-ressources") / "audit"
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",

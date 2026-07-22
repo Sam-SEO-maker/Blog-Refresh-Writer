@@ -45,5 +45,5 @@ avantages/inconvénients (tableau) → FAQ.
 - **Fond** (réponse directe, FAQ, sources, E-E-A-T) → skill `edito-refresh`.
 - **Forme** (préservation des assets, HTML clean, tableaux, métadonnées, callouts
   colorés interdits) → skill `format-wordpress`.
-- **Structure d'ensemble et couleurs** → skill du tenant. Ne pas coder de couleurs
+- **Structure d'ensemble et couleurs** → skill du site. Ne pas coder de couleurs
   en dur ici. Les gabarits ci-dessus décrivent l'ORDRE des sections, pas leur style.

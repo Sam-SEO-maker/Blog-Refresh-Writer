@@ -63,7 +63,7 @@ class SheetsClient:
 
     # Structure des colonnes Refreshs_Audit (28 colonnes A-AB, post-suppression cocon_branch)
     COLS_REFRESHS_AUDIT = [
-        "blog_id",                  # A
+        "site_slug",                  # A
         "blogpost_url",             # B
         "main_keyword",             # C
         "title",                    # D
@@ -95,7 +95,7 @@ class SheetsClient:
 
     # LEGACY: Structure des colonnes URLs_Input (kept for backwards compatibility)
     COLS_URLS_INPUT = [
-        "blog_id", "url", "main_keyword", "title", "post_type", "status", "triggered_by",
+        "site_slug", "url", "main_keyword", "title", "post_type", "status", "triggered_by",
         "processing_started", "processing_completed", "error_message", "notes",
         "child_url_1", "child_url_2", "child_url_3", "child_url_4", "child_url_5", "child_url_6"
     ]
@@ -244,12 +244,12 @@ class SheetsClient:
     # URLs_Input Operations
     # =========================================================================
 
-    def read_pending_urls(self, blog_id: Optional[str] = None) -> list[URLTask]:
+    def read_pending_urls(self, site_slug: Optional[str] = None) -> list[URLTask]:
         """
         Recupere les URLs en attente de traitement.
 
         Args:
-            blog_id: Filtrer par blog (optionnel)
+            site_slug: Filtrer par blog (optionnel)
 
         Returns:
             Liste de URLTask en status PENDING
@@ -266,8 +266,8 @@ class SheetsClient:
                 if len(row) < len(self.COLS_URLS_INPUT):
                     row.extend([""] * (len(self.COLS_URLS_INPUT) - len(row)))
 
-                # Indices (NEW STRUCTURE): blog_id(0), url(1), main_keyword(2), title(3), post_type(4), status(5), triggered_by(6), ...
-                blog_id_val = row[0] if len(row) > 0 else ""
+                # Indices (NEW STRUCTURE): site_slug(0), url(1), main_keyword(2), title(3), post_type(4), status(5), triggered_by(6), ...
+                site_slug_val = row[0] if len(row) > 0 else ""
                 status = row[5] if len(row) > 5 else "PENDING"
                 main_keyword = row[2] if len(row) > 2 else ""
 
@@ -275,14 +275,14 @@ class SheetsClient:
                 if status != TaskStatus.PENDING.value:
                     continue
 
-                # Filtrer par blog_id si spécifié
-                if blog_id and blog_id_val != blog_id:
+                # Filtrer par site_slug si spécifié
+                if site_slug and site_slug_val != site_slug:
                     continue
 
                 tasks.append(URLTask(
                     url=row[1],
                     title=row[3] if len(row) > 3 else "",
-                    blog_id=blog_id_val,
+                    site_slug=site_slug_val,
                     row_index=i,
                     status=TaskStatus(status) if status else TaskStatus.PENDING,
                     triggered_by=TriggerType(row[6]) if len(row) > 6 and row[6] else TriggerType.MANUAL,
@@ -300,7 +300,7 @@ class SheetsClient:
             print(f"Erreur lecture URLs: {e}")
             return []
 
-    def add_url(self, url: str, blog_id: str,
+    def add_url(self, url: str, site_slug: str,
                 title: str = "",
                 triggered_by: TriggerType = TriggerType.MANUAL,
                 notes: str = "") -> bool:
@@ -310,7 +310,7 @@ class SheetsClient:
         Args:
             url: URL à ajouter
             title: Titre de l'article
-            blog_id: Identifiant du blog
+            site_slug: Identifiant du blog
             triggered_by: Source du déclenchement
             notes: Notes optionnelles
 
@@ -324,7 +324,7 @@ class SheetsClient:
             row = [
                 url,
                 title,
-                blog_id,
+                site_slug,
                 "",  # post_type (empty — column kept for backwards compat)
                 TaskStatus.PENDING.value,
                 triggered_by.value,
@@ -364,7 +364,7 @@ class SheetsClient:
                 return False
 
             # Préparer les mises à jour
-            # Colonnes: url(A), title(B), blog_id(C), post_type(D), status(E), triggered_by(F),
+            # Colonnes: url(A), title(B), site_slug(C), post_type(D), status(E), triggered_by(F),
             #           processing_started(G), processing_completed(H), error_message(I), notes(J)
             updates = {
                 "E": status.value,  # Colonne status
@@ -564,7 +564,7 @@ class SheetsClient:
             True si succès
         """
         # Trouver la ligne et mettre à jour la colonne notes avec l'action
-        # Colonnes: url(A), title(B), blog_id(C), ..., notes(J)
+        # Colonnes: url(A), title(B), site_slug(C), ..., notes(J)
         row_index = self._find_url_row(url, self.SHEET_URLS_INPUT)
         if row_index:
             return self._update_cell(
@@ -668,7 +668,7 @@ class SheetsClient:
             traceback.print_exc()
             return False
 
-    def _reset_and_prepare_statuses(self, blog_id: Optional[str] = None, post_type: Optional[str] = None) -> dict:
+    def _reset_and_prepare_statuses(self, site_slug: Optional[str] = None, post_type: Optional[str] = None) -> dict:
         """
         Réinitialise et prépare les statuts pour le workflow automatisé.
 
@@ -678,7 +678,7 @@ class SheetsClient:
         - Colonne J (audit_serp): Laisse vide si vide (auto-détection par read_pending_for_serp_audit)
 
         Args:
-            blog_id: Filtrer par blog_id (optionnel)
+            site_slug: Filtrer par site_slug (optionnel)
 
         Returns:
             Dict avec statistiques: {"status_reset": int, "urls_prepared": int}
@@ -700,8 +700,8 @@ class SheetsClient:
                 if len(row) < 1:
                     continue
 
-                # Filter by blog_id if specified
-                if blog_id and row[0] != blog_id:
+                # Filter by site_slug if specified
+                if site_slug and row[0] != site_slug:
                     continue
 
                 # Filter by post_type if specified (column F, index 5)
@@ -750,7 +750,7 @@ class SheetsClient:
         """Trouve l'index de ligne d'une URL.
 
         Note: Pour Refreshs_Audit, l'URL est en colonne B (index 1).
-        Colonne A = blog_id, Colonne B = blogpost_url.
+        Colonne A = site_slug, Colonne B = blogpost_url.
         Pour les autres sheets (legacy), l'URL est en colonne B (index 1).
         """
         data = self._read_sheet(sheet_name)
@@ -764,7 +764,7 @@ class SheetsClient:
     # NEW: v2.0 Single-Sheet Architecture Methods
     # =========================================================================
 
-    def read_pending_for_gsc_audit(self, blog_id: Optional[str] = None) -> list["RefreshAuditRow"]:
+    def read_pending_for_gsc_audit(self, site_slug: Optional[str] = None) -> list["RefreshAuditRow"]:
         """
         Lit les lignes où audit_gsc est vide ou AUDITING.
 
@@ -779,7 +779,7 @@ class SheetsClient:
                 if audit_gsc in ("", "AUDITING"):
                         try:
                             audit_row = RefreshAuditRow.from_list(row, i)
-                            if not blog_id or audit_row.blog_id == blog_id:
+                            if not site_slug or audit_row.site_slug == site_slug:
                                 rows.append(audit_row)
                         except Exception as e:
                             # Fallback: créer une row minimale avec les champs essentiels
@@ -792,7 +792,7 @@ class SheetsClient:
                                     post_type = ""
 
                                 audit_row = RefreshAuditRow(
-                                    blog_id=row[0] if len(row) > 0 else "",
+                                    site_slug=row[0] if len(row) > 0 else "",
                                     blogpost_url=row[1] if len(row) > 1 else "",
                                     main_keyword=row[2] if len(row) > 2 else "",
                                     title=row[3] if len(row) > 3 else "",
@@ -816,7 +816,7 @@ class SheetsClient:
                                     error_message=row[21] if len(row) > 21 else "",
                                     row_index=i,
                                 )
-                                if not blog_id or audit_row.blog_id == blog_id:
+                                if not site_slug or audit_row.site_slug == site_slug:
                                     rows.append(audit_row)
                                     print(f"[INFO] Row minimale créée pour ligne {i}")
                             except Exception as fallback_error:
@@ -826,7 +826,7 @@ class SheetsClient:
         except Exception:
             return []
 
-    def read_rows_missing_keyword(self, blog_id: Optional[str] = None) -> list["RefreshAuditRow"]:
+    def read_rows_missing_keyword(self, site_slug: Optional[str] = None) -> list["RefreshAuditRow"]:
         """
         Lit les lignes où main_keyword (col D, index 3) est vide.
 
@@ -854,13 +854,13 @@ class SheetsClient:
 
                 try:
                     audit_row = RefreshAuditRow.from_list(row, i)
-                    if not blog_id or audit_row.blog_id == blog_id:
+                    if not site_slug or audit_row.site_slug == site_slug:
                         rows.append(audit_row)
                 except Exception:
                     # Fallback minimal
                     try:
                         audit_row = RefreshAuditRow(
-                            blog_id=row[0] if len(row) > 0 else "",
+                            site_slug=row[0] if len(row) > 0 else "",
                             blogpost_url=url,
                             main_keyword="",
                             title=row[3] if len(row) > 3 else "",
@@ -884,7 +884,7 @@ class SheetsClient:
                             error_message="",
                             row_index=i,
                         )
-                        if not blog_id or audit_row.blog_id == blog_id:
+                        if not site_slug or audit_row.site_slug == site_slug:
                             rows.append(audit_row)
                     except Exception:
                         continue
@@ -914,7 +914,7 @@ class SheetsClient:
             logger.error(f"update_main_keyword error for {url}: {e}")
             return False
 
-    def read_rows_with_keyword(self, blog_id: Optional[str] = None) -> list["RefreshAuditRow"]:
+    def read_rows_with_keyword(self, site_slug: Optional[str] = None) -> list["RefreshAuditRow"]:
         """
         Lit les lignes qui ont déjà un main_keyword (col D non vide).
 
@@ -941,12 +941,12 @@ class SheetsClient:
 
                 try:
                     audit_row = RefreshAuditRow.from_list(row, i)
-                    if not blog_id or audit_row.blog_id == blog_id:
+                    if not site_slug or audit_row.site_slug == site_slug:
                         rows.append(audit_row)
                 except Exception:
                     try:
                         audit_row = RefreshAuditRow(
-                            blog_id=row[0] if len(row) > 0 else "",
+                            site_slug=row[0] if len(row) > 0 else "",
                             blogpost_url=url,
                             main_keyword=main_kw,
                             title=row[3] if len(row) > 3 else "",
@@ -970,7 +970,7 @@ class SheetsClient:
                             error_message="",
                             row_index=i,
                         )
-                        if not blog_id or audit_row.blog_id == blog_id:
+                        if not site_slug or audit_row.site_slug == site_slug:
                             rows.append(audit_row)
                     except Exception:
                         continue
@@ -978,7 +978,7 @@ class SheetsClient:
         except Exception:
             return []
 
-    def read_pending_for_editorial_audit(self, blog_id: Optional[str] = None) -> list["RefreshAuditRow"]:
+    def read_pending_for_editorial_audit(self, site_slug: Optional[str] = None) -> list["RefreshAuditRow"]:
         """
         Lit les lignes où l'audit éditorial n'a pas encore été fait.
 
@@ -994,7 +994,7 @@ class SheetsClient:
                 if not editorial_verdict or editorial_verdict.strip() == "":
                     try:
                         audit_row = RefreshAuditRow.from_list(row, i)
-                        if not blog_id or audit_row.blog_id == blog_id:
+                        if not site_slug or audit_row.site_slug == site_slug:
                             rows.append(audit_row)
                     except Exception as e:
                         print(f"[WARNING] Impossible de parser ligne {i} pour editorial audit: {e}")
@@ -1004,7 +1004,7 @@ class SheetsClient:
             print(f"[ERROR] read_pending_for_editorial_audit: {e}")
             return []
 
-    def read_pending_for_serp_audit(self, blog_id: Optional[str] = None) -> list["RefreshAuditRow"]:
+    def read_pending_for_serp_audit(self, site_slug: Optional[str] = None) -> list["RefreshAuditRow"]:
         """
         Lit les lignes où audit_serp est vide ou AUDITING.
 
@@ -1019,7 +1019,7 @@ class SheetsClient:
                 if audit_serp in ("", "AUDITING"):
                         try:
                             audit_row = RefreshAuditRow.from_list(row, i)
-                            if not blog_id or audit_row.blog_id == blog_id:
+                            if not site_slug or audit_row.site_slug == site_slug:
                                 rows.append(audit_row)
                         except Exception as e:
                             # Fallback: créer une row minimale avec les champs essentiels
@@ -1032,7 +1032,7 @@ class SheetsClient:
                                     post_type = ""
 
                                 audit_row = RefreshAuditRow(
-                                    blog_id=row[0] if len(row) > 0 else "",
+                                    site_slug=row[0] if len(row) > 0 else "",
                                     blogpost_url=row[1] if len(row) > 1 else "",
                                     main_keyword=row[2] if len(row) > 2 else "",
                                     title=row[3] if len(row) > 3 else "",
@@ -1056,7 +1056,7 @@ class SheetsClient:
                                     error_message=row[21] if len(row) > 21 else "",
                                     row_index=i,
                                 )
-                                if not blog_id or audit_row.blog_id == blog_id:
+                                if not site_slug or audit_row.site_slug == site_slug:
                                     rows.append(audit_row)
                                     print(f"[INFO] Row minimale créée pour ligne {i}")
                             except Exception as fallback_error:
@@ -1066,7 +1066,7 @@ class SheetsClient:
         except Exception:
             return []
 
-    def read_pending_for_decision(self, blog_id: Optional[str] = None) -> list["RefreshAuditRow"]:
+    def read_pending_for_decision(self, site_slug: Optional[str] = None) -> list["RefreshAuditRow"]:
         """Lit les lignes où audit_gsc=DONE ET audit_serp=DONE ET action_blogpost=''."""
         try:
             data = self._read_sheet(self.SHEET_REFRESHS_AUDIT)
@@ -1077,7 +1077,7 @@ class SheetsClient:
                     if row[7] == "DONE" and row[8] == "DONE" and (len(row) <= 6 or not row[5]):
                         try:
                             audit_row = RefreshAuditRow.from_list(row, i)
-                            if not blog_id or audit_row.blog_id == blog_id:
+                            if not site_slug or audit_row.site_slug == site_slug:
                                 rows.append(audit_row)
                         except Exception as e:
                             # Fallback: créer une row minimale avec les champs essentiels
@@ -1090,7 +1090,7 @@ class SheetsClient:
                                     post_type = ""
 
                                 audit_row = RefreshAuditRow(
-                                    blog_id=row[0] if len(row) > 0 else "",
+                                    site_slug=row[0] if len(row) > 0 else "",
                                     blogpost_url=row[1] if len(row) > 1 else "",
                                     main_keyword=row[2] if len(row) > 2 else "",
                                     title=row[3] if len(row) > 3 else "",
@@ -1114,7 +1114,7 @@ class SheetsClient:
                                     error_message=row[21] if len(row) > 21 else "",
                                     row_index=i,
                                 )
-                                if not blog_id or audit_row.blog_id == blog_id:
+                                if not site_slug or audit_row.site_slug == site_slug:
                                     rows.append(audit_row)
                                     print(f"[INFO] Row minimale créée pour ligne {i}")
                             except Exception as fallback_error:
@@ -1124,7 +1124,7 @@ class SheetsClient:
         except Exception:
             return []
 
-    def read_pending_for_refresh(self, action: str, blog_id: Optional[str] = None) -> list["RefreshAuditRow"]:
+    def read_pending_for_refresh(self, action: str, site_slug: Optional[str] = None) -> list["RefreshAuditRow"]:
         """Lit les lignes où action_blogpost = action ET status != CONTENT DONE."""
         try:
             data = self._read_sheet(self.SHEET_REFRESHS_AUDIT)
@@ -1145,7 +1145,7 @@ class SheetsClient:
                     if action_value in action_variants and row[6] not in ("DONE", "CONTENT DONE"):
                         try:
                             audit_row = RefreshAuditRow.from_list(row, i)
-                            if not blog_id or audit_row.blog_id == blog_id:
+                            if not site_slug or audit_row.site_slug == site_slug:
                                 rows.append(audit_row)
                         except Exception as e:
                             # Fallback: créer une row minimale avec les champs essentiels
@@ -1158,7 +1158,7 @@ class SheetsClient:
                                     post_type = ""
 
                                 audit_row = RefreshAuditRow(
-                                    blog_id=row[0] if len(row) > 0 else "",
+                                    site_slug=row[0] if len(row) > 0 else "",
                                     blogpost_url=row[1] if len(row) > 1 else "",
                                     main_keyword=row[2] if len(row) > 2 else "",
                                     title=row[3] if len(row) > 3 else "",
@@ -1182,7 +1182,7 @@ class SheetsClient:
                                     error_message=row[21] if len(row) > 21 else "",
                                     row_index=i,
                                 )
-                                if not blog_id or audit_row.blog_id == blog_id:
+                                if not site_slug or audit_row.site_slug == site_slug:
                                     rows.append(audit_row)
                                     print(f"[INFO] Row minimale créée pour ligne {i}")
                             except Exception as fallback_error:
@@ -1194,7 +1194,7 @@ class SheetsClient:
             # dans les Google Sheets réels (HTTP 400). Ce log rend visible toute
             # erreur d'onglet au lieu de retourner 0 ligne sans explication.
             print(
-                f"[ERROR] read_pending_for_refresh({action!r}, blog={blog_id!r}) a échoué "
+                f"[ERROR] read_pending_for_refresh({action!r}, blog={site_slug!r}) a échoué "
                 f"sur l'onglet '{self.SHEET_REFRESHS_AUDIT}': {e}. "
                 "Cet onglet est obsolète — le pipeline Superprof passe par 'New Growing List' "
                 "(prepare_weekly_batch.py) et Enseigna par 'Avis'/'Versus'."
@@ -1377,7 +1377,7 @@ class SheetsClient:
     # pilotées séparément — on ne les touche donc qu'en cellule ciblée, jamais en clear+rewrite.
 
     # Onglets de refresh Enseigna. Source de vérité : bloc `sheets` de
-    # tenants/enseigna/config/tenant.json (§4bis-A). On exclut l'onglet de
+    # sites/enseigna/config/site.json (§4bis-A). On exclut l'onglet de
     # découverte "A ajouter" (col_keyword=3) qui n'est pas un onglet de refresh.
     # Repli sur le littéral historique si la config est absente.
     _ENSEIGNA_DISCOVERY_TABS = {"A ajouter"}
