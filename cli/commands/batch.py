@@ -407,9 +407,9 @@ def benchmark(blog, source_sheet, rows, spreadsheet_id):
 @click.option('--site-id', default='superprof.fr-ressources', show_default=True,
               help='Site identifier (e.g. superprof.fr-ressources, enseigna.fr)')
 @click.option('--input-dir', type=click.Path(exists=True, file_okay=False, path_type=Path),
-              default=None, help='Source HTML folder (default: _shared/outputs/{site_id}/html/)')
+              default=None, help='Source HTML folder (default: sites/{site-slug}/outputs/html/)')
 @click.option('--output-dir', type=click.Path(file_okay=False, path_type=Path),
-              default=None, help='Destination CSV folder (default: _shared/outputs/{site_id}/csv/)')
+              default=None, help='Destination CSV folder (default: sites/{site-slug}/outputs/csv/)')
 @click.option('--file', 'single_file', type=click.Path(exists=True, dir_okay=False, path_type=Path),
               default=None,
               help="Process a single *_refreshed.html file (exact path) instead of scanning --input-dir")
@@ -424,7 +424,7 @@ def extract_tables(site_id, input_dir, output_dir, single_file):
 
     Example:
       cw batch extract-tables --site-id superprof.fr-ressources
-      cw batch extract-tables --site-id superprof.fr-ressources --file _shared/outputs/superprof.fr-ressources/html/my-article_refreshed.html
+      cw batch extract-tables --site-id superprof.fr-ressources --file sites/superprof.fr-ressources/outputs/html/my-article.gutenberg.html
     """
     import logging
     logging.basicConfig(level=logging.WARNING, format="%(message)s")

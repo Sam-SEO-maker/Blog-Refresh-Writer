@@ -10,7 +10,6 @@ Usage:
 
 import click
 
-from scripts.agent.prepare_weekly_batch import mark_ngl_status_by_url
 from scripts.audit.superprof_gsc_audit import STATUTS_VALUES
 
 
@@ -30,8 +29,10 @@ def ngl_status(url, statuts_value):
         )
         raise SystemExit(1)
 
-    found = mark_ngl_status_by_url(url, statuts_value)
-    if not found:
+    # Alias de `cw status --tab "New Growing List"` : même chemin générique.
+    from scripts.sheets.tab_status import update_status
+    res = update_status("superprof.fr-ressources", url, statuts_value, tab="New Growing List")
+    if res is None:
         click.echo(f"[ERROR] URL not found in New Growing List: {url}", err=True)
         raise SystemExit(1)
 

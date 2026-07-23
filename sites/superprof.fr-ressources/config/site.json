@@ -91,6 +91,24 @@
       {
         "name": "New Growing List",
         "col_url": 0,
+        "col_keyword": 1,
+        "col_status": 5
+      },
+      {
+        "name": "⬆️ Growing",
+        "col_url": 0,
+        "col_keyword": 1,
+        "col_status": 5
+      },
+      {
+        "name": "🍼 Medium Potential",
+        "col_url": 0,
+        "col_keyword": 1,
+        "header_row": 2
+      },
+      {
+        "name": "👶🏽 High Potential",
+        "col_url": 0,
         "col_keyword": 1
       }
     ],

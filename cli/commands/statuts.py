@@ -16,12 +16,7 @@ Exemples :
 """
 
 import click
-from scripts.audit.superprof_gsc_audit import (
-    STATUTS_VALUES,
-    _build_clients,
-    find_growing_row_by_url,
-    write_growing_statuts,
-)
+from scripts.audit.superprof_gsc_audit import STATUTS_VALUES
 
 
 @click.command()
@@ -40,13 +35,12 @@ def statuts(url, statuts_value):
         )
         raise SystemExit(1)
 
-    sheets, _ = _build_clients()
-
-    row_index = find_growing_row_by_url(sheets, url)
-    if row_index is None:
+    # Alias de `cw status --tab "⬆️ Growing"` : même chemin générique config-driven.
+    from scripts.sheets.tab_status import update_status
+    res = update_status("superprof.fr-ressources", url, statuts_value, tab="⬆️ Growing")
+    if res is None:
         click.echo(f"[ERROR] URL not found in Growing: {url}", err=True)
         raise SystemExit(1)
 
-    write_growing_statuts(sheets, row_index, statuts_value)
-    click.echo(f"[OK] Row {row_index} → statuts = \"{statuts_value}\"")
+    click.echo(f"[OK] Row {res.row} → statuts = \"{statuts_value}\"")
     click.echo(f"     {url[:90]}")

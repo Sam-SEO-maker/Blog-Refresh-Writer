@@ -83,7 +83,7 @@ def avis(apply_, urls, verbose):
 
     if apply_:
         click.echo(
-            "\nReport: _shared/outputs/enseigna/json/avis_linking_report.json"
+            "\nReport: sites/enseigna.fr/outputs/json/avis_linking_report.json"
         )
         click.echo("Backups: {slug}_refreshed.gutenberg.backup.html")
     else:

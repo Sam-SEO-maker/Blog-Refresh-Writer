@@ -83,26 +83,6 @@ def request(blog, spreadsheet_id):
         raise click.Abort()
 
 
-@indexing.command()
-@blog_option(required=True)
-@click.option('--limit', type=int, default=100, help='Maximum number of URLs to scan')
-def scan(blog, limit):
-    """
-    Scans the indexing status of every URL of the site.
-
-    Checks via the GSC API which URLs are indexed.
-    """
-    click.echo(f"\n🔍 INDEXING SCAN")
-    click.echo(f"Blog:  {blog}")
-    click.echo(f"Limit: {limit}")
-    click.echo()
-
-    click.echo("⚠ Feature to implement:")
-    click.echo("  1. Fetch every URL of the site from the spreadsheet")
-    click.echo("  2. Check the indexing status via the GSC API")
-    click.echo("  3. Generate a report (indexed, not indexed, errors)")
-
-
 @indexing.command(name='bulk-diagnostic')
 @blog_option(required=True)
 @click.option('--spreadsheet-id', required=True, help='Google Sheet ID')

@@ -10,7 +10,7 @@ Usage:
 
 import os
 import click
-from cli.options import blog_option
+from cli.options import blog_option, site_option
 from pathlib import Path
 
 from scripts.agent import RefreshOrchestrator
@@ -84,7 +84,7 @@ def serp(url, keyword):
 
 
 @audit.command("ahrefs-state")
-@click.option('--site', required=True, type=click.Choice(['superprof.fr-ressources', 'enseigna']), help='Target site')
+@site_option(required=True, dest='site')
 @click.option('--months', type=int, default=None, help='Period in months (default: config)')
 @click.option('--limit', type=int, default=None, help='Max number of keywords (default: config)')
 @click.option('--from-csv', type=str, default=None, help='Read an Ahrefs CSV export instead of the API')
@@ -198,7 +198,7 @@ def gsc_page(url, days, dry_run):
 
 
 @audit.command("gsc-state")
-@click.option('--site', required=True, type=click.Choice(['superprof.fr-ressources', 'enseigna']), help='Target site')
+@site_option(required=True, dest='site')
 @click.option('--months', type=int, default=3, help='Period in months (default: 3)')
 @click.option('--top-pos', type=int, default=30, help='Max position to keep (default: 30)')
 @click.option('--min-impressions', type=int, default=0, help='Min impressions to keep')

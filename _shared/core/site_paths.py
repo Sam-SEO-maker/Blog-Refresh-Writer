@@ -36,8 +36,11 @@ class SitePaths:
         self.sites_root = self.base_path / "sites"
 
     def site_dir(self, site_slug: str) -> Path:
-        """Racine du site : `sites/{id}/`."""
-        return self.sites_root / site_slug
+        """Racine du site : `sites/{id}/`. Le slug est canonisé (alias legacy
+        `enseigna`, `superprof-ressources`… → convention domaine) : un appelant
+        avec un vieux slug ne doit jamais résoudre un dossier inexistant."""
+        from _shared.core.constants import canonical_site_slug
+        return self.sites_root / canonical_site_slug(site_slug)
 
     # --- Prompt site override -------------------------------------------------
     def site_prompt(self, site_slug: str) -> Path:
