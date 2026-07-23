@@ -1,13 +1,16 @@
 """
 Prompt Composer Module
 
-Compose automatiquement les prompts en combinant :
-1. Prompt de catégorie (stats, experts, PAA) - selon le subject_category
-2. Prompt de stratégie (FULL/DIFF/TITLE) - selon la stratégie
-3. Prompt site override (blacklist, règles spéciales) - selon le site_id
-4. Template (optionnel) - selon le content_type
+Compose le prompt de génération en combinant les niveaux ACTIFS :
+- Stratégie (`_shared/strategies/{strategy}.md`) — delta conditionnel du moteur
+  de décision (alias : partial_refresh → full_refresh.md) ;
+- Site override (`sites/{id}/prompts/site.md`) — règles éditoriales du site ;
+- Versus (`sites/{id}/prompts/vs_concurrent.md`, niveau 4bis) — seulement si
+  `article_type == "versus"`.
 
-Note: Les règles SEO/E-E-A-T de base sont dans CLAUDE.md (accessible à Claude Code).
+Les niveaux base / catégorie / template de l'ancien composeur 5 niveaux sont
+inactifs (stubs conservés comme points d'extension). Les règles SEO/E-E-A-T
+transverses vivent dans les skills (edito-refresh, format-wordpress).
 """
 
 from pathlib import Path
@@ -16,26 +19,17 @@ from typing import Optional
 
 class PromptComposer:
     """
-    Compose les prompts en 4 niveaux automatiquement.
+    Compose le prompt : stratégie + site.md (+ vs_concurrent.md si versus).
 
-    Hiérarchie: Category → Strategy → Site → Template (optionnel)
-    Override rule: Site > Strategy > Category
-
-    Les règles SEO/E-E-A-T de base sont désormais dans CLAUDE.md.
+    Override rule: Site > Strategy.
 
     Usage:
         composer = PromptComposer()
-
-        # Composer un prompt complet avec nouvelle structure
         prompt = composer.compose(
             strategy="semantic_reorientation",
-            subject="education_reviews",
             site_id="enseigna.fr",
-            content_type="review"
+            article_type="versus",   # optionnel — ajoute vs_concurrent.md
         )
-
-        # Lister les stratégies disponibles
-        strategies = composer.list_available_strategies()
     """
 
     def __init__(self, project_root: Optional[Path] = None):
@@ -63,10 +57,10 @@ class PromptComposer:
         article_type: Optional[str] = None
     ) -> str:
         """
-        Compose le prompt final en combinant les 5 niveaux.
+        Compose le prompt final (niveaux actifs : stratégie + site + versus).
 
         Args:
-            strategy: Stratégie de refresh (ex: "refresh_full", "refresh_diff")
+            strategy: Stratégie de refresh (ex: "full_refresh", "semantic_reorientation")
             subject: Sujet optionnel (ex: "education_reviews", "music_lessons")
             site_id: ID du site (ex: "enseigna.fr") pour prompts site-specific
             content_type: Type de contenu optionnel (ex: "review", "guide") pour template
@@ -138,6 +132,9 @@ class PromptComposer:
         Returns:
             Contenu du prompt ou None
         """
+        # Alias : stratégies sans fichier .md propre (cf. prompts_dispatch.json,
+        # non lu ici — garder les deux synchronisés).
+        strategy = {"partial_refresh": "full_refresh"}.get(strategy, strategy)
         # Essayer .md d'abord, puis .txt
         return (
             self._load_prompt(self.strategies_path / f"{strategy}.md") or
@@ -200,14 +197,3 @@ class PromptComposer:
             print(f"Erreur chargement prompt {path}: {e}")
             return None
 
-    def list_available_strategies(self) -> list[str]:
-        """
-        Liste toutes les stratégies disponibles.
-
-        Returns:
-            Liste des noms de stratégies (sans extension)
-        """
-        if not self.strategies_path.exists():
-            return []
-
-        return [p.stem for p in self.strategies_path.glob("*.md")]

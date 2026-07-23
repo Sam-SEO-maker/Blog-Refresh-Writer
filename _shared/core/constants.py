@@ -32,11 +32,10 @@ LEGACY_SITE_SLUGS = {
     "enseigna": "enseigna.fr",
     "superprof-ressources": "superprof.fr-ressources",
     "superprof.fr": "superprof.fr-ressources",  # domaine hérité (bug output_manager)
-    "es-es-ressources": "superprof.es-apuntes",
-    "de-de-ressources": "superprof.de-lernplattform",
-    "en-uk-ressources": "superprof.co.uk-resources",
-    "en-us-ressources": "superprof.com-resources",
-    "pt-br-ressources": "superprof.com.br-recursos",
+    # NB : n'ajouter un alias ici que pour un site réellement matérialisé sous
+    # sites/ — les mappings vers des sites fantômes (es-es-ressources →
+    # superprof.es-apuntes, etc.) ont été retirés le 2026-07-23 ; les recréer
+    # au fil des onboardings si le besoin réapparaît.
 }
 
 
@@ -70,22 +69,8 @@ OVERLAP_HIGH = 80
 
 
 # =========================================================================
-# Thresholds Intent Detection
-# =========================================================================
-
-INTENT_SHIFT_THRESHOLD = 0.7
-VARIANT_TREND_THRESHOLD = 0.3
-
-
-# =========================================================================
 # Thresholds Content Similarity
 # =========================================================================
 
 SIMILARITY_THRESHOLD = 0.8
 
-
-# =========================================================================
-# Reading Time
-# =========================================================================
-
-WORDS_PER_MINUTE = 200

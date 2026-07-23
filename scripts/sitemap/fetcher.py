@@ -19,7 +19,7 @@ from _shared.core.models import (
     FetchResult,
     SiteConfig
 )
-from _shared.core.sites_registry import SitesRegistry
+
 
 
 # XML namespaces for sitemap parsing
@@ -314,34 +314,3 @@ class SitemapFetcher:
             self.cache_file.unlink()
 
 
-def load_fetcher_from_config(
-    site_id: str,
-    config_path: Optional[Path] = None
-) -> SitemapFetcher:
-    """
-    Load a SitemapFetcher from site configuration.
-
-    Args:
-        site_id: Site identifier (e.g., "enseigna")
-        config_path: Path to sites.json (auto-detected if None)
-
-    Returns:
-        Configured SitemapFetcher instance
-
-    Raises:
-        ValueError: If site not found or inactive
-
-    Usage:
-        fetcher = load_fetcher_from_config("enseigna")
-        result = fetcher.fetch_and_detect_new()
-    """
-    registry = SitesRegistry(config_path=config_path)
-    site_config = registry.get_site(site_id)
-
-    if not site_config:
-        raise ValueError(f"Site not found: {site_id}")
-
-    if not site_config.active:
-        raise ValueError(f"Site is inactive: {site_id}")
-
-    return SitemapFetcher(site_config)

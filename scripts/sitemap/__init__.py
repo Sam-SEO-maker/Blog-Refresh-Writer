@@ -2,21 +2,13 @@
 Sitemap Module
 
 Sitemap fetching and analysis for SEO workflows.
+Entry point: config_adapter (loads SiteConfig from sites/<site-slug>/config/site.json).
 """
 
-from .fetcher import (
-    SitemapFetcher,
-    load_fetcher_from_config
-)
-
-from .analyzer import (
-    SitemapAnalyzer,
-    load_analyzer_from_config
-)
+from .fetcher import SitemapFetcher
+from .analyzer import SitemapAnalyzer
 
 __all__ = [
     "SitemapFetcher",
-    "load_fetcher_from_config",
     "SitemapAnalyzer",
-    "load_analyzer_from_config",
 ]

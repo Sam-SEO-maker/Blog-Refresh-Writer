@@ -9,7 +9,7 @@ from typing import Optional
 from pathlib import Path
 
 from _shared.core.models import SitemapURL, StaleContent
-from .fetcher import SitemapFetcher, load_fetcher_from_config
+from .fetcher import SitemapFetcher
 
 
 class SitemapAnalyzer:
@@ -185,26 +185,3 @@ class SitemapAnalyzer:
         return [url for url in urls if pattern in url.loc]
 
 
-def load_analyzer_from_config(
-    site_id: str,
-    config_path: Optional[Path] = None
-) -> SitemapAnalyzer:
-    """
-    Load a SitemapAnalyzer from site configuration.
-
-    Args:
-        site_id: Site identifier (e.g., "enseigna")
-        config_path: Path to sites.json (auto-detected if None)
-
-    Returns:
-        Configured SitemapAnalyzer instance
-
-    Raises:
-        ValueError: If site not found or inactive
-
-    Usage:
-        analyzer = load_analyzer_from_config("enseigna")
-        stale = analyzer.find_stale_content(months=6)
-    """
-    fetcher = load_fetcher_from_config(site_id, config_path)
-    return SitemapAnalyzer(fetcher)

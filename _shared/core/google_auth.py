@@ -26,23 +26,6 @@ _TOKEN_PATH = Path(
 ).expanduser()
 
 
-def resolve_auth_mode(site_slug: Optional[str] = None) -> str:
-    """Lit `auth_mode` de la config du site. Défaut: 'service_account'."""
-    if not site_slug:
-        return "service_account"
-    try:
-        from _shared.core.site_paths import SitePaths
-        import json
-        cfg_path = SitePaths().site_config(site_slug)
-        if cfg_path.exists():
-            mode = json.loads(cfg_path.read_text(encoding="utf-8")).get("auth_mode")
-            if mode in ("service_account", "oauth_user"):
-                return mode
-    except Exception:
-        pass
-    return "service_account"
-
-
 def get_credentials(scopes: list[str], auth_mode: str = "service_account"):
     """Retourne des credentials Google selon le mode, ou None si indisponible.
 

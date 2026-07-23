@@ -1387,7 +1387,7 @@ class SheetsClient:
     @property
     def ENSEIGNA_TABS(self) -> list[str]:
         from _shared.core.sheets_config import get_tab_names
-        names = [t for t in get_tab_names("enseigna")
+        names = [t for t in get_tab_names("enseigna.fr")
                  if t not in self._ENSEIGNA_DISCOVERY_TABS]
         return names or ["Avis", "Versus"]
 
