@@ -53,9 +53,10 @@ def load_blog_config_as_site_config(site_slug: str, base_path: Optional[Path] = 
     domain = data.get("domain")
     gsc_property = data.get("gsc_property", f"https://{domain}/")
 
-    # Récupérer spreadsheet_id depuis sheets_config
-    sheets_config = data.get("sheets_config", {})
-    sheet_id = sheets_config.get("spreadsheet_id", "")
+    # spreadsheet_id : bloc réel `sheets` du site.json (l'ancienne clé
+    # "sheets_config" n'a jamais existé dans les configs — champ informatif,
+    # non consommé par le flux sitemap).
+    sheet_id = data.get("sheets", {}).get("spreadsheet_id", "")
 
     # Sitemap URL (vide = auto-découverte)
     sitemap_url = data.get("sitemap_url", "")
