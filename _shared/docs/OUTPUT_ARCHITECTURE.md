@@ -7,7 +7,7 @@ Every site owns its outputs. Nothing is written outside the site folder:
 ```
 sites/<site-slug>/outputs/          # gitignored (see .gitignore: outputs/)
 ├── html/                           # generated article bodies (.gutenberg.html)
-│   ├── avis/ | versus/             # enseigna.fr only: one subfolder per article type
+│   ├── <article-type>/             # sites with several article types: one subfolder per type
 │   └── YYYY-MM-DD/                 # batch runs are grouped in dated subfolders
 ├── acf/                            # structured data (ACF JSON, one per article)
 ├── csv/                            # tables exported for TablePress (max 3/article)
