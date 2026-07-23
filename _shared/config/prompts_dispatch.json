@@ -1,5 +1,5 @@
 {
-  "_comment": "Dispatch des prompts de strategie. Les chemins sont relatifs a la racine du repo. Les cles subject_prompts/site_overrides/blog_to_subject_mapping ont ete retirees (2026-07-17) : elles pointaient sur _shared/prompts/sites/*.md, disparus au profit de sites/<site-slug>/prompts/site.md, et leur sortie n'etait consommee par personne (PromptComposer compose strategy + site.md).",
+  "_comment": "Strategy prompt dispatch. Paths are relative to the repo root. The subject_prompts/site_overrides/blog_to_subject_mapping keys were removed (2026-07-17): they pointed to _shared/prompts/sites/*.md, gone in favour of sites/<site-slug>/prompts/site.md, and their output was consumed by nobody (PromptComposer composes strategy + site.md).",
   "content_type_mapping": {
     "review_comparatif": {
       "base_prompt": "prompts/formats/comparatif_review.md",
