@@ -1,5 +1,10 @@
 """Génère les CSV de tableaux (+ zip par article) pour Superprof Ressources.
 
+KEEP (audit 2026-07-23) : pas d'importeur Python — outil batch MANUEL assumé
+(lancé en python -m après une fournée d'articles ; les csv_zips/ des outputs
+superprof en attestent). Complémentaire de table_csv_extractor (par-article,
+appelé par output_manager à la génération).
+
 Pour chaque article, extrait les <table> du fichier `{slug}.gutenberg.html`
 et écrit un CSV par tableau, nommé `{slug-à-tirets}_tableau_{descriptif-sujet}.csv`
 (descripteur = sujet déduit du heading le plus proche, PAS les en-têtes — voir
