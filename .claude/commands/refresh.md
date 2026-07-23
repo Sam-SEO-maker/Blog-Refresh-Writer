@@ -1,6 +1,6 @@
 ---
 description: Full SEO refresh of a URL (WP REST fetch/scrape → GSC/SERP/PAA/intent → decision → source research → generation via subagent).
-argument-hint: <url> --site <enseigna.fr|superprof.fr-ressources> [--strategy X] [--main-keyword K]
+argument-hint: <url> --site <site-slug> [--strategy X] [--main-keyword K]
 allowed-tools: Bash(python3 content_writer.py refresh:*), Bash(python3 content_writer.py finalize:*), Task, Read, Write, WebSearch, WebFetch, Skill
 ---
 

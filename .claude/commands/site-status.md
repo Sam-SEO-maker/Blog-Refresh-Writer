@@ -1,6 +1,6 @@
 ---
 description: SEO state of play of a site via GSC (keywords ranking in top-N, performance) → dedicated Sheet.
-argument-hint: --site <enseigna|superprof.fr-ressources> [--months 3] [--top-pos 30] [--dry-run]
+argument-hint: --site <site-slug> [--months 3] [--top-pos 30] [--dry-run]
 allowed-tools: Bash(python3 content_writer.py audit gsc-state:*), Read
 ---
 
