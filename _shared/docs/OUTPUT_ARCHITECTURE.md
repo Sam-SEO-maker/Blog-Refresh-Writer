@@ -39,6 +39,13 @@ fine: the invariant is only that **everything lives under
   article-type subfolder), and keep only `.gutenberg.html` files (the bare
   debug HTML is deleted after generation).
 
+## Known exception
+
+The sitemap fetcher (`scripts/sitemap/fetcher.py`) keeps its ephemeral JSON
+cache in `_shared/temp/sitemaps/<site>/` (gitignored, recreated on demand).
+It is the last writer outside `sites/<site-slug>/outputs/`; candidate for a
+future move to the site's output folder.
+
 ## History
 
 - v2.0 (2026-02) described the old centralised layout (`_shared/temp/` +
