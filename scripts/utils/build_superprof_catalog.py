@@ -31,7 +31,7 @@ from pathlib import Path
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 CATALOG_PATH = _PROJECT_ROOT / "_shared" / "config" / "superprof_sites_catalog.json"
 
-# Les 6 sites Ressources confirmés (cf. RECENSEMENT_BLOGS_SUPERPROF.md).
+# Les 6 sites Ressources confirmés (source historique : recensement manuel, désormais supplanté par le catalogue GSC).
 # gsc_property → (site_slug, country, language, url_base)
 # Slug = domaine + segment d'URL réel (le domaine seul serait ambigu : ces 6
 # domaines portent aussi un blog).
