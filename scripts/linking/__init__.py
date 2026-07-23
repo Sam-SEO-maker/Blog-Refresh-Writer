@@ -1,19 +1,13 @@
 """
 Linking Package
 
-Automated internal linking injection for semantic cocoons.
+Live path: EnseignaAvisLinker (`cw linking avis`, finalize step 4) +
+InjectionValidator. The generic cocoon-injection pipeline (LinkInjector,
+LinkMappingLoader, AnchorGenerator, InjectionPlanner, similarity engine)
+was removed on 2026-07-23: zero consumers, and its links.csv inputs never
+existed (see memory: no silo internal linking on SP Ressources).
 """
 
-from .link_injector import LinkInjector
-from .link_mapping_loader import LinkMappingLoader
-from .anchor_generator import AnchorGenerator
-from .injection_planner import InjectionPlanner
 from .injection_validator import InjectionValidator
 
-__all__ = [
-    "LinkInjector",
-    "LinkMappingLoader",
-    "AnchorGenerator",
-    "InjectionPlanner",
-    "InjectionValidator",
-]
+__all__ = ["InjectionValidator"]

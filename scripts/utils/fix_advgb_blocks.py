@@ -1,5 +1,9 @@
 """Répare les blocs AdvGB/quote mal formatés dans les articles SP Ressources.
 
+KEEP (audit 2026-07-23) : pas d'importeur Python, mais outil de réparation
+manuel volontairement conservé — a servi à corriger le formatage des blocs
+WP Gutenberg des articles Séraphine (décision user).
+
 Bugs corrigés (causés par gutenberg_formatter.py qui ne gère pas les blocs AdvGB
 et émet wp:quote natif au lieu de superprof/quote-block) :
   1. quote      : <!-- wp:quote --> + markup custom  ->  <!-- wp:superprof/quote-block {...} -->

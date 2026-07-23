@@ -236,13 +236,20 @@ class HTMLAnalyzer:
         return links
 
     def _classify_link(self, netloc: str) -> str:
-        """Classifie un lien selon son domaine."""
+        """Classifie un lien selon son domaine.
+
+        Ordre critique : le test "internal" passe AVANT le test superprof.
+        Quand le site audité EST superprof (superprof.fr-ressources,
+        domain == SUPERPROF_DOMAIN), l'ancien ordre rendait la branche
+        internal inatteignable : internal_links restait à 0 et la Golden
+        Rule ne protégeait plus les liens internes (bug confirmé 2026-07-23).
+        """
         netloc = netloc.lower()
 
-        if SUPERPROF_DOMAIN in netloc:
-            return "superprof"
-        elif self.domain in netloc:
+        if self.domain and self.domain in netloc:
             return "internal"
+        elif SUPERPROF_DOMAIN in netloc:
+            return "superprof"
         else:
             return "external"
 

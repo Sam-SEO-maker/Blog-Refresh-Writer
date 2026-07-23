@@ -73,7 +73,6 @@ class WorkflowTracker:
         self._active_workflows[url] = progress
 
         # Mettre à jour le statut dans Sheets
-        self.sheets_client.update_status(url, TaskStatus.PROCESSING)
 
         return progress
 
@@ -121,9 +120,7 @@ class WorkflowTracker:
             "completed": TaskStatus.COMPLETED,
         }
 
-        if progress.current_step in status_mapping:
-            self.sheets_client.update_status(url, status_mapping[progress.current_step])
-
+        # (écriture Sheet retirée : l'onglet URLs_Input n'existe pas — suivi en mémoire)
         return progress
 
     def record_error(self, url: str, error: str) -> None:
@@ -138,8 +135,6 @@ class WorkflowTracker:
             self._active_workflows[url].errors.append(error)
             self._active_workflows[url].last_update = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Mettre à jour Sheets avec l'erreur
-        self.sheets_client.update_status(url, TaskStatus.FAILED, error)
 
     def complete_workflow(self, url: str, success: bool = True) -> None:
         """
@@ -149,16 +144,7 @@ class WorkflowTracker:
             url: URL concernée
             success: True si succès, False si échec
         """
-        if success:
-            self.sheets_client.update_status(url, TaskStatus.COMPLETED)
-        else:
-            errors = self._active_workflows.get(url, WorkflowProgress(
-                url=url, current_step="", steps_completed=[], steps_remaining=[],
-                progress_percent=0, started_at="", last_update="", errors=[]
-            )).errors
-            error_msg = "; ".join(errors) if errors else "Erreur inconnue"
-            self.sheets_client.update_status(url, TaskStatus.FAILED, error_msg)
-
+        # (écritures Sheet COMPLETED/FAILED retirées — suivi en mémoire uniquement)
         # Nettoyer le workflow actif
         if url in self._active_workflows:
             del self._active_workflows[url]

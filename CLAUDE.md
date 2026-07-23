@@ -91,7 +91,6 @@ Internal linking → Sync.
 | `/batch --action X --site <site-slug>` | Batch refresh from Google Sheets |
 | `/audit serp <url> --main-keyword ""` | Targeted SERP audit (PAA, SERP features, top 10). Always pass `--main-keyword`: without it the keyword is derived from the URL slug, so any typo or shorthand in the slug is queried verbatim and the SERP answers a keyword nobody searches |
 | `/plan-check <url> --site <site-slug>` | Validate the editorial outline (`content_plan.md`) against the SEO invariants — heading hierarchy, PAA coverage, proof placement. Deterministic (no generation). Verdict OK / NEEDS_FIX before writing. Scaffold it first with `plan init` (CLI lays the file + injects signals; the agent fills the outline via the `seo-outline` skill) |
-| `/decide --site <site-slug>` | Data-driven decision engine (Sheet) |
 | `/site-status --site <site-slug>` | GSC SEO status of a site (→ Sheet) |
 | `/blog --site <site-slug>` | SEO performance of a blog via GSC MCP: totals + top KW (chat summary) |
 | `/page <url>` | SEO performance of a specific URL via GSC MCP (site inferred from the URL) |

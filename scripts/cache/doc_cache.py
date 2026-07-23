@@ -149,32 +149,6 @@ class DocumentCache:
         """
         return self._blog_configs.get(site_slug, {})
 
-    def get_all_site_slugs(self) -> list[str]:
-        """
-        Retourne la liste de tous les blog IDs.
-
-        Returns:
-            Liste des identifiants de blogs
-        """
-        return list(self._blog_configs.keys())
-
-    def get_prompts_dispatch(self) -> dict:
-        """
-        Retourne la configuration de dispatch des prompts.
-
-        Returns:
-            Configuration prompts_dispatch.json
-        """
-        return self._prompts_dispatch
-
-    def get_decision_rules(self) -> dict:
-        """
-        Retourne les règles de décision.
-
-        Returns:
-            Configuration decision_rules.json
-        """
-        return self._decision_rules
 
     def get_combined_guidelines(self, include_geo: bool = True, include_eeat: bool = True, include_claude: bool = True) -> str:
         """
@@ -230,15 +204,7 @@ class DocumentCache:
 
         return '\n\n'.join(extracted)
 
-    def reload(self):
-        """Force le rechargement de tous les documents."""
-        self._cache.clear()
-        self._blog_configs.clear()
-        self._prompts_dispatch.clear()
-        self._decision_rules.clear()
-        self._load_all()
 
-    @classmethod
     def reset_instance(cls):
         """Réinitialise l'instance singleton (utile pour les tests)."""
         with cls._lock:

@@ -103,42 +103,6 @@ def write_gsc_12m_metrics(sheets_api, row_index: int, impressions_12m: int, clic
     ).execute()
 
 
-def mark_ngl_status(sheets_api, row_index: int, status: str) -> None:
-    """Écrit le statut éditorial (col F) dans New Growing List.
-
-    À appeler après génération réussie du contenu refreshé (status="Rédigé"),
-    ou pour toute autre transition (Draft in WP, Publié).
-    """
-    sheets_api.spreadsheets().values().update(
-        spreadsheetId=os.environ["SPREADSHEET_ID_SUPERPROF"],
-        range=f"'{NGL_SHEET}'!{NGL_STATUS_COL}{row_index}",
-        valueInputOption="USER_ENTERED",
-        body={"values": [[status]]},
-    ).execute()
-
-
-def mark_ngl_status_by_url(url: str, status: str) -> bool:
-    """Trouve la ligne New Growing List correspondant à `url` et écrit son statut.
-
-    Retourne True si l'URL a été trouvée et mise à jour, False sinon.
-    Usage typique en fin de génération (Phase 2) :
-        mark_ngl_status_by_url(url, "Rédigé")
-    """
-    from scripts.audit.superprof_gsc_audit import _build_clients
-
-    sheets_api, _ = _build_clients()
-    data = sheets_api.spreadsheets().values().get(
-        spreadsheetId=os.environ["SPREADSHEET_ID_SUPERPROF"],
-        range=f"'{NGL_SHEET}'!A:A",
-    ).execute().get("values", [])
-
-    target = _norm(url)
-    for i, row in enumerate(data, start=1):
-        if row and _norm(row[0]) == target:
-            mark_ngl_status(sheets_api, i, status)
-            return True
-    return False
-
 
 def main() -> int:
     load_dotenv()

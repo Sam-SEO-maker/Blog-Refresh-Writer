@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hook Stop : rappelle de mettre à jour CLAUDE.md / README.md quand un module,
+"""Hook Stop : rappelle de mettre à jour CLAUDE.md / README.md quand une surface documentée (commands/skills/cli),
 une commande ou une skill a changé sans que la doc suive.
 
 Non-bloquant : émet un simple rappel (exit 0 + message) si le diff de travail

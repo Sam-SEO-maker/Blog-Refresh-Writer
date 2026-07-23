@@ -1,5 +1,5 @@
 {
-  "_comment": "Strategy prompt dispatch: maps the DecisionEngine action to the strategy prompt file injected at generation (read by StrategySelector). Paths are relative to the repo root. Purged 2026-07-23: content_type_mapping, category_paths, blog_to_category_mapping and eeat_levels were dead config from the old 5-level composer (targets no longer on disk, zero consumers in code); only strategy_prompts is read.",
+  "_comment": "Strategy prompt dispatch: maps the DecisionEngine action to the strategy prompt file injected at generation (read by StrategySelector). Paths are relative to the repo root. Only strategy_prompts is read (legacy composer sections purged 2026-07-23).",
   "strategy_prompts": {
     "title_optimization": {
       "file": "_shared/strategies/title_optimization.md",
