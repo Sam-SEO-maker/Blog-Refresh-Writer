@@ -1,0 +1,14 @@
+{
+  // _shared/context/ est gitignoré : sans ce réglage, VS Code masque ses fichiers
+  // (content_plan.md, audit_data.json…) dans cmd+p et la recherche.
+  "search.useIgnoreFiles": false,
+  "search.exclude": {
+    "**/__pycache__": true,
+    "**/.venv": true,
+    "**/venv": true,
+    "**/node_modules": true,
+    "**/.pytest_cache": true,
+    "_shared/cache": true,
+    "_shared/temp": true
+  }
+}

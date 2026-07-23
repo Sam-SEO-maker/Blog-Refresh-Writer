@@ -119,7 +119,10 @@ dmypy.json
 .pyre/
 
 # IDE
-.vscode/
+# .vscode/settings.json is versioned on purpose: it keeps the gitignored
+# _shared/context/ files visible in VS Code search/cmd+p for every clone.
+.vscode/*
+!.vscode/settings.json
 .idea/
 *.swp
 *.swo
