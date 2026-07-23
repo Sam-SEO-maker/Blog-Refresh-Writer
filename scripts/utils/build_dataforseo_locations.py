@@ -112,10 +112,10 @@ def main() -> int:
     doc = {
         "_comment": (
             "country ISO (superprof_sites_catalog.json) -> location_name DataForSEO. "
-            "Généré et validé contre /v3/serp/google/locations ; ne pas éditer à la main. "
-            "Régénérer : python3 scripts/utils/build_dataforseo_locations.py. "
-            "UK (catalogue) -> GB (ISO). HK/TW/PR n'existent pas en 'Country' chez "
-            "DataForSEO : repli sur la Region homonyme."
+            "Generated and validated against /v3/serp/google/locations; do not edit by hand. "
+            "Regenerate: python3 scripts/utils/build_dataforseo_locations.py. "
+            "UK (catalog) -> GB (ISO). HK/TW/PR do not exist as 'Country' at DataForSEO: "
+            "fall back to the Region of the same name."
         ),
         "locations": resolved,
     }

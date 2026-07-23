@@ -201,9 +201,9 @@ def main() -> None:
             })
 
     config = {
-        "_doc": ("Registre des landings Superprof par site. Généré depuis "
-                 "landings-superprof-fr.csv par scripts/utils/build_superprof_landings.py. "
-                 "Ne pas éditer à la main : régénérer."),
+        "_doc": ("Registry of Superprof landings per site. Generated from "
+                 "landings-superprof-fr.csv by scripts/utils/build_superprof_landings.py. "
+                 "Do not edit by hand: regenerate."),
         "_updated": "2026-06-17",
         "_source": "landings-superprof-fr.csv",
         args.site: {

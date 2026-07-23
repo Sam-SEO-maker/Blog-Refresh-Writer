@@ -1,5 +1,5 @@
 {
-  "_comment": "Catalogue des sites Superprof (généré depuis GSC list_properties). NE PAS confondre avec sites.json (sites onboardés, lu au runtime). Régénérer : python -m scripts.utils.build_superprof_catalog --from-file <props>.",
+  "_comment": "Superprof site catalog (generated from GSC list_properties). NOT to be confused with sites.json (onboarded sites, read at runtime). Regenerate: python -m scripts.utils.build_superprof_catalog --from-file <props>.",
   "sites": [
     {
       "site_slug": "superprof.de-lernplattform",

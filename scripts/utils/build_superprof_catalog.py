@@ -200,9 +200,9 @@ def build_catalog(urls: list[str]) -> dict:
     blogs.sort(key=lambda x: x["site_slug"])
     return {
         "_comment": (
-            "Catalogue des sites Superprof (généré depuis GSC list_properties). "
-            "NE PAS confondre avec sites.json (sites onboardés, lu au runtime). "
-            "Régénérer : python -m scripts.utils.build_superprof_catalog --from-file <props>."
+            "Superprof site catalog (generated from GSC list_properties). "
+            "NOT to be confused with sites.json (onboarded sites, read at runtime). "
+            "Regenerate: python -m scripts.utils.build_superprof_catalog --from-file <props>."
         ),
         "sites": ressources + blogs,
         "counts": {"ressources": len(ressources), "blog": len(blogs),
