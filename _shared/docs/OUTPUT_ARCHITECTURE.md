@@ -1,260 +1,47 @@
 # Output Architecture
 
-**Version**: 2.0
-**Last Updated**: 2026-02-13
+**Version**: 3.0 (multi-site) · **Last updated**: 2026-07-23
 
----
-
-## Règle d'Or
-
-**AUCUN fichier ne doit être écrit en dehors de cette structure.**
+Every site owns its outputs. Nothing is written outside the site folder:
 
 ```
-_shared/
-├── temp/           # Cache temporaire (éphémère, peut être purgé)
-└── outputs/        # Sorties validées (permanent, tracking git)
+sites/<site-slug>/outputs/          # gitignored (see .gitignore: outputs/)
+├── html/                           # generated article bodies (.gutenberg.html)
+│   ├── avis/ | versus/             # enseigna.fr only: one subfolder per article type
+│   └── YYYY-MM-DD/                 # batch runs are grouped in dated subfolders
+├── acf/                            # structured data (ACF JSON, one per article)
+├── csv/                            # tables exported for TablePress (max 3/article)
+├── metadata/                       # per-article metadata JSON (title, meta, H1, notes)
+├── json/                           # raw analysis artifacts
+├── audit/ · editorial_audits/      # audit reports
+└── _scrape_cache/                  # scraped original HTML (before/after comparison)
 ```
 
----
+Some sites carry extra folders created by their own workflows (e.g.
+`batches/`, `csv_zips/`, `wp_backups/` on superprof.fr-ressources). That is
+fine: the invariant is only that **everything lives under
+`sites/<site-slug>/outputs/`**.
 
-## 1. Cache Temporaire (`_shared/temp/`)
+## Rules
 
-**Objectif**: Stocker temporairement le HTML scrapé pour comparaison lors de l'audit éditorial.
+- **Path resolution goes through `_shared/core/site_paths.py`** (single point):
+  `output_dir(site_slug)`, `scrape_cache_dir(site_slug)`, etc. Never build an
+  output path by hand. `OutputManager` (`scripts/utils/output_manager.py`) is
+  the write layer on top of it (`save_refreshed_html`, `save_metadata`,
+  `save_temp_html`...).
+- **`outputs/` is gitignored**: generated content never lands in the public
+  repo. The scaffold (`site init`) creates the folder skeleton.
+- **Scrape cache** (`_scrape_cache/`) holds the original HTML fetched before a
+  refresh, used for the editorial audit comparison and the Golden Rule asset
+  check (`assets_after >= assets_before`). Safe to purge; regenerated on the
+  next refresh.
+- **Publication source**: publish from the dated batch subfolder (or the
+  article-type subfolder), and keep only `.gutenberg.html` files (the bare
+  debug HTML is deleted after generation).
 
-**Caractéristiques**:
-- ❌ **Non versionné** (dans `.gitignore`)
-- ⏱️ **Éphémère** - Peut être purgé à tout moment via `OutputManager.init_workspace(purge_temp=True)`
-- 🔄 **Usage unique** - HTML brut scrapé depuis URL, utilisé pour editorial_audit.md, puis jetable
+## History
 
-**Structure**:
-```
-_shared/temp/
-├── enseigna.fr/
-│   ├── avis-acadomia.html
-│   └── cours-maths-primaire.html
-├── enseigna-vs-concurrent/
-└── superprof.fr-ressources/
-```
-
-**Méthodes OutputManager**:
-- `save_temp_html(site_id, url_slug, html)` - Sauvegarder HTML scrapé
-- `get_temp_html(site_id, url_slug)` - Récupérer HTML scrapé
-- `clear_temp_cache(site_id=None)` - Purger cache (1 site ou tous)
-
----
-
-## 2. Sorties Permanentes (`_shared/outputs/`)
-
-**Objectif**: Stocker les résultats validés du workflow (HTML optimisé, metadata, audits).
-
-**Caractéristiques**:
-- ✅ **Versionné** (tracking git)
-- 📦 **Permanent** - Représente le livrable final
-- 🔒 **Validé** - Passe par quality gate (editorial audit, asset validation)
-
-**Structure par site**:
-```
-_shared/outputs/{site_id}/
-├── html/                          # HTML WordPress-ready (après refresh)
-│   ├── {slug}_refreshed.html
-│   └── {slug}_refreshed.gutenberg.html
-├── metadata/                      # Métadonnées et rapports d'audit JSON
-│   ├── {slug}_metadata.json       # Title, meta, keywords, assets counts
-│   ├── {slug}_audit.json          # Audit report (GSC + SERP + HTML analysis)
-│   ├── {slug}_serp.json           # SERP analysis (TOP 3, PAA, intent)
-│   └── {slug}_gsc.json            # GSC metrics (CTR, impressions, position)
-├── csv/                           # Tableaux d'articles extraits (TablePress-ready)
-└── editorial_audits/              # Audits éditoriaux quality gate
-    └── {slug}_editorial_audit.md  # Quality gate report (1-10 score)
-```
-
-**Exemple concret**:
-```
-_shared/outputs/enseigna/
-├── html/
-│   └── preply-avis_refreshed.gutenberg.html
-├── metadata/
-│   └── preply-avis_metadata.json
-└── editorial_audits/
-    └── preply-avis_editorial_audit.md
-
-_shared/outputs/superprof.fr-ressources/
-├── html/
-│   └── apprendre-piano_refreshed.html
-├── metadata/
-│   └── apprendre-piano_metadata.json
-├── csv/
-│   └── tableau-comparaison-cours.csv
-└── editorial_audits/
-    └── apprendre-piano_editorial_audit.md
-```
-
-**Méthodes OutputManager**:
-- `save_refreshed_html(site_id, url_slug, html)` - HTML optimisé
-- `save_metadata(site_id, url_slug, metadata)` - Metadata JSON
-- `save_audit_report(site_id, url_slug, data, report_type)` - Rapports d'audit
-- `save_editorial_audit(site_id, url_slug, markdown)` - Audit éditorial (quality gate)
-
----
-
-## 3. Multi-Site Isolation
-
-**Sites autorisés** (définis dans `OutputManager.VALID_SITE_IDS`):
-
-| Site ID | Domain | Type |
-|---------|--------|------|
-| `enseigna.fr` | enseigna.fr | Reviews soutien scolaire |
-| `enseigna-vs-concurrent` | enseigna.fr | Comparatifs Enseigna vs concurrents |
-| `superprof.fr-ressources` | superprof.fr/ressources/ | Blog éducatif Superprof FR |
-
-**Validation stricte**:
-```python
-output_mgr._validate_site_id("enseigna.fr")  # ✅ OK
-output_mgr._validate_site_id("invalid.com")  # ❌ ValueError
-```
-
----
-
-## 4. Workflow Intégration
-
-### Étape 1: Scrape (Temp Cache)
-```python
-scraper.fetch_html(url)
-  → output_mgr.save_temp_html(site_id, url_slug, html)
-  → _shared/temp/{site_id}/{slug}.html
-```
-
-### Étape 1.5: Editorial Audit (Lecture Temp + Écriture Outputs)
-```python
-html_temp = output_mgr.get_temp_html(site_id, url_slug)  # Lecture temp
-editorial_result = auditor.audit(html_temp)
-  → output_mgr.save_editorial_audit(site_id, url_slug, report_md)
-  → _shared/outputs/{site_id}/editorial_audits/{slug}_editorial_audit.md
-```
-
-### Étape 4: Refresh (Écriture Outputs)
-```python
-refreshed_html = ghostwriter.refresh(html, audit)
-  → output_mgr.save_refreshed_html(site_id, url_slug, html)
-  → _shared/outputs/{site_id}/{slug}_refreshed.html
-
-  → output_mgr.save_metadata(site_id, url_slug, metadata)
-  → _shared/outputs/{site_id}/{slug}_metadata.json
-```
-
----
-
-## 5. Initialisation Workspace
-
-**Au démarrage du workflow autonome**:
-```python
-output_mgr = OutputManager()
-stats = output_mgr.init_workspace(purge_temp=True)
-
-# Garantit:
-# - _shared/temp/ est vide (purgé)
-# - _shared/outputs/{site_id}/ existe pour chaque site
-# - _shared/outputs/{site_id}/editorial_audits/ existe
-```
-
-**Résultat**:
-```python
-{
-  "temp_files_removed": 42,           # Fichiers purgés
-  "output_dirs_created": 6,           # 1 par site
-  "editorial_audit_dirs_created": 6   # 1 par site
-}
-```
-
----
-
-## 6. Validation & Sécurité
-
-### Validation Outputs Existent
-```python
-all_exist, missing = output_mgr.validate_outputs_exist(
-    site_id="enseigna.fr",
-    url_slug="avis-acadomia",
-    required=["refreshed_html", "metadata", "editorial_audit"]
-)
-
-if not all_exist:
-    print(f"Missing: {missing}")  # ["refreshed_html", "metadata"]
-```
-
-### Statistiques Workspace
-```python
-stats = output_mgr.get_workspace_stats()
-# {
-#   "temp_cache": {"enseigna.fr": 12, "superprof.fr-ressources": 8},
-#   "outputs": {"enseigna.fr": 45, "superprof.fr-ressources": 32},
-#   "total_temp_size_mb": 2.4,
-#   "total_output_size_mb": 18.7
-# }
-```
-
----
-
-## 7. Distinction Cache vs Outputs
-
-| Aspect | `_shared/temp/` | `_shared/outputs/` |
-|--------|-----------------|-------------------|
-| **Versionné** | ❌ Non (.gitignore) | ✅ Oui (tracking git) |
-| **Durée de vie** | Éphémère (session) | Permanent |
-| **Contenu** | HTML brut scrapé | HTML optimisé + metadata + audits |
-| **Usage** | Comparaison audit | Livrable final |
-| **Purge** | Fréquente (init_workspace) | Jamais (archive si besoin) |
-| **Validation** | Aucune | Quality gate + asset validation |
-
-**Exemple de cycle de vie**:
-```
-URL → Scraper → temp/{slug}.html (éphémère)
-                     ↓
-              Editorial Audit (lecture)
-                     ↓
-            Quality Gate (score ≥ 4?)
-                     ↓
-              Ghostwriter Refresh
-                     ↓
-        outputs/{slug}_refreshed.html (permanent)
-                     ↓
-              temp/{slug}.html (peut être purgé)
-```
-
----
-
-## 8. API OutputManager (Référence)
-
-### Initialisation
-```python
-from scripts.utils.output_manager import OutputManager
-mgr = OutputManager()  # Auto-detect base_path
-mgr.init_workspace(purge_temp=True)
-```
-
-### Cache Temporaire
-```python
-mgr.save_temp_html("enseigna.fr", "avis-acadomia", "<html>...")
-html = mgr.get_temp_html("enseigna.fr", "avis-acadomia")
-mgr.clear_temp_cache("enseigna.fr")  # Purger 1 site
-mgr.clear_temp_cache()  # Purger tous les sites
-```
-
-### Outputs Permanents
-```python
-mgr.save_refreshed_html("enseigna.fr", "avis-acadomia", "<html>...")
-mgr.save_metadata("enseigna.fr", "avis-acadomia", {"title": "..."})
-mgr.save_audit_report("enseigna.fr", "avis-acadomia", {...}, "audit")
-mgr.save_editorial_audit("enseigna.fr", "avis-acadomia", "# Report...")
-```
-
-### Validation
-```python
-outputs = mgr.get_output_files("enseigna.fr", "avis-acadomia")
-all_ok, missing = mgr.validate_outputs_exist("enseigna.fr", "avis-acadomia")
-stats = mgr.get_workspace_stats()
-```
-
----
-
-**Fin de la documentation technique**
+- v2.0 (2026-02) described the old centralised layout (`_shared/temp/` +
+  `_shared/outputs/`, git-tracked). That structure no longer exists: outputs
+  were migrated into each site folder (`sites/<site-slug>/outputs/`,
+  gitignored), and the scrape cache moved to `outputs/_scrape_cache/`.
