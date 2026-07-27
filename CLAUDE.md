@@ -94,6 +94,7 @@ Internal linking → Sync.
 | `/site-status --site <site-slug>` | GSC SEO status of a site (→ Sheet) |
 | `/blog --site <site-slug>` | SEO performance of a blog via GSC MCP: totals + top KW (chat summary) |
 | `/page <url>` | SEO performance of a specific URL via GSC MCP (site inferred from the URL) |
+| `/tab-perf --site <site-slug> --tab "<tab-name>"` | Refresh monitoring of a whole Sheet tab (not a single URL): GSC gains/losses per URL vs the previous window, grouped by editorial status — HTML report + JSON dump |
 
 Actual CLI (the commands wrap it): `python3 content_writer.py <group> <cmd>`.
 Up-to-date list of groups/commands: `python3 content_writer.py --help` (and

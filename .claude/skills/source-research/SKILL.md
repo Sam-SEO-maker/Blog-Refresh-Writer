@@ -38,13 +38,28 @@ tier 1, it does not replace it.
 WebFetch or deep-research call.** Keep the list in working memory for the whole
 session and apply it **a priori**:
 
-- A blacklisted domain is **never fetched** nor kept as a candidate; it is
-  discarded as soon as the SERP or search results are read, not after the fact.
-- Never package a "top N" of results without first sifting it against the
+- A blacklisted domain is **never linked** (no `href` added) and **never
+  treated as an E-E-A-T source** (never added to `sources[]`/`eeat_sources`,
+  never used to attribute a statistic or an expert quote).
+- Never package a "top N" of *sources* without first sifting it against the
   blacklist: the filtering happens **before** curation, not after.
 - In **batch / multi-article** mode: re-check the blacklist at the start of **each
   article** (re-read the file or re-summarise its categories); the constraint must
   never drop out of working memory between two iterations.
+
+> ⚠️ **What the blacklist does NOT forbid.** Two things are outside its
+> scope, both already exercised elsewhere in the workflow:
+> - **Naming a competitor in the body text** of a comparative article (e.g.
+>   "Acadomia propose un tarif de X€/h"): a factual mention with no link is
+>   not a citation in the E-E-A-T sense and is not blocked. It never carries
+>   a `href`, and it is not what makes it into `eeat_sources`.
+> - **Reading a blacklisted page for competitive analysis** (structure,
+>   angle, the gap it covers): `WebFetch`-ing a competitor's article to
+>   understand *why* it ranks is the same purpose the top-10 SERP scrape at
+>   `/refresh` step 2.2 already serves, just closer-in. Beating a
+>   better-ranked competitor page often starts with reading it. Nothing
+>   read this way may become a cited/linked source — that prohibition is
+>   absolute — but reading it to inform the outline (step 3.3) is allowed.
 
 The two exceptions (Golden Rule on existing content, review article whose subject IS
 the platform) are defined in `references/blacklisted-domains.md` and prevail.
@@ -75,8 +90,10 @@ sources). Choose the tool based on the need:
 
 Query best practices:
 - **Blacklist first** (step 0 already done): a SERP/WebSearch result belonging
-  to a blacklisted domain is **ignored without being fetched**; immediately look
-  for a non-blacklisted alternative.
+  to a blacklisted domain is **never treated as a source candidate** for the
+  brief; immediately look for a non-blacklisted alternative for the claim at
+  hand. This does not bar fetching that result for competitive reading (see
+  step 0) — it bars using it as a cited source.
 - **Restrict to the directory's authority domain** (`site:insee.fr`,
   `site:hal.science`) rather than an open search.
 - **Target the precise page** (deep-link) that carries the information, never the homepage.
@@ -121,12 +138,14 @@ example and injection flow**: `references/brief-schema.md`.
   source is not written (cf. E-E-A-T Experience Proofs: do not fabricate
   numbered anecdotes).
 - ❌ **Keeping Wikipedia as a source** in the brief: [[feedback-no-wikipedia-links]].
-- ❌ **Citing/linking a blacklisted domain** (competitors, aggregators): the exclusion
-  happens **a priori** (step 0: blacklist loaded before any research, candidates
-  discarded before fetch). Filtering the final brief against
+- ❌ **Citing/linking a blacklisted domain** (competitors, aggregators): the
+  exclusion from `sources[]`/`eeat_sources`/`href` happens **a priori** (step
+  0: blacklist loaded before any research, candidates discarded before they
+  reach the brief). Filtering the final brief against
   `references/blacklisted-domains.md` remains a **safety net**, not the
   main mechanism; without an alternative, drop the claim (→ `lacunes[]`)
-  rather than cite a forbidden domain.
+  rather than cite a forbidden domain. This bars citing/linking it, not
+  reading it for competitive analysis (see step 0).
 - ❌ "Consulté le [date]" ("Accessed on [date]") in the returned references: [[feedback-no-consulte-le]].
 - ❌ Em dash `—`: [[feedback-no-em-dash]].
 

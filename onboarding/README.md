@@ -23,6 +23,9 @@ SEO Manager for one country (ES, UK, US, MX, ID, JP, …) and you work on **your
    fill in its config, write your `site.md`, install your writing skill.
 3. **[03 — Daily usage](03-daily-usage.md)** — the architecture, the slash commands and
    CLI, and the end-to-end refresh workflow.
+4. **[04 — Workflow deep dive](04-workflow-deep-dive.md)** — every SEO task the
+   refresh performs, explained step by step (SERP, PAA, sources, editorial rules,
+   YTG semantic QC), for a non-technical reader.
 
 Reference model to copy from: **[site-model/](site-model/README.md)**.
 

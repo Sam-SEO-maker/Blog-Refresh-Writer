@@ -197,6 +197,70 @@ def gsc_page(url, days, dry_run):
         raise click.Abort()
 
 
+@audit.command("gsc-tab")
+@site_option(required=True, dest='site')
+@click.option('--tab', required=True,
+              help='Declared tab name (sheets.tabs of site.json), e.g. "New Growing List"')
+@click.option('--days', type=int, default=28, help='Current window in days (default: 28), ignored if --start/--end')
+@click.option('--start', default=None, help='Current window start YYYY-MM-DD (with --end)')
+@click.option('--end', default=None, help='Current window end YYYY-MM-DD (with --start)')
+@click.option('--top', type=int, default=15, help='Rows per movers table (default: 15)')
+@click.option('--dry-run', is_flag=True, help='Do not write the local JSON dump')
+def gsc_tab(site, tab, days, start, end, top, dry_run):
+    """Refresh monitoring of a work tab: GSC gains/losses vs the previous window."""
+    from scripts.audit.gsc_tab_perf import run_gsc_tab
+
+    def fmt_delta(n):
+        return f"+{n:,}" if n > 0 else f"{n:,}"
+
+    def fmt_pct(v):
+        return "n/a" if v is None else (f"+{v}%" if v > 0 else f"{v}%")
+
+    def fmt_pos(pg):
+        b, a = pg["position_before"], pg["position_after"]
+        if b is None or a is None:
+            return "pos   n/a      "
+        arrow = "↑" if a < b else ("↓" if a > b else "=")
+        return f"pos {b:>5} → {a:>5} {arrow}"
+
+    click.echo(f"\n📈 GSC TAB DELTA - {site} / {tab}")
+    try:
+        r = run_gsc_tab(site, tab=tab, days=days, start=start, end=end, dry_run=dry_run)
+        p, pp, t = r["period"], r["previous_period"], r["totals"]
+        click.echo(f"  Window:   {p['start']} → {p['end']}  (vs {pp['start']} → {pp['end']})")
+        click.echo(f"  URLs:     {t['urls']} | ↗ {len(r['progressions'])} | "
+                   f"↘ {len(r['regressions'])} | = {len(r['stable'])}")
+        click.echo(f"  Clicks:   {t['clicks_before']:,} → {t['clicks_after']:,} "
+                   f"({fmt_delta(t['clicks_delta'])}, {fmt_pct(t['clicks_delta_pct'])})")
+
+        click.echo(f"\n  By editorial status:")
+        for status, g in sorted(r["by_status"].items(),
+                                key=lambda kv: kv[1]["clicks_after"], reverse=True):
+            click.echo(f"    {status:<28} {g['urls']:>4} URLs | "
+                       f"{g['clicks_before']:>6,} → {g['clicks_after']:>6,} clicks "
+                       f"({fmt_delta(g['clicks_delta'])}, {fmt_pct(g['clicks_delta_pct'])})")
+
+        for title, rows in (("Top progressions", r["progressions"][:top]),
+                            ("Top regressions", r["regressions"][:top])):
+            if not rows:
+                continue
+            click.echo(f"\n  {title}:")
+            for pg in rows:
+                slug = pg["url"].rstrip("/").rsplit("/", 1)[-1]
+                click.echo(f"    {fmt_delta(pg['clicks_delta']):>6} clicks "
+                           f"({pg['clicks_before']:>4,} → {pg['clicks_after']:>4,}) | "
+                           f"{fmt_pos(pg)} | {pg['status']:<22} | {slug}")
+
+        if r.get('report_path'):
+            click.echo(f"\n  📄 Report: {r['report_path']}")
+            click.echo(f"     (open it in a browser: open \"{r['report_path']}\")")
+        if r.get('output_path'):
+            click.echo(f"  Raw data: {r['output_path']}")
+    except Exception as e:
+        click.echo(f"\n❌ ERROR: {e}", err=True)
+        raise click.Abort()
+
+
 @audit.command("gsc-state")
 @site_option(required=True, dest='site')
 @click.option('--months', type=int, default=3, help='Period in months (default: 3)')
