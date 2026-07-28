@@ -154,6 +154,7 @@ class SheetsClient:
             traceback.print_exc()
             return False
 
+    @property
     def ENSEIGNA_TABS(self) -> list[str]:
         from _shared.core.sheets_config import get_tab_names
         names = [t for t in get_tab_names("enseigna.fr")

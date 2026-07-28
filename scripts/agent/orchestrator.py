@@ -769,6 +769,7 @@ class RefreshOrchestrator:
                 main_keyword=audit_dict.get("main_keyword", ""),
                 people_also_ask=audit_dict.get("people_also_ask", ""),
                 secondary_keywords=audit_dict.get("secondary_keywords", ""),
+                serp=audit_dict.get("serp") or {},
                 # STEP 2.5 : guide YTG calculé ci-dessus, propagé au CLI refresh.
                 ytg_guide_id=audit_dict.get("ytg_guide_id", ""),
                 ytg_semantic_field=audit_dict.get("semantic_field_override", []),
@@ -1249,7 +1250,289 @@ class RefreshOrchestrator:
             for r in avis_rows
         ]
 
-    def batch_refresh(self, action: str, site_slug: Optional[str] = None, post_type: Optional[str] = None, limit: Optional[int] = None) -> dict:
+    # Statuts terminaux : la ligne est déjà traitée ou sortie du périmètre
+    # éditorial, on ne la repasse jamais en génération.
+    _TAB_SKIP_STATUSES = {
+        "publié",
+        "redirection 301",
+        "cannibalisation de kw",
+    }
+
+    def _tab_rows_for_refresh(self, site_slug: str, tab: str) -> list:
+        """
+        Lit les lignes à rafraîchir d'un onglet déclaré (`sheets.tabs` du
+        site.json) et les adapte à l'interface attendue par la boucle de
+        `batch_refresh`.
+
+        Config-driven comme `scripts/audit/gsc_tab_perf._read_tab_rows` : la
+        géométrie (col_url, col_keyword, col_status, header_row) vient de la
+        config, jamais de littéraux — les onglets n'ont ni la même colonne de
+        statut (NGL = F, Medium Potential = I) ni le même nombre de lignes
+        d'en-tête.
+
+        Sélection : on retient les lignes dont le statut n'est PAS terminal,
+        cellule vide incluse (un onglet fraîchement ouvert a sa colonne de
+        statut vide — l'exiger renverrait 0 ligne).
+        """
+        from _shared.core.sheets_config import get_sheets_config
+
+        cfg = get_sheets_config(site_slug)
+        tabs = cfg.get("tabs") or []
+        tab_cfg = next((t for t in tabs if t.get("name") == tab), None)
+        if tab_cfg is None:
+            declared = ", ".join(t.get("name", "?") for t in tabs) or "(aucun)"
+            raise ValueError(
+                f"Onglet '{tab}' non déclaré pour {site_slug}. Déclarés : {declared}"
+            )
+
+        col_url = tab_cfg.get("col_url", 0)
+        col_kw = tab_cfg.get("col_keyword")
+        col_status = tab_cfg.get("col_status")
+        header_row = tab_cfg.get("header_row", 1)
+
+        @dataclass
+        class _TabRefreshRow:
+            site_slug: str = ""
+            blogpost_url: str = ""
+            main_keyword: str = ""
+            title: str = ""
+            post_type: str = ""
+            impressions_30d: int = 0
+            clicks_30d: int = 0
+            ctr_30d: float = 0.0
+            index_diagnostic: str = ""
+            row_index: int = 0
+            status: str = ""
+            # Signaux SERP (STEP 2.6) : la Sheet ne les porte pas sur ces onglets,
+            # ils sont peuplés depuis DataForSEO avant la génération. Sans ces
+            # champs, _prepare_context_for_claude_code part à l'aveugle.
+            people_also_ask: str = ""
+            secondary_keywords: str = ""
+
+        def cell(row, idx):
+            if idx is None or idx >= len(row):
+                return ""
+            return (row[idx] or "").strip()
+
+        values = self.sheets_client._read_sheet(tab)
+        rows = []
+        for i, row in enumerate(values, start=1):
+            if i <= header_row or not row:
+                continue
+            url = cell(row, col_url)
+            if not url.startswith("http"):
+                continue
+            status = cell(row, col_status)
+            if status.lower() in self._TAB_SKIP_STATUSES:
+                continue
+            rows.append(_TabRefreshRow(
+                site_slug=site_slug,
+                blogpost_url=url,
+                main_keyword=cell(row, col_kw),
+                title="",  # pas de colonne title fiable : le ghostwriter part du H1 scrapé
+                post_type="",
+                row_index=i,
+                status=status,
+            ))
+        return rows
+
+    def _update_tab_status(self, site_slug: str, tab: str, row_index: int, status: str) -> bool:
+        """
+        Écrit le statut éditorial dans la colonne déclarée de l'onglet traité.
+
+        Pendant en écriture de `_tab_rows_for_refresh` : la géométrie vient de
+        `sheets.tabs` du site.json (`col_status`), jamais d'un littéral — les
+        onglets n'ont pas la même colonne de statut (NGL = F, Medium Potential = I).
+
+        Un onglet sans `col_status` déclaré n'est pas une erreur : la Sheet ne
+        porte simplement pas encore la colonne, on ne écrit rien et on le dit.
+        """
+        from _shared.core.sheets_config import get_sheets_config
+
+        if not row_index:
+            logger.warning(f"[STEP 8] pas de row_index pour {tab} — statut non écrit")
+            return False
+
+        cfg = get_sheets_config(site_slug)
+        tab_cfg = next((t for t in (cfg.get("tabs") or []) if t.get("name") == tab), None)
+        if tab_cfg is None:
+            logger.warning(f"[STEP 8] onglet '{tab}' non déclaré — statut non écrit")
+            return False
+
+        col_status = tab_cfg.get("col_status")
+        if col_status is None:
+            logger.info(
+                f"[STEP 8] '{tab}' ne déclare pas col_status — statut '{status}' "
+                f"non écrit (colonne absente de la Sheet)"
+            )
+            return True
+
+        col_letter = chr(ord("A") + col_status)
+        return self.sheets_client._batch_update_cells([
+            {"sheet": tab, "cell": f"{col_letter}{row_index}", "value": status},
+        ])
+
+    def _rows_for_batch(self, action: str, site_canonical: Optional[str],
+                        tab: Optional[str], post_type: Optional[str],
+                        limit: Optional[int], logger) -> list:
+        """Sélectionne les lignes du batch (routage onglet/site + filtres).
+
+        Extrait de `batch_refresh` pour que le chemin séquentiel et le chemin
+        parallèle sélectionnent EXACTEMENT le même périmètre : une divergence
+        ici ferait traiter des URLs différentes selon le mode, ce qui est
+        indétectable à la lecture d'un rapport.
+        """
+        if tab:
+            if not site_canonical:
+                raise ValueError(
+                    "batch: --tab requires --site (tab layout is read from the site config)."
+                )
+            rows = self._tab_rows_for_refresh(site_canonical, tab)
+        elif site_canonical == "enseigna.fr":
+            rows = self._enseigna_rows_for_refresh(action)
+        else:
+            raise ValueError(
+                f"batch: no sheet-driven batch flow wired for site '{site_canonical}' "
+                f"(only enseigna.fr Avis/Versus). "
+                f"Pass --tab \"<declared tab>\" to use the generic tab-driven flow."
+            )
+
+        if post_type:
+            rows = [r for r in rows if r.post_type == post_type]
+        if limit and limit > 0:
+            rows = rows[:limit]
+        return rows
+
+    def batch_prepare_parallel(self, action: str, site_slug: Optional[str] = None,
+                               post_type: Optional[str] = None, limit: Optional[int] = None,
+                               tab: Optional[str] = None,
+                               parallel: int = 3) -> dict:
+        """Prépare en PARALLÈLE le contexte de tous les articles du lot.
+
+        Ne génère rien : la rédaction passe par les subagents Claude Code
+        (abonnement Max), qu'un script Python ne peut pas invoquer. Cette
+        méthode couvre la phase déterministe et coûteuse en I/O — fetch WP,
+        audit GSC, SERP/PAA, guide YTG, décision, `generation_prompt.txt` — et
+        écrit un plan de travail que l'agent consomme ensuite.
+
+        Le quota YTG (15 req/min) reste tenu : `RateLimiter` s'appuie désormais
+        sur un décompte partagé entre processus et threads.
+        """
+        import logging
+        from _shared.core.constants import canonical_site_slug
+        from scripts.agent.parallel_batch import ParallelBatchPreparer
+
+        logger = logging.getLogger("RefreshOrchestrator")
+
+        if not self.sheets_client:
+            return {"processed": 0, "prepared": 0, "skipped": 0, "failed": 0,
+                    "errors": ["No sheets client configured."], "plan_path": ""}
+
+        site_canonical = canonical_site_slug(site_slug) if site_slug else None
+        try:
+            rows = self._rows_for_batch(action, site_canonical, tab, post_type, limit, logger)
+        except ValueError as e:
+            logger.error(str(e))
+            return {"processed": 0, "prepared": 0, "skipped": 0, "failed": 0,
+                    "errors": [str(e)], "plan_path": ""}
+
+        def prepare_fn(row, sheets_lock):
+            """Phase déterministe d'un article. Exécutée dans un thread."""
+            extraction_result = self._fetch_html(row.blogpost_url, row.site_slug)
+            if not extraction_result.get("clean_body"):
+                raise ValueError(f"Failed to fetch HTML for {row.blogpost_url}")
+
+            original_metrics = self._extract_content_metrics(
+                extraction_result, row.blogpost_url, row.site_slug
+            )
+
+            # Guide YTG (pré-génération). Le rate limiter partagé sérialise les
+            # appels entre threads ET entre processus.
+            ytg_pre_data = {}
+            try:
+                if self.ytg_analyzer is None:
+                    self.ytg_analyzer = YTGAnalyzer()
+                if self.ytg_analyzer.is_configured and row.main_keyword:
+                    ytg_result = self._fetch_ytg_guide(row.main_keyword, {})
+                    if ytg_result:
+                        ytg_pre_data = {
+                            "ytg_guide_id": ytg_result.guide_id,
+                            "semantic_field_override": ytg_result.semantic_terms,
+                            "ytg_competitor_targets": {
+                                "top3_soseo": ytg_result.top3_soseo,
+                                "top3_dseo": ytg_result.top3_dseo,
+                                "top10_soseo": ytg_result.top10_soseo,
+                                "top10_dseo": ytg_result.top10_dseo,
+                            },
+                            "ytg_term_colors": ytg_result.term_colors,
+                        }
+            except Exception as ytg_err:
+                logger.warning(f"[YTG] non-blocking error for {row.blogpost_url}: {ytg_err}")
+
+            # SERP : PAA + mots-clés secondaires (mêmes signaux qu'en séquentiel).
+            if not getattr(row, "people_also_ask", "") and row.main_keyword:
+                try:
+                    serp_result = self._get_serp_analyzer(row.site_slug).analyze(
+                        keyword=row.main_keyword,
+                        our_domain=urlparse(row.blogpost_url).netloc,
+                    )
+                    paa = list(serp_result.paa_questions or [])
+                    secondary: list[str] = []
+                    for result in (serp_result.organic_results or [])[:10]:
+                        for kw in (getattr(result, "keywords", None) or [])[:3]:
+                            if kw and kw not in secondary:
+                                secondary.append(kw)
+                    row.people_also_ask = ", ".join(paa[:5])
+                    row.secondary_keywords = ", ".join(secondary[:10])
+                except Exception as serp_err:
+                    logger.warning(f"[SERP] non-blocking error for {row.blogpost_url}: {serp_err}")
+
+            # Contexte + generation_prompt.txt (identique au chemin séquentiel).
+            context_dir = self._prepare_context_for_claude_code(
+                extraction_result["clean_body"], action, row,
+                extraction_result, ytg_data=ytg_pre_data,
+            )
+
+            output_slug = row.blogpost_url.rstrip('/').rsplit('/', 1)[-1]
+            if output_slug.endswith('.html'):
+                output_slug = output_slug[:-len('.html')]
+            outputs = self.output_mgr.get_output_files(
+                row.site_slug, output_slug, title=row.title
+            )
+
+            return {
+                "action": action,
+                "context_dir": context_dir.absolute(),
+                "generation_prompt": context_dir.absolute() / "generation_prompt.txt",
+                "output_html": outputs["refreshed_html"],
+                "output_json": outputs["metadata"],
+                "strategy": action,
+                "main_keyword": row.main_keyword or "",
+                "ytg_guide_id": ytg_pre_data.get("ytg_guide_id", ""),
+                "article_type": getattr(row, "article_type", "") or "",
+                "assets_before": {
+                    "images": original_metrics.get("images_count", 0),
+                    "internal_links": original_metrics.get("internal_links_count", 0),
+                },
+            }
+
+        preparer = ParallelBatchPreparer(self, parallel=parallel)
+        results = preparer.run(rows, prepare_fn)
+
+        plan_path = Path("_shared/context") / "parallel_batch_plan.json"
+        preparer.write_plan(results, plan_path)
+
+        return {
+            "processed": len(results),
+            "prepared": sum(1 for r in results if r.status == "PREPARED"),
+            "skipped": sum(1 for r in results if r.status == "SKIPPED"),
+            "failed": sum(1 for r in results if r.status == "FAILED"),
+            "errors": [f"{r.url}: {r.reason}" for r in results if r.status == "FAILED"],
+            "plan_path": str(plan_path),
+            "results": results,
+        }
+
+    def batch_refresh(self, action: str, site_slug: Optional[str] = None, post_type: Optional[str] = None, limit: Optional[int] = None, tab: Optional[str] = None) -> dict:
         """
         Batch refresh pour lignes where action_blogpost = action.
 
@@ -1282,18 +1565,33 @@ class RefreshOrchestrator:
         if not self.sheets_client:
             return {"processed": 0, "success": 0, "failed": 0, "assets_restored": 0, "errors": []}
 
-        # Router vers les onglets réels du site. Seul enseigna.fr a un flux batch
-        # piloté par Sheet (Avis/Versus). L'ancien fallback lisait l'onglet retiré
+        # Router vers les onglets réels du site. `--tab` (chemin générique
+        # config-driven) prime ; sinon seul enseigna.fr a un flux batch par
+        # défaut (Avis/Versus). L'ancien fallback lisait l'onglet retiré
         # Refreshs_Audit et renvoyait silencieusement 0 ligne — remplacé par une
-        # erreur explicite (le batch superprof passe par prepare_weekly_batch).
+        # erreur explicite qui oriente vers --tab.
         from _shared.core.constants import canonical_site_slug
         site_canonical = canonical_site_slug(site_slug) if site_slug else None
-        if site_canonical == "enseigna.fr":
+        if tab:
+            # Onglet explicite : chemin générique config-driven, valable pour
+            # tout site déclarant `sheets.tabs` (prime sur le routage par site).
+            if not site_canonical:
+                msg = "batch_refresh: --tab requires --site (tab layout is read from the site config)."
+                logger.error(msg)
+                return {"processed": 0, "success": 0, "failed": 0,
+                        "assets_restored": 0, "errors": [msg]}
+            try:
+                rows = self._tab_rows_for_refresh(site_canonical, tab)
+            except ValueError as e:
+                logger.error(str(e))
+                return {"processed": 0, "success": 0, "failed": 0,
+                        "assets_restored": 0, "errors": [str(e)]}
+        elif site_canonical == "enseigna.fr":
             rows = self._enseigna_rows_for_refresh(action)
         else:
             msg = (f"batch_refresh: no sheet-driven batch flow wired for site "
                    f"'{site_canonical}' (only enseigna.fr Avis/Versus). "
-                   f"Superprof batches run via scripts/agent/prepare_weekly_batch.")
+                   f"Pass --tab \"<declared tab>\" to use the generic tab-driven flow.")
             logger.error(msg)
             return {"processed": 0, "success": 0, "failed": 0,
                     "assets_restored": 0, "errors": [msg]}
@@ -1354,6 +1652,37 @@ class RefreshOrchestrator:
                             )
                 except Exception as ytg_pre_err:
                     logger.warning(f"[STEP 2.5] YTG pre-gen non-blocking error: {ytg_pre_err}")
+
+                # STEP 2.6: SERP — PAA + mots-clés secondaires AVANT génération.
+                # Les onglets Sheet ne portent pas ces colonnes (contrairement à
+                # RefreshAuditRow) : sans ce reversement, le plan éditorial et la
+                # couverture des questions se construisent à l'aveugle.
+                if not getattr(row, "people_also_ask", ""):
+                    try:
+                        if row.main_keyword:
+                            serp_result = self._get_serp_analyzer(row.site_slug).analyze(
+                                keyword=row.main_keyword,
+                                our_domain=urlparse(row.blogpost_url).netloc,
+                            )
+                            paa = list(serp_result.paa_questions or [])
+                            secondary: list[str] = []
+                            for result in (serp_result.organic_results or [])[:10]:
+                                for kw in (getattr(result, "keywords", None) or [])[:3]:
+                                    if kw and kw not in secondary:
+                                        secondary.append(kw)
+                            row.people_also_ask = ", ".join(paa[:5])
+                            row.secondary_keywords = ", ".join(secondary[:10])
+                            logger.info(
+                                f"[STEP 2.6] SERP: {len(paa)} PAA, "
+                                f"{len(secondary)} secondary_keywords"
+                            )
+                        else:
+                            logger.warning(
+                                f"[STEP 2.6] SERP skipped (no main_keyword) — "
+                                f"{row.blogpost_url}"
+                            )
+                    except Exception as serp_err:
+                        logger.warning(f"[STEP 2.6] SERP non-blocking error: {serp_err}")
 
                 # STEP 3: Generate refreshed content
                 if action in ["FULL_REFRESH", "FULL REFRESH"]:
@@ -1569,15 +1898,31 @@ class RefreshOrchestrator:
                 # Gate YTG : si actif et contenu sous-optimisé → révision, pas DONE.
                 new_status = "NEEDS_REVIEW" if ytg_gate_block else "DONE"
 
-                # STEP 8: Update sheet (refresh_date Avis/Versus — seul flux batch câblé)
-                update_ok = self.sheets_client.update_refresh_status_enseigna(
-                    url=row.blogpost_url,
-                    refresh_date=datetime.now().strftime("%Y-%m-%d"),
-                )
-                if not update_ok:
-                    logger.error(f"[STEP 8] ÉCHEC écriture Avis/Versus (refresh_date) pour {row.blogpost_url[:60]}")
+                # STEP 8: Update sheet — l'écriture du statut est propre au flux.
+                # `update_refresh_status_enseigna` cible les onglets Avis/Versus
+                # d'enseigna.fr : l'appeler depuis le flux générique par onglet
+                # cherchait l'URL dans le mauvais spreadsheet et faisait échouer
+                # l'article après une génération réussie.
+                if tab:
+                    # Flux générique config-driven : le statut vit dans la colonne
+                    # déclarée (`col_status`) de l'onglet lu, pas dans Avis/Versus.
+                    update_ok = self._update_tab_status(
+                        site_slug=row.site_slug,
+                        tab=tab,
+                        row_index=getattr(row, "row_index", 0),
+                        status=new_status,
+                    )
+                    label = f"{tab}"
                 else:
-                    logger.info(f"[STEP 8] ✓ Avis/Versus mis à jour: refresh_date écrit pour {row.blogpost_url[:60]}")
+                    update_ok = self.sheets_client.update_refresh_status_enseigna(
+                        url=row.blogpost_url,
+                        refresh_date=datetime.now().strftime("%Y-%m-%d"),
+                    )
+                    label = "Avis/Versus"
+                if not update_ok:
+                    logger.error(f"[STEP 8] ÉCHEC écriture {label} pour {row.blogpost_url[:60]}")
+                else:
+                    logger.info(f"[STEP 8] ✓ {label} mis à jour ({new_status}) pour {row.blogpost_url[:60]}")
 
                 # STEP 9: Log to Notion refresh tracker (non-blocking)
                 try:

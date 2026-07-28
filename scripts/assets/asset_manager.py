@@ -287,7 +287,26 @@ class AssetManager:
         new_assets = self.extract_assets(new_content, exclude_featured_image=True)
 
         # Compter les assets (images contextuelles uniquement, sans featured image)
-        images_original = original_assets.get("counts", {}).get("images", 0)
+        #
+        # Les deux membres de la comparaison DOIVENT être mesurés à la même aune.
+        # Le baseline transmis par `cw finalize` vient de
+        # `ContentExtractor._extract_assets_baseline()`, qui compte **toutes** les
+        # images WordPress, image à la Une comprise ; `extract_assets` ci-dessus
+        # l'exclut. Comparer les deux faisait perdre une image fantôme sur tout
+        # article pourvu d'une featured image — donc en pratique sur tous — et
+        # `finalize` affichait « missing assets NOT restorable » à chaque refresh.
+        # Une alerte qui se déclenche toujours finit ignorée, et c'est justement
+        # celle qui garde la Règle d'Or.
+        #
+        # Quand l'original est disponible, on le recompte donc avec la même
+        # méthode que le nouveau contenu ; sinon on retombe sur le compteur
+        # transmis, faute de mieux.
+        if original_content:
+            images_original = self.extract_assets(
+                original_content, exclude_featured_image=True
+            ).get("counts", {}).get("images", 0)
+        else:
+            images_original = original_assets.get("counts", {}).get("images", 0)
         images_new = new_assets.get("counts", {}).get("images", 0)
 
         links_original = (

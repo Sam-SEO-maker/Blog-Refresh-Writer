@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 import uuid
-from bs4 import BeautifulSoup, NavigableString, Tag
+from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 
 
 _WP_IMAGE_CLASS_RE = re.compile(r"wp-image-(\d+)")
@@ -371,11 +371,42 @@ def _convert_element(tag: Tag) -> str:
     return str(tag)
 
 
+def is_already_gutenberg(html: str) -> bool:
+    """Le HTML porte-t-il déjà des délimiteurs de blocs Gutenberg ?
+
+    Sert de garde à `to_gutenberg` : reconvertir un contenu déjà converti
+    détruit ses blocs (voir la docstring de `to_gutenberg`).
+    """
+    return re.search(r"<!--\s*/?wp:", html or "") is not None
+
+
 def to_gutenberg(html: str) -> str:
+    """Convertit du HTML éditorial en blocs Gutenberg.
+
+    **Idempotent** : si l'entrée contient déjà des délimiteurs `<!-- wp: -->`,
+    elle est retournée telle quelle.
+
+    Sans cette garde, une seconde conversion corrompait le document. Les
+    délimiteurs Gutenberg sont des commentaires HTML ; BeautifulSoup les expose
+    en nœuds `Comment`, **sous-classe de `NavigableString`**. La branche « texte
+    nu » les capturait donc et réemballait chaque délimiteur en paragraphe
+    visible : un `<!-- wp:paragraph -->\\n<p>Bonjour</p>\\n<!-- /wp:paragraph -->`
+    ressortait en trois blocs, dont deux affichant littéralement
+    « wp:paragraph » et « /wp:paragraph » sur la page publiée. C'est la cause
+    racine de la non-idempotence de `cw finalize` (fichier qui gonfle et se
+    remplit de blocs parasites à chaque relance sur la même URL).
+    """
+    if is_already_gutenberg(html):
+        return html
+
     soup = BeautifulSoup(html, "html.parser")
     root = soup.body if soup.body is not None else soup
     blocks = []
     for child in root.children:
+        # Un Comment est un NavigableString : le tester d'abord, sinon un
+        # délimiteur de bloc serait traité comme du texte éditorial.
+        if isinstance(child, Comment):
+            continue
         if isinstance(child, NavigableString):
             text = str(child)
             if text.strip():

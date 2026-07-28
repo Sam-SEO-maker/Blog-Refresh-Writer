@@ -158,10 +158,22 @@ def _is_interrogative(text: str) -> bool:
 
 
 def _split_terms(raw: str) -> List[str]:
-    """PAA / secondary_keywords sont des strings séparées par ' | '."""
+    """Découpe une liste PAA / secondary_keywords sérialisée en string.
+
+    Deux séparateurs coexistent dans le projet : l'historique ` | ` et la
+    virgule, écrite par l'orchestrateur (`", ".join(paa[:5])`). Ne gérer que le
+    pipe faisait passer les 4 questions d'une PAA pour **une seule** : `plan
+    init` affichait « 1 PAA injected » et surtout `plan check` validait la
+    couverture contre une chaîne unique, donc ne vérifiait rien.
+
+    Le pipe prime quand il est présent (format explicite) ; sinon on retombe sur
+    la virgule. Une PAA contenant une virgule interne reste correctement
+    découpée dans le format pipe, ce qui est la raison de garder cette priorité.
+    """
     if not raw:
         return []
-    return [t.strip() for t in raw.split("|") if t.strip()]
+    separator = "|" if "|" in raw else ","
+    return [t.strip() for t in raw.split(separator) if t.strip()]
 
 
 # --------------------------------------------------------------------------- #

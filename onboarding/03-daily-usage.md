@@ -26,7 +26,7 @@ Type these in the Claude Code chat. They wrap the CLI and load the right skills.
 | Command | What it does |
 |---|---|
 | `/refresh <url> --site <site-slug> --main-keyword "<main keyword>"` | Full refresh: audit → decision → sources → generation → finalize. Always pass the main keyword: the SERP analysis and the YTG semantic guide are built from it |
-| `/batch --action X --site <site-slug>` | Batch refresh from your Google Sheet |
+| `/batch --site <site-slug> --tab "<tab name>"` | Batch refresh from your Google Sheet. Pass the tab you work on, spelled exactly as declared in your site config — each tab has its own status column. Processes 50 URLs by default (`--limit 0` for the whole tab) |
 | `/audit serp <url> --main-keyword "<main keyword>"` | Targeted SERP audit (PAA, secondary keywords) |
 | `/decide --site <site-slug>` | Data-driven decision engine on your sheet's URLs |
 | `/site-status --site <site-slug>` | GSC state of your site → sheet |

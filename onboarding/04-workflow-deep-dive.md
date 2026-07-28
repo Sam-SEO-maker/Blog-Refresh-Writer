@@ -18,7 +18,6 @@ Les étapes d'un refresh sont les suivantes :
 
 ```
 1     Identification (Sheet) / ingestion de l'URL
-1.5   (retiré 2026-07)
 2     Audit (GSC, SERP, intention)
   2.1   GSC (performance actuelle)
   2.2   SERP / DataForSEO (concurrence + PAA)

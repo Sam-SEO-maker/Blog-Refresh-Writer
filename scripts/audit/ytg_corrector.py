@@ -31,21 +31,29 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 # ---------------------------------------------------------------------------
 
 class RateLimiter:
-    """Simple sliding-window rate limiter for YTG API (15 req/min)."""
+    """Sliding-window rate limiter for the YTG API (15 req/min).
+
+    Le décompte est partagé ENTRE PROCESSUS (fichier verrouillé), pas seulement
+    au sein de celui-ci. Sans ça, `/batch --parallel N` lance N `cw finalize`
+    qui démarrent chacun avec un compteur vierge et tirent jusqu'à N×13
+    appels/min sur un plafond de 15 : l'article échoue en 429 tout à la fin,
+    après avoir déjà payé le fetch WP, l'audit GSC, la SERP et la génération.
+
+    Le nom et la signature sont conservés : les appelants existants
+    (ytg.py, YTGCorrector, YTGAutoCorrector) n'ont rien à changer.
+    """
 
     def __init__(self, max_calls: int = 13, window: float = 60.0):
-        self.timestamps: list[float] = []
+        from _shared.core.cross_process_rate_limit import CrossProcessRateLimiter
+
         self.max_calls = max_calls
         self.window = window
+        self._shared = CrossProcessRateLimiter(
+            name="ytg", max_calls=max_calls, window=window
+        )
 
     def wait_if_needed(self):
-        now = time.time()
-        self.timestamps = [t for t in self.timestamps if now - t < self.window]
-        if len(self.timestamps) >= self.max_calls:
-            sleep_time = self.window - (now - self.timestamps[0]) + 1.0
-            logger.info(f"[RateLimit] Sleeping {sleep_time:.0f}s")
-            time.sleep(sleep_time)
-        self.timestamps.append(time.time())
+        self._shared.wait_if_needed(logger=logger)
 
 
 # ---------------------------------------------------------------------------
