@@ -23,11 +23,24 @@ in the brief's `lacunes[]`.
 1. **Golden Rule**: a blacklisted link **already present** in the original article is
    kept as-is (`assets_after ≥ assets_before`). The prohibition covers
    **additions**, never existing content.
-2. **The article's subject = the platform** (Enseigna review/versus articles): when the
-   article evaluates a platform (Preply, GoStudent, Acadomia…), that platform is a
-   **primary source about itself** (pricing, offer, terms of service); citing/linking it is
-   legitimate. The blacklist still holds for the **other** domains in the article
-   (never Wikipedia, never another competitor as an authority source).
+2. **Comparison articles** (`enseigna.fr` review/versus): a platform is a **primary
+   source about itself**. This covers **every platform being compared**, not only the
+   one named in the title — a versus or a review that positions Superprof against
+   competitors needs their factual data (pricing, subjects covered, app features,
+   terms of service), and that data exists nowhere but on their own sites.
+
+   Separate the three acts the blacklist otherwise conflates:
+
+   | Act | Allowed? |
+   |---|---|
+   | **Fetch** a compared platform to verify a fact about *itself* | **Yes** — that is the only reliable source for it |
+   | **Link** to it | Yes for the article's subject; for the others, only if the original already linked it (Golden Rule) — a comparison does not require handing out links |
+   | Cite it as an **authority on a general claim** (market stats, pedagogy, "the best method for…") | **Never** — that still needs an institutional/academic source |
+
+   Scope is strict: **facts about the platform itself**, freshly checked, dated in the
+   brief (pricing moves). Outside review/versus articles this exception does not apply,
+   and the rest of the blacklist (never Wikipedia, never a competitor as an authority)
+   holds in every case.
 
 ## Categories (the *why*)
 
@@ -37,6 +50,8 @@ in the brief's `lacunes[]`.
    ([[feedback-no-wikipedia-links]]).
 2. **Tutoring competitors** (direct + indirect): Acadomia, Anacours, Complétude,
    Les Sherpas, GoStudent, Preply, italki, Wyzant, Chegg…
+   → in an `enseigna.fr` review/versus, exception 2 applies: they are consultable
+   as primary sources **about themselves** (pricing, subjects, features).
 3. **Language platforms**: Babbel, Duolingo, Berlitz, Wall Street English, EF,
    Lingoda, Busuu, Memrise…
 4. **Course platforms / MOOCs**: Udemy and equivalents.

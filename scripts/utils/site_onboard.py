@@ -78,9 +78,11 @@ def build_site_config(entry: dict) -> dict:
         # vides → France/fr, le défaut des marchés historiques.
         "serp_location": resolve_serp_location(entry.get("country", "")),
         "_TODO": (
-            "Compléter par le responsable pays : tone_profile, seo_settings, "
-            "editorial_guides (déposer prompts/site.md + guides dans ce dossier), "
-            "sheets, wp_api_config, brand_rules. Copier depuis "
+            "Compléter par le responsable pays : seo_settings, sheets, "
+            "wp_api_config, generation_skill (+ qc_skill si le site en a un). "
+            "Les règles éditoriales (ton, marque, format) vont dans "
+            "prompts/site.md et dans la skill du site, pas dans ce fichier : "
+            "seule la skill atteint le générateur. Copier depuis "
             "onboarding/site-model/ (livré sur ta machine) ; le site de référence "
             "superprof.fr-ressources n'est pas sur ton disque (sparse-checkout)."
         ),

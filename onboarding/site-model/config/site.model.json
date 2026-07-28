@@ -9,42 +9,11 @@
   "content_type": "blog_article",
   "subject_category": "education_general",
   "language": "<xx>",
-  "tone_profile": {
-    "style": "natural_informal",
-    "formality": "informal",
-    "voice": "encouraging_educator",
-    "characteristics": [
-      "Truthful",
-      "Ambitious",
-      "Understanding",
-      "Frame things positively"
-    ],
-    "_TODO": "Adapt the tone to your language/market. Do NOT copy any 'TODO_a_confirmer_PO' field — describe your market's actual register."
-  },
   "seo_settings": {
     "min_word_count": 1200,
     "max_word_count": 1600,
     "max_external_links": 2,
     "money_keywords_in_blog_anchors_forbidden": true
-  },
-  "refresh_thresholds": {
-    "stale_months": 12,
-    "critical_months": 24,
-    "ctr_low_threshold": 2.0,
-    "impression_high_threshold": 1000,
-    "position_decline_alert": 5
-  },
-  "editorial_guides": [
-    "sites/<site-slug>/prompts/site.md"
-  ],
-  "brand_rules": {
-    "name": "Superprof",
-    "forbidden_spellings": [
-      "Super Prof",
-      "SuperProf",
-      "SP"
-    ],
-    "no_pronouns": true
   },
   "sheets": {
     "_TODO": "Optional: your Google Sheet if you drive refreshes from a spreadsheet. Otherwise delete this block.",

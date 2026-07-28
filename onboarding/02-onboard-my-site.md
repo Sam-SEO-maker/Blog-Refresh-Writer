@@ -49,8 +49,8 @@ This does three things:
    from the catalog (`site_slug`, `display_name`, `domain`, `url_base`, `gsc_property`,
    `language`, `serp_location`, plus safe defaults for `auth_mode`/`content_type`/
    `subject_category`) — and a `_TODO` line
-   listing everything **you** must still add by hand (tone_profile, seo_settings,
-   wp_api_config, sheets, …). It is a **skeleton, not a finished config**: expect ~12
+   listing everything **you** must still add by hand (seo_settings, wp_api_config,
+   sheets, generation_skill, …). It is a **skeleton, not a finished config**: expect ~12
    lines, not the rich hundred-line file a mature site ends up with. You'll flesh it
    out in steps 3–4, using the model files in
    [`site-model/`](site-model/README.md) as your starting point (that folder is on
@@ -130,16 +130,20 @@ Back in `sites/<site-slug>/config/site.json`, the remaining `_TODO` values need 
 input. Same method as step 3: **tell Claude the information and let it write the
 JSON**. For example:
 
-> In my `site.json`, fill in `tone_profile` (friendly, informal "tu", for students),
-> `sheets` (my Google Sheet id is …), and set `generation_skill` to `<my-skill-name>`.
+> In my `site.json`, fill in `sheets` (my Google Sheet id is …), `seo_settings`
+> (target word counts), and set `generation_skill` to `<my-skill-name>`.
 
 What each field means:
 
-- `tone_profile` — voice and register for your site.
 - `seo_settings` — your SEO thresholds/targets.
 - `sheets` — your Google Sheet id(s), if you drive refreshes from a sheet.
 - `generation_skill` / `qc_skill` — the name of the writing/QC skills you'll create
   in step 6 (this is how the generator finds them; it is **not** hardcoded).
+
+> **Editorial rules do not belong in `site.json`.** Voice, register, brand rules and
+> formatting go in `prompts/site.md` (injected into every generation prompt) and in
+> your site's skill (loaded by the agent). Those two are what actually reach the
+> writer — a config key describing tone would be read by nothing.
 
 Want to see what a finished config looks like? Open
 **[`site-model/config/site.model.json`](site-model/config/site.model.json)**

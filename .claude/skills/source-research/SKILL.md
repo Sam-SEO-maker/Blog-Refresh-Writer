@@ -61,8 +61,12 @@ session and apply it **a priori**:
 >   read this way may become a cited/linked source — that prohibition is
 >   absolute — but reading it to inform the outline (step 3.3) is allowed.
 
-The two exceptions (Golden Rule on existing content, review article whose subject IS
-the platform) are defined in `references/blacklisted-domains.md` and prevail.
+The two exceptions are defined in `references/blacklisted-domains.md` and prevail:
+the **Golden Rule** on existing content, and **comparison articles**
+(`enseigna.fr` review/versus), where **every compared platform** — not only the one
+in the title — is a primary source **about itself** (pricing, subjects, features) and
+must be fetched to get those facts right. Linking stays restricted to the article's
+subject, and no competitor is ever an authority on a general claim.
 
 ## Cascading research (3 tiers)
 
