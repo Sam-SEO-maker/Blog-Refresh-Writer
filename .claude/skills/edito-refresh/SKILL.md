@@ -72,6 +72,15 @@ field) without **over-optimising** (repetition). Caps:
 - Explicit Q&A format in the FAQ (**3-5 PAA questions** by default; extended FAQ possible
   if the article type warrants it).
 - Short sentences (15-20 words), subject-verb-object structure, jargon defined.
+- **Chunking** — each paragraph must stand on its own: an AI system quoting it in
+  isolation should still get a complete, correct statement. In practice: one main
+  idea per paragraph, 3-4 sentences max, headings that describe what follows
+  (never "Introduction" or "To go further"), and no paragraph opening on an
+  unresolved reference ("as seen above", "this method") that the surrounding text
+  alone resolves.
+- **Alternate** two or three text paragraphs with another block (list, table,
+  info box, quote): a self-contained block is far easier to extract and cite than
+  a paragraph buried in a wall of text.
 
 ## 6. Freshness
 

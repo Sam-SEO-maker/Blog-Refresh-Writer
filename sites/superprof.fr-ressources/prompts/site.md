@@ -475,7 +475,8 @@ L'introduction = uniquement les 2 paragraphes (hook + paragraphe 2 anti-template
 
 ### Référence HTML canonique (PRIORITAIRE)
 
-Avant de générer le HTML final, consulter `sites/superprof.fr-ressources/prompts/reference.md`.
+Avant de générer le HTML final, consulter
+`sites/superprof.fr-ressources/.claude/skills/sp-ressources-gutenberg/references/reference-gutenberg.md`.
 
 Ce fichier contient le HTML Gutenberg de référence (article validé en production). Le LLM DOIT reproduire à l'identique :
 - la structure des commentaires `<!-- wp:* -->` (ouverture, attributs JSON, fermeture)

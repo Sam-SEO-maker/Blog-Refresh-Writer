@@ -94,7 +94,7 @@ max 3 tableaux/article), les rédacteurs l'intègrent en mode code depuis le CSV
 - **Ton « tu » + emojis** dans les H2/H3 — [[feedback-sp-ressources-gutenberg-house-format]].
 - **Blocs AdvGB au format exact** (commentaires `<!-- wp:advgb/* -->`, HTML sur
   une seule ligne, `{uuid}` cohérent JSON↔classe CSS) — [[feedback-advgb-block-format]] ;
-  référence canonique `sites/superprof.fr-ressources/prompts/reference.md`.
+  référence canonique `sites/superprof.fr-ressources/.claude/skills/sp-ressources-gutenberg/references/reference-gutenberg.md`.
 - **5 blocs obligatoires** : 2 infobox (1 bleue + 1 jaune), 1 count-up, 1 citation,
   1 bloc sources — [[feedback-sp-ressources-gutenberg-house-format]],
   [[feedback-sp-sources-block-format]].
@@ -117,4 +117,5 @@ cette skill.
 - Blocs AdvGB : [[feedback-advgb-block-format]].
 - FAQ emoji : [[feedback-faq-question-emoji]].
 - Prompt principal : `sites/superprof.fr-ressources/prompts/site.md`.
-- Référence HTML canonique : `sites/superprof.fr-ressources/prompts/reference.md`.
+- Référence HTML canonique :
+  `sites/superprof.fr-ressources/.claude/skills/sp-ressources-gutenberg/references/reference-gutenberg.md`.

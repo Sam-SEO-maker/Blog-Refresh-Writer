@@ -34,7 +34,7 @@ sites/<site-slug>/
 │   ├── site.md            tone, blacklist, WP format (master source, loaded)
 │   ├── vs_concurrent.md   override for "versus" articles (enseigna.fr)
 │   ├── reference.md       HTML example to imitate (superprof.fr-ressources)
-│   └── blocks/ | guides/  annexes loaded on demand
+│   └── blocks/            block annexes (enseigna.fr)
 ├── config/site.json       generation_skill/qc_skill, language, auth_mode, ytg…
 ├── linking_maps/          internal linking maps
 └── outputs/               html/ csv/ acf/ metadata/ audit/ …
