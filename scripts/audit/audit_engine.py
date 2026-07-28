@@ -537,6 +537,15 @@ class AuditEngine:
                 "our_position": serp.our_position if serp else None,
                 "paa_questions": paa_questions,
                 "secondary_keywords": secondary_keywords,
+                # Top 10 organique : c'est la matière du gap concurrentiel. Sans
+                # lui, on n'a que des questions et rien ne permet de dire
+                # contre quoi l'article se bat.
+                "top_10_results": [
+                    self._serp_to_dict(r) for r in (serp.organic_results or [])[:10]
+                ],
+                "features": [
+                    self._feature_to_dict(f) for f in (serp.features or [])
+                ],
             } if serp else None,
             "assets": report.assets,
         }

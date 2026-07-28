@@ -78,8 +78,9 @@ the other levels (base, category, template) are inactive.
 ## Workflow map (orientation — 1 line/step)
 
 Identification (Sheet) → GSC → DataForSEO/SERP (+ YTG guide) → SERP/user intent →
-Decision (engine) → **Source research (5bis)** → Generation (subagent) → YTG QC →
-Internal linking → Sync.
+Decision (engine) — *deterministic Python up to here* — then the **agent chain**:
+Keyword → SERP reading → Sources → Outline → Writing → (finalize) → YTG QC →
+Format → Internal linking → Sync.
 
 > The *map* stays here. The *how-to* of each step is in the corresponding skill.
 
@@ -88,7 +89,7 @@ Internal linking → Sync.
 | Command | Role |
 |---|---|
 | `/refresh <url> --site <site-slug> --main-keyword ""` | Full refresh: audit → decision → source research → generation → `cw finalize` |
-| `/batch --action X --site <site-slug>` | Batch refresh from Google Sheets |
+| `/batch --site <site-slug> --tab "<tab-name>"` | Batch refresh from Google Sheets. Always pass `--tab` (name **exactly as declared** in `sheets.tabs` of the site config): the tab layout — status column, header rows — differs from one tab to the next and is read from the config, never assumed. Rows with a terminal status (`Publié`, `Redirection 301`, `Cannibalisation de KW`) are skipped, empty statuses are processed. Defaults: `--action FULL_REFRESH`, `--limit 50` (`--limit 0` = whole tab), spreadsheet id from the site config. Without `--tab`, only `enseigna.fr` has a default flow (Avis/Versus) |
 | `/audit serp <url> --main-keyword ""` | Targeted SERP audit (PAA, SERP features, top 10). Always pass `--main-keyword`: without it the keyword is derived from the URL slug, so any typo or shorthand in the slug is queried verbatim and the SERP answers a keyword nobody searches |
 | `/plan-check <url> --site <site-slug>` | Validate the editorial outline (`content_plan.md`) against the SEO invariants — heading hierarchy, PAA coverage, proof placement. Deterministic (no generation). Verdict OK / NEEDS_FIX before writing. Scaffold it first with `plan init` (CLI lays the file + injects signals; the agent fills the outline via the `seo-outline` skill) |
 | `/site-status --site <site-slug>` | GSC SEO status of a site (→ Sheet) |
@@ -120,8 +121,67 @@ Up-to-date list of groups/commands: `python3 content_writer.py --help` (and
 > `edito-refresh`, `format-wordpress`, `source-research`. The `refresh` orchestrator is a
 > **slash command** (`.claude/commands/refresh.md`), not a skill — see the table above.
 
-**Subagent**: `content-generator` (`.claude/agents/`) runs generation under the Max subscription,
-reads `generation_prompt.txt`, writes the files, never returns HTML in the chat.
+## Index — Agent chain (`.claude/agents/`)
+
+Past the deterministic audit, **the analysis stays in the main session and only
+the execution is delegated**, to 4 specialised agents. All run under the Max
+subscription, never the paid API, and none returns HTML in the chat.
+
+Inline (no agent): keyword check, SERP/PAA reading, editorial outline
+(`content_plan.md` looped on `plan check` until `OK`). These rest on signals
+already fetched at step 1 and on the conversation's own context; delegating them
+would mean serialising your analysis to disk for another agent to re-read, which
+loses information at every hop and buys no parallelism (the outline waits on the
+brief anyway).
+
+| # | Agent | Trade | Web |
+|---|---|---|---|
+| 1 | `source-researcher` | verified sources → `sources_brief.md` | **yes** |
+| 2 | `content-generator` | the substance + text-bearing blocks → HTML | no |
+| 3 | `ytg-qc` | semantic density SOSEO/DSEO (after `finalize`) | no |
+| 4 | `gutenberg-formatter` | format compliance, **last pass** | no |
+
+What justifies an agent is a **capability boundary**, not a change of subject:
+
+- **Only link 1 reaches the web.** Links 2-4 physically cannot fetch a source,
+  so a gap in the brief stays visible instead of being invented mid-writing —
+  a tool-level guarantee, not a rule the model must remember. This is why source
+  research stays delegated while the analysis around it does not.
+- **The writer burns the tokens.** Generation is the one step whose context
+  would otherwise swamp the session.
+- **Format closes the chain.** `finalize` creates the `.gutenberg.html`, then
+  `ytg-qc` rewords *inside* the blocks; the formatter runs last, on the file
+  that actually ships.
+- **Each link is a restart point.** A failed article restarts at the failed
+  link, not from the audit.
+
+**Neither the audit nor the SERP fetch is an agent**: they are
+`cw refresh` / `cw batch refresh`, deterministic Python (`SERPAnalyzer.analyze()`
+calls DataForSEO once per URL, and `audit_data.json` carries the whole `serp`
+block: PAA, top 10, features, dominant format, position). You *read* that file
+and never re-query — re-fetching would double the API cost per URL and
+desynchronise the analysed signals from those that drove the strategy decision.
+An LLM in the fetch itself would replace tested code on the very data that
+drives every downstream decision.
+
+**The YTG guide is keyed on the root `main_keyword`** (`provided_keyword or
+GSC`), never on `performance.main_keyword`. Reading the GSC field alone made a
+page with no traffic — exactly the pages worth refreshing — fall through to the
+slug and build a guide on the wrong sense of the word.
+
+**The `context_dir` is shared between the CLI and the agents.** Re-running an
+audit archives only the artefacts the CLI regenerates
+(`RefreshOrchestrator._CLI_ARTIFACTS`); the agents' briefs stay in place, since
+nothing else would rewrite them and a missing brief is indistinguishable from
+a brief that never existed.
+
+**Parallelism.** The unit of speed is the **article**, not the step: within an
+article the steps are a data dependency chain (the outline needs the brief,
+the writing needs the outline), so splitting it buys isolation, not wall-clock.
+Articles are independent — `batch refresh --parallel N` (1-8) prepares N at
+once. The YTG quota (15 req/min) is held by a cross-process counter
+(`_shared/core/cross_process_rate_limit.py`); without it, N concurrent
+processes would each start from a blank counter and blow the quota.
 
 ## Where to find the "how"
 

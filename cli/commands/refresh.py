@@ -8,7 +8,7 @@ Usage:
 import os
 import click
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from scripts.agent import RefreshOrchestrator
 from cli.options import blog_option
@@ -27,6 +27,10 @@ class MinimalRow:
     ctr_30d: float = 0.0
     people_also_ask: str = ""
     secondary_keywords: str = ""
+    # Bloc SERP complet (top 10, format dominant, position). Sans ce champ, les
+    # concurrents récupérés par DataForSEO meurent à la frontière du CLI : le
+    # la lecture SERP (session principale) ne peut plus mesurer le gap concurrentiel.
+    serp: dict = field(default_factory=dict)
 
 
 @click.command()
@@ -144,6 +148,7 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
             # sans quoi le contexte de génération part sans questions SERP.
             people_also_ask=result.people_also_ask or "",
             secondary_keywords=result.secondary_keywords or "",
+            serp=result.serp or {},
         )
 
         # Propager le guide YTG calculé au STEP 2.5 de process_url : sans ça, les

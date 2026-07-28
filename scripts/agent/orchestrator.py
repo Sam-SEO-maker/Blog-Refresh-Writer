@@ -57,6 +57,20 @@ class RefreshOrchestrator:
     6. Sync - Mettre à jour le Sheets
     """
 
+    # Artefacts régénérés par le CLI à chaque passe de `refresh` : eux seuls
+    # peuvent être déplacés vers `_archive/`, puisque la passe suivante les
+    # réécrit. Tout le reste du context_dir (briefs des agents : sources_brief.md,
+    # content_plan.md, serp_brief.md, keyword_decision.json…) n'est régénéré par
+    # personne et doit rester en place — cf. _archive_previous_context.
+    _CLI_ARTIFACTS = frozenset({
+        "original.html",
+        "audit_data.json",
+        "guidelines.txt",
+        "task.json",
+        "generation_prompt.txt",
+        "timing.json",
+    })
+
     # Mapping site_slug (or domain) → semantic category for SemanticChecker
     BLOG_CATEGORY_MAP = {
         "enseigna": "education",
@@ -523,8 +537,18 @@ class RefreshOrchestrator:
             # Non-bloquant : si YTG non configuré ou timeout, le workflow
             # continue avec les termes statiques de la catégorie.
             try:
-                main_kw = audit_dict.get("performance", {}).get("main_keyword", "")
-                # Fallback multi-source si l'audit GSC n'a pas fourni de mot-clé.
+                # Le mot-clé racine porte `provided_keyword or GSC` (cf.
+                # AuditEngine.to_dict) : c'est celui que la SERP a réellement
+                # audité. Lire `performance.main_keyword` reviendrait à ne
+                # regarder que GSC et à ignorer un --main-keyword passé à la
+                # main — or plus une page performe mal, moins GSC renvoie de
+                # données, et plus le guide dérivait vers le slug. Le guide
+                # était donc faux exactement là où on en a besoin.
+                main_kw = (
+                    audit_dict.get("main_keyword", "")
+                    or audit_dict.get("performance", {}).get("main_keyword", "")
+                )
+                # Fallback multi-source si ni le keyword fourni ni GSC n'ont donné de mot-clé.
                 if not main_kw:
                     try:
                         from scripts.audit.keyword_resolver import KeywordResolver
@@ -890,12 +914,25 @@ class RefreshOrchestrator:
 
         return keyword
 
-    def _archive_previous_context(context_dir: Path) -> Optional[Path]:
+    def _archive_previous_context(self, context_dir: Path) -> Optional[Path]:
         """Archive le contenu d'une passe précédente dans _archive/{timestamp}/.
 
         Relancer `cw refresh` sur une URL déjà traitée ne doit jamais détruire le
-        contexte précédent (audit, prompt, plan, brief de sources) : tout ce qui
-        n'est pas déjà dans `_archive/` est déplacé vers un sous-dossier horodaté.
+        contexte précédent : la passe est copiée dans un sous-dossier horodaté.
+
+        Le context_dir est un espace de travail PARTAGÉ entre le CLI et la chaîne
+        d'agents, et les deux familles de fichiers ne se traitent pas pareil :
+
+        - les artefacts du CLI (`_CLI_ARTIFACTS`) sont réécrits à chaque passe :
+          on les archive puis on laisse la nouvelle passe les remplacer ;
+        - les briefs produits par les agents (sources, plan, décision KW) ne sont
+          régénérés par personne. Les déplacer les faisait disparaître, sans que
+          le maillon suivant puisse même savoir qu'ils avaient existé — un
+          `content-generator` privé de `sources_brief.md` n'a aucun moyen de
+          distinguer « pas de brief » de « brief perdu », alors que sa consigne
+          est d'écrire à partir des sources de ce brief. On les COPIE donc dans
+          l'archive et on les laisse en place.
+
         Retourne le dossier d'archive créé, ou None si le contexte était vierge.
         """
         import shutil
@@ -907,9 +944,21 @@ class RefreshOrchestrator:
 
         archive_dir = context_dir / "_archive" / datetime.now().strftime("%Y%m%d_%H%M%S")
         archive_dir.mkdir(parents=True, exist_ok=True)
+        preserved = []
         for entry in entries:
-            shutil.move(str(entry), str(archive_dir / entry.name))
+            dest = archive_dir / entry.name
+            if entry.name in self._CLI_ARTIFACTS:
+                shutil.move(str(entry), str(dest))
+            elif entry.is_dir():
+                shutil.copytree(str(entry), str(dest))
+                preserved.append(entry.name)
+            else:
+                shutil.copy2(str(entry), str(dest))
+                preserved.append(entry.name)
         print(f"[CONTEXT] Previous pass archived → {archive_dir}")
+        if preserved:
+            print(f"[CONTEXT] Briefs conservés (non régénérés par le CLI) : "
+                  f"{', '.join(sorted(preserved))}")
         return archive_dir
 
     def _prepare_context_for_claude_code(self, original_html: str, action: str, row, extraction_result: dict = None, ytg_data: dict = None) -> Path:
@@ -979,6 +1028,11 @@ class RefreshOrchestrator:
             "ctr_30d": float(row.ctr_30d) if row.ctr_30d else 0.0,
             "people_also_ask": row.people_also_ask[:500] if row.people_also_ask else "",
             "secondary_keywords": row.secondary_keywords[:500] if row.secondary_keywords else "",
+            # Bloc SERP complet (top 10, format dominant, position, features).
+            # Les chemins batch ne peuplent que les deux champs plats ci-dessus ;
+            # `serp` reste alors vide, ce qui est explicite à la lecture —
+            # préférable à une clé absente qu'il interpréterait comme une panne.
+            "serp": getattr(row, "serp", None) or {},
             "url_slug": url_slug,
             "output_dir": f"sites/{row.site_slug}/outputs",
             # Semantic field: category for SemanticChecker._load_semantic_field()

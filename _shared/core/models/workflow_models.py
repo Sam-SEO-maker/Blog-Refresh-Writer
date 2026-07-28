@@ -29,6 +29,10 @@ class RefreshWorkflowResult:
     # refresh unitaire de peupler le contexte de génération sans passer par le Sheet.
     people_also_ask: str = field(default="")
     secondary_keywords: str = field(default="")
+    # Bloc SERP complet (top 10, format dominant, position) tel que sérialisé par
+    # AuditEngine.to_dict. Les questions PAA seules ne suffisent pas : sans les
+    # concurrents, impossible de mesurer le gap éditorial face au top 10.
+    serp: dict = field(default_factory=dict)
     # Guide sémantique YTG calculé au STEP 2.5 de process_url — propagé au CLI
     # refresh pour (a) injecter les termes dans le prompt de génération et
     # (b) réutiliser le guide au QC post-génération sans le recréer.
