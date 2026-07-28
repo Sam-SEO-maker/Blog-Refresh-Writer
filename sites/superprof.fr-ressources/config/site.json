@@ -61,7 +61,7 @@
   },
   "editorial_guides": [
     "sites/superprof.fr-ressources/prompts/site.md",
-    "sites/superprof.fr-ressources/prompts/reference.md"
+    "sites/superprof.fr-ressources/.claude/skills/sp-ressources-gutenberg/references/reference-gutenberg.md"
   ],
   "brand_rules": {
     "name": "Superprof",

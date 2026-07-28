@@ -128,7 +128,9 @@ It produces `<context_dir>/sources_brief.md` (source → claim → url → year)
 reports what it could **not** find. Take that gap seriously: no later link can
 fill it, by design.
 
-> As long as `sites/<site-slug>/sources/` does not exist (Phase 4), the agent
+> Where `sites/<site-slug>/sources/` exists (today: `superprof.fr-ressources`,
+> with `authority-map.md`), it is tier 1: identify the subject, aim at those
+> authority domains first, then complete on the web. Where it does not, the agent
 > operates in web-only mode.
 
 ## Step 2bis - Editorial outline (inline, no agent)

@@ -21,8 +21,9 @@ dans les H2/H3. YMYL low.
 > pour cette raison. Réf. [[feedback-sp-ressources-gutenberg-house-format]].
 >
 > **Source de vérité canonique** :
-> `sites/superprof.fr-ressources/prompts/site.md` (règles maîtresses, prompt principal) +
-> `sites/superprof.fr-ressources/prompts/reference.md` (exemple HTML Gutenberg à imiter).
+> `sites/superprof.fr-ressources/prompts/site.md` (règles maîtresses, prompt principal,
+> injecté par `PromptComposer`) + `references/reference-gutenberg.md` (exemple HTML
+> Gutenberg à imiter, à consulter avant de produire le HTML final).
 
 **Connaissance pays FR** : `references/connaissance-fr.md` (à consulter au besoin) —
 système éducatif post-réforme 2021 (piège « Bac S/L/ES »), vocabulaire opérationnel,
@@ -94,6 +95,12 @@ ces blocs. Réf. [[feedback-advgb-block-format]].
 - ❌ « Consulté le [date] » dans les sources — [[feedback-no-consulte-le]].
 - Accents corrects partout (y compris JSON). Ancres sans `<strong>`, pas de lien
   dans les H2/H3. Listes : `<li>` en virgule, dernier en point.
+- **Nom de marque** : toujours **Superprof** — jamais « Super Prof », « SuperProf »
+  ni « SP ». La marque n'est ni « il » ni « elle ». Les autres marques gardent la
+  casse officielle de leur site (YouTube, TikTok — pas « Youtube », « Tiktok »).
+- **Acronymes** : écrire le terme complet à la première occurrence, sigle entre
+  parenthèses, puis le sigle seul (« Ministère de l'Éducation nationale (MEN) »).
+- **Italique** réservé aux mots en langue étrangère ; pour l'emphase, le gras.
 
 ## QC post-génération
 
