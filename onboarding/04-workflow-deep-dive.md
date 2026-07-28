@@ -81,6 +81,13 @@ alimente aussi la **résolution du mot-clé principal** s'il n'a pas
 `GSCAnalyzer` (module audit). Accès direct pour les sites Superprof via le
 MCP `gsc-remote` (auth côté serveur, rien à configurer) ; via service account
 pour les sites hors Superprof (Enseigna, futurs clients).
+
+Le routage est décidé **par domaine de propriété**, pas par le `site.json` :
+`gsc_source_for_property()` envoie `superprof.*` sur le MCP et tout le reste sur
+le service account. Le chemin du service account (GSC **et** Google Sheets) vient
+de la variable d'environnement `GOOGLE_SA_PATH` (`.env`), avec pour défaut
+`~/.credentials/google/google-service-account.json` — jamais d'un champ de config
+de site. Le fichier de clé reste hors du dépôt.
 `KeywordResolver` (`scripts/audit/keyword_resolver.py`) fait la résolution
 multi-source du mot-clé.
 </details>
@@ -315,9 +322,13 @@ HTML — il est écarté dès qu'il apparaît dans une liste de résultats candi
   lire pour nourrir le plan éditorial (section 3.3) est permis.
 
 Deux autres exceptions : un lien existant vers un domaine blacklisté est
-préservé (Golden Rule — voir section 5.2), et un article de type « avis »
-dont le sujet *est* la plateforme concurrente peut la citer/lier légitimement
-(elle est alors une source primaire sur elle-même : prix, offre, CGV).
+préservé (Golden Rule — voir section 5.2), et sur un article de comparaison
+(avis/versus `enseigna.fr`), **chaque plateforme comparée** — pas seulement
+celle du titre — est une source primaire sur elle-même (prix, offre, matières,
+CGV). Il faut donc aller chercher ces données chez elle : elles n'existent
+nulle part ailleurs. Le **lien** reste réservé à la plateforme sujet de
+l'article, et aucun concurrent ne devient jamais une autorité sur un fait
+général (stats marché, pédagogie).
 
 ### La recherche en cascade (3 niveaux)
 

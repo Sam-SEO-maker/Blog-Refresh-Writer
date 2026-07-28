@@ -11,7 +11,7 @@ placeholder or `_TODO` behind.
 
 | Model file (here) | Copy to | Action |
 |---|---|---|
-| [`config/site.model.json`](config/site.model.json) | `sites/<site-slug>/config/site.json` | **Adapt.** `site init` already pre-filled the identity fields — merge, don't overwrite them. Fill tone_profile, seo_settings, wp_api_config, sheets, `generation_skill`. |
+| [`config/site.model.json`](config/site.model.json) | `sites/<site-slug>/config/site.json` | **Adapt.** `site init` already pre-filled the identity fields — merge, don't overwrite them. Fill seo_settings, wp_api_config, sheets, `generation_skill`. Editorial rules (tone, brand, format) go in `prompts/site.md` and your skill, never here. |
 | [`prompts/site.model.md`](prompts/site.model.md) | `sites/<site-slug>/prompts/site.md` | **Adapt.** A section skeleton — rewrite each section for your language/country. |
 | [`skill/SKILL.model.md`](skill/SKILL.model.md) | `sites/<site-slug>/.claude/skills/<your-skill-name>/SKILL.md` | **Write your own.** This is your site's SEO/editorial expertise — not a template to replicate. The model only shows the required front-matter shape (`name:`/`description:`); the rules are yours. `name:` must equal `generation_skill` in site.json. |
 

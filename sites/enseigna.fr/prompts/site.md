@@ -167,6 +167,15 @@ Jamais : "la meilleure solution", "bien mieux que [concurrent]", lien direct ver
 
 **Raison** : Concurrents directs. Les articles les mentionnent pour comparaison, mais SANS lien.
 
+✅ **En revanche, CONSULTER un concurrent est nécessaire** sur un avis/versus :
+tarifs, matières couvertes, fonctionnalités de l'app, CGU — ces données factuelles
+n'existent que sur son propre site, et positionner Superprof devant lui suppose de
+les avoir justes. Ce qui est interdit, c'est le **lien** (`href`) et le fait de
+l'ériger en **autorité sur un fait général** (stats marché, pédagogie), pas la
+vérification. Les chiffres cités doivent être fraîchement vérifiés et datés (les
+tarifs bougent). Le lien vers la plateforme **sujet** de l'article reste, lui,
+légitime.
+
 ❌ **JAMAIS de lien vers Wikipédia** : lier la source primaire (étude, institution, texte officiel) que Wikipédia agrège, jamais l'article encyclopédique. Wikipédia n'est pas une source d'autorité.
 
 ---

@@ -16,7 +16,8 @@
 
 ## Style & Voice
 <!-- Tone, register (tu/vous or your language's equivalent — state it explicitly, don't
-     leave a TODO), personality traits. Mirror tone_profile in site.json. -->
+     leave a TODO), personality traits. This file is the only place voice is declared:
+     it is injected into every generation prompt. Do not mirror it into site.json. -->
 
 ## Language & Tone Rules
 <!-- Forbidden phrases, positive-framing replacements, country-specific wording. -->

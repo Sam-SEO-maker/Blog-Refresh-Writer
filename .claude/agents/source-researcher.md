@@ -35,10 +35,29 @@ Lis `.claude/skills/source-research/references/blacklisted-domains.md`
 blacklisté n'est jamais fetché, jamais gardé dans un top N, jamais cité. Le
 filtrage est **a priori**, pas après curation.
 
-Deux exceptions, définies dans ce même fichier : un lien blacklisté **déjà
-présent** dans l'original est conservé (Golden Rule), et la plateforme qui est
-le **sujet** d'un article avis/versus peut être citée comme source primaire sur
-elle-même.
+Deux exceptions, définies dans ce même fichier :
+
+1. **Transverse (tous sites)** : un lien blacklisté **déjà présent** dans
+   l'original est conservé (Golden Rule) — l'interdit porte sur les *ajouts*.
+2. **`enseigna.fr` uniquement, articles avis/versus** : chaque plateforme
+   **comparée** (pas seulement celle du titre) est une source primaire sur
+   elle-même. Un versus qui positionne Superprof face à ses concurrents a besoin
+   de leurs données factuelles — tarifs, matières couvertes, fonctionnalités de
+   l'app, CGU — et elles n'existent que sur leurs propres sites. Tu dois donc
+   **aller les chercher**.
+
+   Distingue trois actes que la blacklist confond sinon :
+   - **Fetcher** un concurrent pour vérifier un fait *sur lui-même* : **oui**,
+     c'est la seule source fiable.
+   - **Lier** : oui vers le sujet de l'article ; pour les autres, seulement si
+     l'original liait déjà (Golden Rule).
+   - Le citer comme **autorité sur un fait général** (stats marché, pédagogie,
+     « la meilleure méthode pour… ») : **jamais**, il faut une source
+     institutionnelle.
+
+   Portée stricte : faits sur la plateforme elle-même, vérifiés fraîchement et
+   **datés dans le brief** (les tarifs bougent). Hors avis/versus, l'exception ne
+   s'applique pas.
 
 Rappel transverse : **aucun lien Wikipédia** (toutes éditions) — lier la source
 primaire à la place.

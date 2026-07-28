@@ -5,7 +5,6 @@
   "url_base": "https://www.superprof.fr/ressources/",
   "gsc_property": "https://www.superprof.fr/ressources/",
   "auth_mode": "service_account",
-  "gsc_credentials_filename": "google-service-account.json",
   "content_type": "blog_article",
   "subject_category": "education_general",
   "language": "fr",
@@ -19,21 +18,6 @@
       "gsc",
       "slug"
     ]
-  },
-  "tone_profile": {
-    "style": "natural_informal",
-    "formality": "informal",
-    "voice": "encouraging_educator",
-    "characteristics": [
-      "Truthful",
-      "Ambitious",
-      "Understanding",
-      "Conversational without being careless",
-      "Frame things positively",
-      "Inspire learning and growth"
-    ],
-    "registre_tu_vous": "TODO_a_confirmer_PO",
-    "todo": "Tone & voice complet en attente de la PO Manager — pour l'instant, suivre Guide 1 (Voice & Tone). Le registre tu/vous n'est PAS spécifié dans les guides anglais (Guide 1 dit seulement 'natural and tends toward informal')."
   },
   "seo_settings": {
     "word_count_by_type": {
@@ -51,37 +35,6 @@
     "max_word_count": 1600,
     "max_external_links": 2,
     "money_keywords_in_blog_anchors_forbidden": true
-  },
-  "refresh_thresholds": {
-    "stale_months": 12,
-    "critical_months": 24,
-    "ctr_low_threshold": 2.0,
-    "impression_high_threshold": 1000,
-    "position_decline_alert": 5
-  },
-  "editorial_guides": [
-    "sites/superprof.fr-ressources/prompts/site.md",
-    "sites/superprof.fr-ressources/.claude/skills/sp-ressources-gutenberg/references/reference-gutenberg.md"
-  ],
-  "brand_rules": {
-    "name": "Superprof",
-    "forbidden_spellings": [
-      "Super Prof",
-      "SuperProf",
-      "SP"
-    ],
-    "no_pronouns": true
-  },
-  "linking_rules": {
-    "blog_to_blog_anchor_types": [
-      "warm",
-      "cold"
-    ],
-    "blog_to_landing_anchor_types": [
-      "money"
-    ],
-    "landing_url_marker": "/lessons/",
-    "blog_url_marker": "/blog/"
   },
   "sheets": {
     "spreadsheet_id": "1Vutb06Fcm3awnANPbtLkI1EvhbE9d-TXrZRLTrmmLlQ",
@@ -135,6 +88,5 @@
     "timeout": 30
   },
   "generation_skill": "sp-ressources-gutenberg",
-  "qc_skill": "qc-sp-ressources",
-  "eeat_level": "high"
+  "qc_skill": "qc-sp-ressources"
 }
