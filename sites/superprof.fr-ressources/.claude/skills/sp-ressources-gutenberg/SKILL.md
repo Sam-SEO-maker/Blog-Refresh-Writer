@@ -95,6 +95,22 @@ ces blocs. Réf. [[feedback-advgb-block-format]].
 - ❌ « Consulté le [date] » dans les sources — [[feedback-no-consulte-le]].
 - Accents corrects partout (y compris JSON). Ancres sans `<strong>`, pas de lien
   dans les H2/H3. Listes : `<li>` en virgule, dernier en point.
+- **Typographie française — à appliquer dès la rédaction**, pas à laisser au QC :
+  - apostrophe **typographique** `’` (U+2019) dans toute la prose : `l’élève`,
+    `qu’il`, `d’un`. Jamais l’apostrophe droite `'`.
+  - **espace insécable** (U+00A0) avant `? ! ; :` et à l’intérieur des `«  »`,
+    ainsi que dans les groupes de milliers (`2 163`).
+  - Ces règles valent aussi **à l’intérieur du JSON des blocs** (`title`, `text`,
+    `descText`, `quote`…) : Gutenberg re-rend depuis le JSON, une apostrophe
+    droite qui y subsiste réapparaît à la première ouverture de l’éditeur. JSON
+    et miroir HTML doivent être modifiés **ensemble**.
+  - ⚠️ **Exceptions — laisser l’apostrophe droite** : notation mathématique
+    (`f'`, `OA'`, `F'A'`), code dans `<code>` ou `<script>`, attributs HTML,
+    URL, et markup d’embed tiers (blockquote TikTok/Twitter). Les typographier
+    y serait une faute, pas une correction.
+  - Les exemples de `references/reference-gutenberg.md` sont du **code à
+    reproduire à l’identique** : leurs apostrophes droites ne sont pas un modèle
+    typographique pour la prose.
 - **Nom de marque** : toujours **Superprof** — jamais « Super Prof », « SuperProf »
   ni « SP ». La marque n'est ni « il » ni « elle ». Les autres marques gardent la
   casse officielle de leur site (YouTube, TikTok — pas « Youtube », « Tiktok »).

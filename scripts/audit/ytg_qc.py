@@ -77,6 +77,55 @@ class YTGQualityCheck:
     Graceful : renvoie un verdict SKIP si YTG non configuré ou blog désactivé.
     """
 
+    # En deçà de ce rapport TOP3/TOP10 sur le SOSEO, le TOP 3 est considéré
+    # comme non représentatif de la SERP et écarté du calcul des cibles.
+    TOP3_DEGENERATE_RATIO = 0.5
+
+    @classmethod
+    def resolve_targets(
+        cls,
+        top3_soseo: Optional[float],
+        top3_dseo: Optional[float],
+        top10_soseo: Optional[float],
+        top10_dseo: Optional[float],
+    ) -> tuple[Optional[float], Optional[float]]:
+        """Cibles SOSEO/DSEO à partir des moyennes concurrentes du guide.
+
+        La cible n'est pas le seul TOP 3 : le CLAUDE.md impose de battre les
+        moyennes TOP 3 **et** TOP 10. On retient la contrainte la plus stricte
+        des deux — `max()` côté SOSEO (dépasser la plus haute), `min()` côté
+        DSEO (rester sous la plus basse).
+
+        Une moyenne nulle n'est jamais une cible : elle signale une donnée
+        absente (quota API) ou une SERP dégénérée, pas un objectif atteint.
+        Elle est écartée, et si plus aucune référence ne subsiste la cible vaut
+        `None` — le verdict devient indéterminé plutôt qu'OPTIMAL.
+
+        Enfin, un TOP 3 dont le SOSEO est très inférieur au TOP 10 trahit des
+        premières positions hors sujet ; son DSEO, mécaniquement proche de 0,
+        imposerait une cible inatteignable. Cas réel : TOP 3 = 5.0/0.7 contre
+        TOP 10 = 32.4/8.8. Le TOP 10 fait alors seul référence.
+
+        Returns:
+            (target_soseo, target_dseo) — `None` si indéterminable.
+        """
+        if (
+            top3_soseo and top10_soseo
+            and top3_soseo < top10_soseo * cls.TOP3_DEGENERATE_RATIO
+        ):
+            logger.warning(
+                "[YTG] TOP 3 non représentatif (SOSEO %.1f vs TOP 10 %.1f) : "
+                "cibles calculées sur le TOP 10 seul.", top3_soseo, top10_soseo
+            )
+            top3_soseo = top3_dseo = None
+
+        soseo_refs = [v for v in (top3_soseo, top10_soseo) if v]
+        dseo_refs = [v for v in (top3_dseo, top10_dseo) if v]
+        return (
+            max(soseo_refs) if soseo_refs else None,
+            min(dseo_refs) if dseo_refs else None,
+        )
+
     def __init__(
         self,
         analyzer=None,
@@ -207,11 +256,13 @@ class YTGQualityCheck:
             result.message = f"Guide YTG introuvable/non créé pour '{main_keyword}'"
             return result
 
-        # 4. Cibles concurrents (TOP3) — via le guide
+        # 4. Cibles concurrentes — via le guide (voir `resolve_targets`).
         guide = analyzer.get_guide(guide_id, keyword=main_keyword)
         if guide:
-            result.target_soseo = guide.top3_soseo
-            result.target_dseo = guide.top3_dseo
+            result.target_soseo, result.target_dseo = self.resolve_targets(
+                guide.top3_soseo, guide.top3_dseo,
+                guide.top10_soseo, guide.top10_dseo,
+            )
 
         # 5. Analyse du contenu
         text = BeautifulSoup(html, "html.parser").get_text(separator=" ", strip=True)
@@ -233,10 +284,27 @@ class YTGQualityCheck:
         result.over_optimized_terms = [t for t, c in colors.items() if c == "red"]
 
         # 6. Verdict
-        target_s = result.target_soseo or 0
-        target_d = result.target_dseo or 0
-        result.soseo_ok = (result.our_soseo >= target_s) if target_s else True
-        result.dseo_ok = (result.our_dseo <= target_d) if target_d else True
+        target_s = result.target_soseo
+        target_d = result.target_dseo
+
+        # Une cible absente rend le verdict INDÉTERMINÉ, jamais OPTIMAL : sans
+        # référence concurrente, rien ne prouve que le contenu est au niveau.
+        # L'ancienne version validait d'office (`if target else True`), ce qui
+        # transformait un guide muet — quota API, SERP dégénérée — en succès.
+        if target_s is None or target_d is None:
+            result.verdict = VERDICT_BLOCKED
+            missing = "SOSEO" if target_s is None else "DSEO"
+            if target_s is None and target_d is None:
+                missing = "SOSEO et DSEO"
+            result.message = (
+                f"Cibles concurrentes indisponibles ({missing}) pour le guide "
+                f"{guide_id} : verdict impossible. Vérifier le quota YTG ou la "
+                f"qualité de la SERP du mot-clé."
+            )
+            return result
+
+        result.soseo_ok = result.our_soseo >= target_s
+        result.dseo_ok = result.our_dseo <= target_d
 
         if result.soseo_ok and result.dseo_ok:
             result.verdict = VERDICT_OPTIMAL

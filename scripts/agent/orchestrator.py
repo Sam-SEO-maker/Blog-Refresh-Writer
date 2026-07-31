@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, field
 import logging
+import re
 import requests
 import time
 import json
@@ -439,8 +440,17 @@ class RefreshOrchestrator:
             # Extraire les métriques
             word_count = len(html_result.text_content.split()) if html_result.text_content else 0
 
-            # Compter les images
-            images_count = len(html_result.images) if html_result.images else 0
+            # Compter les images — baseline de la Règle d'Or.
+            #
+            # On compte les `<img>` distinctes par `src` directement dans le HTML,
+            # et non `html_result.images` : cette liste exclut la featured image
+            # (voir HTMLAnalyzer.analyze) et sert l'analyse éditoriale, pas la
+            # préservation des assets. Sur ce corpus WordPress, les formules
+            # mathématiques sont rendues en images (fichiers nommés par un hash,
+            # sans `alt`) : les sous-compter faisait passer un article de 22
+            # images pour un article de 10, et le rédacteur les supprimait de
+            # bonne foi en les transcrivant en `<code>`.
+            images_count = self._count_unique_images(html)
 
             # Compter les liens internes
             internal_links_count = 0
@@ -456,6 +466,28 @@ class RefreshOrchestrator:
         except Exception as e:
             logger.warning(f"Failed to extract content metrics: {str(e)[:100]}")
             return self._get_empty_metrics()
+
+    @staticmethod
+    def _count_unique_images(html: str) -> int:
+        """Nombre de `<img>` distinctes par `src` dans le HTML.
+
+        Compte volontairement TOUTES les images, y compris la featured image et
+        les formules mathématiques rendues en images par l'éditeur WordPress
+        (fichiers nommés par un hash, dépourvus d'attribut `alt`). C'est la
+        baseline de la Règle d'Or : `assets_after >= assets_before`.
+
+        La déduplication par `src` évite de gonfler la baseline quand une même
+        image apparaît deux fois dans l'article — sans elle, un doublon rendrait
+        l'invariant impossible à satisfaire sans dupliquer aussi à la sortie.
+        """
+        if not html:
+            return 0
+        srcs = set()
+        for tag in re.finditer(r"<img[^>]*>", html, re.I):
+            src = re.search(r'src=["\']([^"\']+)["\']', tag.group(0), re.I)
+            if src:
+                srcs.add(src.group(1).strip())
+        return len(srcs)
 
     def _get_empty_metrics(self) -> dict:
         """Retourne des métriques vides."""

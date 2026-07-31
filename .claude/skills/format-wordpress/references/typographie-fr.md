@@ -35,8 +35,25 @@ refresh.
 
 ## 3. Apostrophe
 
-**Typographic** apostrophe `'` (U+2019), never the straight one `'` (U+0027):
-`aujourd'hui`, `l'oral`.
+**Typographic** apostrophe `’` (U+2019), never the straight one `'` (U+0027):
+`aujourd’hui`, `l’oral`.
+
+Applies **inside block JSON too** (`title`, `text`, `descText`, `quote`…):
+Gutenberg re-renders from the JSON, so a straight apostrophe left there
+reappears the first time the editor is opened. Edit the JSON and its rendered
+HTML mirror **together**.
+
+**Exceptions — keep the straight apostrophe.** It is not prose there, and
+converting it is an error, not a fix:
+
+- mathematical notation: `f'`, `OA'`, `F'A' · FA = f·f'` (a `f’` is simply wrong);
+- code inside `<code>`, `<script>` or `<pre>`;
+- HTML attributes (`alt`, `title`, `href`…) and URLs;
+- third-party embed markup (TikTok / Twitter `blockquote`), which must be
+  copied verbatim.
+
+A safe substitution pattern targets an apostrophe **framed by two letters**
+(`l'élève`), which can never match a URL or a math notation.
 
 ## 4. Dashes
 
