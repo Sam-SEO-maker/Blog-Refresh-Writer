@@ -1470,6 +1470,11 @@ class RefreshOrchestrator:
 
         def prepare_fn(row, sheets_lock):
             """Phase déterministe d'un article. Exécutée dans un thread."""
+            # Départ du chrono machine pour CET article. `cw refresh` l'écrivait
+            # déjà (cli/commands/refresh.py), pas le chemin batch : un lot entier
+            # ne laissait donc aucune trace de durée, et `cw finalize` affichait
+            # la durée totale seulement pour les URLs passées à l'unité.
+            prepare_started_at = datetime.now()
             extraction_result = self._fetch_html(row.blogpost_url, row.site_slug)
             if not extraction_result.get("clean_body"):
                 raise ValueError(f"Failed to fetch HTML for {row.blogpost_url}")
@@ -1525,6 +1530,26 @@ class RefreshOrchestrator:
                 extraction_result, ytg_data=ytg_pre_data,
             )
 
+            # Horodatage machine de la préparation, écrit APRÈS
+            # `_prepare_context_for_claude_code` (qui archive la passe
+            # précédente et emporterait le fichier). `prepare_seconds` mesure la
+            # phase déterministe — fetch WP, GSC, SERP, guide YTG — et
+            # `refresh_started_at` sert de point zéro à `cw finalize` pour la
+            # durée totale du pipeline.
+            import json as _json
+            prepare_ended_at = datetime.now()
+            (context_dir / "timing.json").write_text(
+                _json.dumps({
+                    "url": row.blogpost_url,
+                    "refresh_started_at": prepare_started_at.isoformat(),
+                    "prepare_ended_at": prepare_ended_at.isoformat(),
+                    "prepare_seconds": round(
+                        (prepare_ended_at - prepare_started_at).total_seconds(), 1
+                    ),
+                }, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
             output_slug = row.blogpost_url.rstrip('/').rsplit('/', 1)[-1]
             if output_slug.endswith('.html'):
                 output_slug = output_slug[:-len('.html')]
@@ -1536,6 +1561,9 @@ class RefreshOrchestrator:
                 "action": action,
                 "context_dir": context_dir.absolute(),
                 "generation_prompt": context_dir.absolute() / "generation_prompt.txt",
+                "prepare_seconds": round(
+                    (prepare_ended_at - prepare_started_at).total_seconds(), 1
+                ),
                 "output_html": outputs["refreshed_html"],
                 "output_json": outputs["metadata"],
                 "strategy": action,

@@ -19,6 +19,10 @@ from bs4 import BeautifulSoup
 logger = logging.getLogger(__name__)
 
 _INDEX_FILE = "_index.csv"
+
+# Longueur max du descriptif dérivé des en-têtes, une fois préfixé du slug
+# d'article dans `{slug}_tableau_{descriptif}.csv`.
+_MAX_DESCRIPTOR_LEN = 45
 _INDEX_FIELDS = ["csv_file", "colonnes", "article_titre", "article_url", "tableau_n"]
 
 
@@ -64,9 +68,22 @@ def extract_tables_to_csv(
             continue
 
         header_row = rows[0]
-        base_slug = _slug_from_headers(header_row) if rows else ""
-        if not base_slug:
-            base_slug = f"{file_slug}_table_{idx}"
+
+        # Convention projet : `{slug-article}_tableau_{descriptif}.csv`.
+        # Le descriptif vient des en-têtes de colonnes, mais le nom DOIT être
+        # préfixé du slug de l'article : sans lui, deux articles produisaient des
+        # fichiers indiscernables ("parametre_valeur.csv"), et le CSV déjà écrit
+        # par le rédacteur se retrouvait doublonné par celui de `finalize`.
+        # 9 doublons ainsi créés sur un lot de 10 articles, avec le risque que
+        # l'intégrateur reprenne le mauvais fichier.
+        descriptor = _slug_from_headers(header_row) if rows else ""
+        if not descriptor:
+            descriptor = f"table_{idx}"
+        # Le descriptif est raccourci : préfixé du slug d'article (souvent 40+
+        # caractères), un descriptif de 80 produirait des noms de 130+, mal
+        # supportés par certains clients de synchronisation.
+        descriptor = descriptor[:_MAX_DESCRIPTOR_LEN].rstrip("_")
+        base_slug = f"{file_slug}_tableau_{descriptor}"
 
         if base_slug in seen_slugs:
             seen_slugs[base_slug] += 1

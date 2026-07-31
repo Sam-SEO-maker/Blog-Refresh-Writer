@@ -229,10 +229,16 @@ class TestOutputMethods:
             html_content=html
         )
 
+        # Un seul fichier subsiste : la version Gutenberg, seule publiable.
+        # Le HTML nu est un intermédiaire, supprimé après conversion (sinon
+        # `ytg qc --slug` trouve 2 fichiers et on risque de publier la version
+        # d'avant QC).
         assert saved_path.exists()
-        assert saved_path.read_text(encoding="utf-8") == html
-        assert saved_path.name == "test-article_refreshed.html"
+        assert saved_path.name == "test-article_refreshed.gutenberg.html"
         assert saved_path.parent.name == "html"
+        assert not (saved_path.parent / "test-article_refreshed.html").exists()
+        # Le contenu éditorial traverse la conversion.
+        assert "Refreshed content" in saved_path.read_text(encoding="utf-8")
 
     def test_save_refreshed_html_article_type_routes_subdir(self, output_mgr):
         """article_type route la sortie HTML dans html/{type}/ (ex. avis|versus)."""
@@ -368,10 +374,12 @@ class TestValidationMethods:
         output_mgr.save_refreshed_html("enseigna.fr", "test", "<html/>")
         output_mgr.save_metadata("enseigna.fr", "test", {"title": "Test"})
 
+        # `refreshed_html` est le chemin d'écriture du rédacteur, supprimé après
+        # conversion : c'est `gutenberg_html` qui persiste et qu'on valide.
         all_exist, missing = output_mgr.validate_outputs_exist(
             "enseigna.fr",
             "test",
-            required=["refreshed_html", "metadata"]
+            required=["gutenberg_html", "metadata"]
         )
 
         assert all_exist is True

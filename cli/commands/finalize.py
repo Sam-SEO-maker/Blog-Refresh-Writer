@@ -130,24 +130,38 @@ def finalize(url, site_slug, html_file, title, article_type, keyword, guide_id, 
 
 
 def _echo_timers(base: Path, url: str, finalize_t0: float) -> None:
-    """Affiche la durée du finalize et, si disponible, celle du pipeline complet.
+    """Affiche ET persiste les durées machine de l'article.
 
-    Le départ du pipeline (`refresh_started_at`) est écrit par `cw refresh` dans
-    `_shared/context/{slug}/timing.json`. Absent (finalize rejoué seul, contexte
-    archivé…) → seule la durée du finalize est affichée.
+    `refresh_started_at` est écrit à la préparation, aussi bien par `cw refresh`
+    que par `cw batch refresh`, dans `_shared/context/{slug}/timing.json`.
+    Les durées y sont réinjectées pour rester exploitables après coup : sans
+    persistance, le temps machine par URL n'existait qu'à l'écran et disparaissait
+    avec le scrollback.
     """
     import time
     from datetime import datetime
 
-    click.echo(f"⏱ Finalize: {_fmt_duration(time.perf_counter() - finalize_t0)}")
+    finalize_seconds = time.perf_counter() - finalize_t0
+    click.echo(f"⏱ Finalize: {_fmt_duration(finalize_seconds)}")
 
     try:
         from scripts.audit.ytg_qc import url_to_context_slug
         timing_path = (base / "_shared" / "context"
                        / url_to_context_slug(url) / "timing.json")
-        started = json.loads(timing_path.read_text(encoding="utf-8"))["refresh_started_at"]
-        total = (datetime.now() - datetime.fromisoformat(started)).total_seconds()
+        data = json.loads(timing_path.read_text(encoding="utf-8"))
+        started = data["refresh_started_at"]
+        ended = datetime.now()
+        total = (ended - datetime.fromisoformat(started)).total_seconds()
         click.echo(f"⏱ Full pipeline (refresh → finalize): {_fmt_duration(total)}")
+
+        data.update({
+            "finalize_ended_at": ended.isoformat(),
+            "finalize_seconds": round(finalize_seconds, 1),
+            "total_seconds": round(total, 1),
+        })
+        timing_path.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
     except Exception:
         pass  # pas de timing.json exploitable — durée totale omise
 
