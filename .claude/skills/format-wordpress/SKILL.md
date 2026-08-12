@@ -44,6 +44,14 @@ is used for publication**; delete the bare one after generation. Ref.
 
 - **Refresh images**: keep the existing `id`s via `class="wp-image-NNN"`.
   If no id is detectable, emit a `wp:image` without `id`.
+  Keep the source `width`/`height` and any inline `style` **verbatim**; never invent
+  or recompute them (an absent dimension beats a wrong one). Keep the `size-*` class
+  matching the file actually served.
+  **Never carry over `srcset`, `sizes`, `loading` or `decoding`.** WordPress computes
+  them at render time from the media library. A `srcset` frozen into the content makes
+  it emit `sizes="auto, …"`, and the browser's own stylesheet then applies
+  `contain:size !important` — the image is cut off from its real size and inherits the
+  declared intrinsic size instead (observed: a 1920x1280 image rendered 35694px tall).
 - **Pros/cons convention** (Enseigna): `<div class="pros-cons"><div class="cons">…</div><div class="pros">…</div></div>`
   → auto-converted to `wp:columns`.
 
@@ -101,9 +109,29 @@ with a **period**.
 
 ## Tables
 
-Each `<table>` → a **CSV** in `csv/` (`{slug}_tableau_{descriptif}.csv`),
-max 3 per article, **no shortcode** `[table id=X /]` in the HTML. Ref.
-[[feedback-csv-naming-tablepress]].
+**Every article ships at least one table — no exception.** A refresh that
+produces zero `<table>` is incomplete, even when the original had none and
+nothing looks "naturally tabular": there is always a comparison, a set of
+criteria, a list of cases or a recap of formulas worth laying out in a grid.
+Target **1 to 3 tables per article** (3 is the hard cap).
+
+A table must earn its place: it condenses something the prose states in a
+scattered way (symbol / unit / role, criterion / case A / case B,
+step / action / result). Never a two-line table of decoration, never a
+reformatted bullet list.
+
+Mechanics:
+- Wrap in a `<!-- wp:table -->` block, `<table>` as the **direct** child
+  (no `<figure class="wp-block-table">` wrapper, no `has-fixed-layout`
+  class unless the matching `{"hasFixedLayout":true}` attribute is set) —
+  a mismatch between markup and block attributes makes the editor
+  report "block seems broken".
+- A `<figcaption class="wp-element-caption">` goes **inside** the block.
+- Each `<table>` → a **CSV** in `csv/` (`{slug}_tableau_{descriptif}.csv`),
+  **no shortcode** `[table id=X /]` in the HTML. Ref.
+  [[feedback-csv-naming-tablepress]].
+- Generate the CSVs with the pipeline extractor, never by hand:
+  `scripts/utils/generate_table_csv.gen_for(slug, html, batch_folder)`.
 
 ## Golden Rule: never reduce the assets
 
@@ -112,8 +140,9 @@ original's asset count (`assets_after ≥ assets_before`): images, tables,
 videos, internal links **and** external links (including links to competitors).
 Enrich, never impoverish. Keep every existing link identical
 (URL **and** anchor text), without injecting new ones. The exact scope of
-counted assets is site-specific (Superprof Ressources emits neither
-`<table>` nor video): see the site's skill.
+counted assets is site-specific: see the site's skill. Note that **tables are
+mandatory everywhere**, Superprof Ressources included (see "Tables" above) —
+the Golden Rule is a floor, not a licence to emit none.
 
 ## JSON metadata
 
