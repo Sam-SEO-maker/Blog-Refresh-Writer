@@ -244,9 +244,19 @@ def extract_tables(site_id, input_dir, output_dir, single_file):
         if not html_dir.exists():
             click.echo(f"Folder not found: {html_dir}", err=True)
             raise click.Abort()
-        html_files = sorted(html_dir.rglob("*_refreshed.html"))
+        # Le HTML nu est supprime par OutputManager._cleanup_bare_html des que
+        # le .gutenberg.html existe : chercher *_refreshed.html seul ne ramenait
+        # plus rien. On prend les deux, en ignorant un nu doublonne par son
+        # gutenberg pour ne pas extraire deux fois les memes tableaux.
+        gutenberg = sorted(html_dir.rglob("*.gutenberg.html"))
+        bare = [
+            f for f in sorted(html_dir.rglob("*_refreshed.html"))
+            if not f.name.endswith(".gutenberg.html")
+            and f.with_suffix("").with_suffix(".gutenberg.html") not in gutenberg
+        ]
+        html_files = sorted(gutenberg + bare)
         if not html_files:
-            click.echo(f"No *_refreshed.html file found in {html_dir}")
+            click.echo(f"No *.gutenberg.html or *_refreshed.html file found in {html_dir}")
             return
 
     click.echo(f"\nCSV extraction - {site_id}")
@@ -259,7 +269,15 @@ def extract_tables(site_id, input_dir, output_dir, single_file):
 
     for html_file in html_files:
         html_content = html_file.read_text(encoding="utf-8")
-        file_slug = html_file.stem.removesuffix("_refreshed")
+        # Noms reels : "<slug>.html_refreshed.gutenberg.html" ou "<slug>_refreshed.html".
+        # Sans nettoyer .gutenberg / .html, le slug polluait le nom des CSV.
+        file_slug = (
+            html_file.name
+            .removesuffix(".html")
+            .removesuffix(".gutenberg")
+            .removesuffix("_refreshed")
+            .removesuffix(".html")
+        )
         csv_files = extract_tables_to_csv(html_content, csv_dir, file_slug)
 
         if csv_files:

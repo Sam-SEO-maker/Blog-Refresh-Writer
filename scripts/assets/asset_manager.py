@@ -249,8 +249,16 @@ class AssetManager:
     def _classify_link(self, href: str) -> str:
         """Classifie un lien selon son URL."""
         href_lower = href.lower()
+        host = url_host(href_lower)
 
-        if SUPERPROF_DOMAIN in href_lower:
+        # Un lien superprof.fr/ressources/... est un lien de maillage interne
+        # vers un autre article du blog, pas le CTA commercial (/cours/...) :
+        # le compter comme "superprof" ferait échouer la contrainte "exactement
+        # 1 lien Superprof" dès qu'un article maille vers un autre.
+        if host == SUPERPROF_DOMAIN or host.endswith("." + SUPERPROF_DOMAIN):
+            path = href_lower.split(host, 1)[-1]
+            if path.startswith("/ressources/"):
+                return "internal"
             return "superprof"
         elif href.startswith('/') or href.startswith('#'):
             return "internal"

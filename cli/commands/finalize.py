@@ -37,12 +37,17 @@ from cli.options import blog_option
                    "recreated). Carry it over from the `cw refresh` output.")
 @click.option("--apply-linking", is_flag=True, default=False,
               help="Apply the internal linking (writes the files). Otherwise dry-run.")
-@click.option("--publish", is_flag=True, default=False,
-              help="Publish to WordPress (REST) after QC OK. Blast radius: "
-                   "human confirmation required. Refused on NEEDS_FIX/BLOCKED verdict.")
-@click.option("--yes", "assume_yes", is_flag=True, default=False,
-              help="Skip the interactive publish confirmation (informed batch usage).")
-def finalize(url, site_slug, html_file, title, article_type, keyword, guide_id, apply_linking, publish, assume_yes):
+@click.option("--publish/--no-publish", "publish", default=True,
+              help="Publish to WordPress (REST) once QC verdict is OPTIMAL. "
+                   "On by default. Refused on NEEDS_FIX/BLOCKED/SKIP verdict "
+                   "unless --force-publish.")
+@click.option("--force-publish", "force_publish", is_flag=True, default=False,
+              help="Publish even on NEEDS_FIX/SKIP (never BLOCKED): pushes the "
+                   "best draft obtained so far for human editors to finish. "
+                   "Explicit opt-in, off by default.")
+@click.option("--yes", "assume_yes", is_flag=True, default=True,
+              help="Deprecated no-op: publish no longer prompts for confirmation.")
+def finalize(url, site_slug, html_file, title, article_type, keyword, guide_id, apply_linking, publish, force_publish, assume_yes):
     """
     Post-generation chain: save → assets → YTG QC → internal linking.
 
@@ -97,15 +102,28 @@ def finalize(url, site_slug, html_file, title, article_type, keyword, guide_id, 
     # 3. QC sémantique YTG
     # -------------------------------------------------------------------
     click.echo("\n[3/4] YTG semantic QC...")
-    verdict = _run_ytg_qc(base, site_slug, url, saved, main_keyword=keyword, guide_id=guide_id)
+    verdict, ytg_message = _run_ytg_qc(base, site_slug, url, saved, main_keyword=keyword, guide_id=guide_id)
 
-    # BLOCKED = problème de fond → arrêt + alerte humaine (pas de maillage)
+    # BLOCKED recouvre deux causes distinctes (cf. scripts/audit/ytg_qc.py) :
+    # sur-optimisation sévère de contenu (vrai problème de fond) OU panne
+    # d'infra (API YTG en erreur/429, "Analyse YTG échouée (API)") - la
+    # docstring du module classe volontairement les deux ensemble, mais
+    # seule la première justifie un arrêt qu'aucun --force-publish ne doit
+    # franchir. La seconde n'a jamais vérifié le contenu : elle reste
+    # bloquante par défaut, mais --force-publish peut la traverser (le
+    # contenu peut être publiable même si l'API n'a pas pu le confirmer).
     if verdict == "BLOCKED":
-        click.echo("\n❌ BLOCKED verdict - stopping. Severe over-optimization: "
-                   "human review required, no automatic re-generation.")
-        click.echo("   Internal linking NOT applied (article cannot be finalized as is).")
-        _echo_timers(base, url, finalize_t0)
-        return
+        api_failure = "API)" in (ytg_message or "") or "introuvable" in (ytg_message or "")
+        if api_failure and force_publish:
+            click.echo(f"\n⚠ BLOCKED verdict (infra: {ytg_message}) - "
+                       "bypassed by --force-publish, content not semantically verified.")
+            verdict = "SKIP"
+        else:
+            click.echo(f"\n❌ BLOCKED verdict - stopping ({ytg_message}). "
+                       "Human review required, no automatic re-generation.")
+            click.echo("   Internal linking NOT applied (article cannot be finalized as is).")
+            _echo_timers(base, url, finalize_t0)
+            return
 
     # -------------------------------------------------------------------
     # 4. Maillage interne
@@ -114,10 +132,10 @@ def finalize(url, site_slug, html_file, title, article_type, keyword, guide_id, 
     _run_linking(base, site_slug, url, apply_linking)
 
     # -------------------------------------------------------------------
-    # 5. Publication WordPress (optionnelle, --publish) — fort blast radius
+    # 5. Publication WordPress (auto sur verdict OPTIMAL, --no-publish pour désactiver)
     # -------------------------------------------------------------------
     if publish:
-        _maybe_publish(base, site_slug, url, url_slug, saved, verdict, assume_yes)
+        _maybe_publish(base, site_slug, url, url_slug, saved, verdict, assume_yes, force_publish)
 
     click.echo(f"\n{'='*70}")
     if verdict == "NEEDS_FIX":
@@ -178,24 +196,39 @@ def _fmt_duration(seconds: float) -> str:
 
 
 def _maybe_publish(base: Path, site_slug: str, url: str, url_slug: str, saved: Path,
-                   verdict: str, assume_yes: bool) -> None:
+                   verdict: str, assume_yes: bool, force_publish: bool = False) -> None:
     """Publie l'article sur WordPress via REST, uniquement si le QC est OK.
 
-    Garde-fous (fort blast radius, site public) :
-    - refus si verdict NEEDS_FIX ou BLOCKED (BLOCKED n'atteint jamais ce point) ;
-    - confirmation humaine explicite avant le POST, sauf --yes.
+    Garde-fou restant (fort blast radius, site public) : refus si verdict
+    NEEDS_FIX/SKIP, sauf --force-publish (décision du 2026-08-06 : pousser le
+    meilleur brouillon obtenu pour finition par des rédacteurs humains — cf.
+    memory project_finalize_autopublish_default). BLOCKED n'atteint jamais ce
+    point (return plus haut dans `finalize`) : jamais publiable, même forcé.
     """
     from scripts.utils.push_to_wp import build_client, publish_article
 
     click.echo("\n[5/5] Publishing to WordPress (REST)...")
 
-    if verdict == "NEEDS_FIX":
-        click.echo("  ⛔ Publish refused: NEEDS_FIX verdict. "
-                   "Fix the article then re-run `finalize --publish`.")
+    # Whitelist explicite, pas blacklist : un verdict SKIP (YTG désactivé,
+    # ou API en erreur/429 - cf. `_run_ytg_qc`'s except-clause) ne veut pas
+    # dire "QC passée", seulement "QC pas faite". Le laisser filtrer au même
+    # titre qu'OPTIMAL a publié un NEEDS_FIX réel sous un 429 (incident du
+    # 2026-08-06) : seul OPTIMAL, vérifié, ouvre la publication par défaut.
+    if verdict != "OPTIMAL" and not force_publish:
+        click.echo(f"  ⛔ Publish refused: verdict is {verdict}, not OPTIMAL. "
+                   "Fix the article, re-run `finalize --publish`, or use "
+                   "--force-publish to push the current draft as-is.")
         return
+    if verdict != "OPTIMAL":
+        click.echo(f"  ⚠ Force-publishing despite verdict {verdict} "
+                   "(--force-publish): draft pushed for human editors to finish.")
 
     # Contenu à pousser = .gutenberg.html adjacent au HTML nu sauvegardé.
-    gutenberg_path = saved.with_name(saved.stem + ".gutenberg.html")
+    # `saved` est déjà nommé "*_refreshed.gutenberg.html" (voir save_refreshed_html) :
+    # ne pas rajouter ".gutenberg.html" à son stem, qui le contient déjà, sous peine
+    # de produire "*.gutenberg.gutenberg.html" (fichier inexistant).
+    gutenberg_path = saved if saved.suffixes[-2:] == [".gutenberg", ".html"] \
+        else saved.with_name(saved.stem + ".gutenberg.html")
     if not gutenberg_path.exists():
         click.echo(f"  ⛔ Cannot publish: {gutenberg_path.name} not found.")
         return
@@ -203,8 +236,19 @@ def _maybe_publish(base: Path, site_slug: str, url: str, url_slug: str, saved: P
     # Metadata (title + meta_description) — save_metadata() nomme par url_slug,
     # save_refreshed_html() par file_slug (issu du titre) : les deux peuvent
     # différer. On tente les deux, puis un fallback glob si un seul candidat.
+    # `saved.name` porte le nom complet ("*_refreshed.gutenberg.html" ou
+    # "*.html_refreshed.gutenberg.html") : `.stem` ne retire qu'un seul
+    # ".html" final, laissant les autres suffixes accolés au slug. On les
+    # retire explicitement plutôt que de se fier à `.stem`.
     meta_dir = saved.parent.parent / "metadata"
-    file_slug = saved.stem[: -len("_refreshed")] if saved.stem.endswith("_refreshed") else saved.stem
+    file_slug = saved.name
+    changed = True
+    while changed:
+        changed = False
+        for suffix in (".gutenberg.html", ".html_refreshed", "_refreshed", ".html"):
+            if file_slug.endswith(suffix):
+                file_slug = file_slug[: -len(suffix)]
+                changed = True
     metadata_path = None
     for cand in (meta_dir / f"{url_slug}_metadata.json",
                  meta_dir / f"{file_slug}_metadata.json"):
@@ -226,14 +270,9 @@ def _maybe_publish(base: Path, site_slug: str, url: str, url_slug: str, saved: P
         click.echo(f"  ⛔ WP client unavailable for '{site_slug}': {e}")
         return
 
-    # Confirmation humaine — le seul Y/N qui doit subsister (blast radius).
     click.echo(f"  Target: {url}")
     click.echo(f"  Site: {site_slug}  |  QC verdict: {verdict}")
     click.echo(f"  Content: {gutenberg_path.name}")
-    if not assume_yes:
-        if not click.confirm("  ⚠ PUBLISH to the public site now?", default=False):
-            click.echo("  Publish cancelled by the user.")
-            return
 
     res = publish_article(
         client=client,
@@ -297,8 +336,8 @@ def _validate_assets(base: Path, site_slug: str, url: str, html: str, saved: Pat
 
 
 def _run_ytg_qc(base: Path, site_slug: str, url: str, saved: Path,
-                main_keyword: str = "", guide_id: str = "") -> str:
-    """Lance YTGQualityCheck.check_html sur le HTML sauvegardé. Retourne le verdict.
+                main_keyword: str = "", guide_id: str = "") -> tuple:
+    """Lance YTGQualityCheck.check_html sur le HTML sauvegardé. Retourne (verdict, message).
 
     main_keyword/guide_id (issus du STEP 2.5 de `cw refresh`) évitent de re-résoudre
     le mot-clé sur le slug et de recréer un guide.
@@ -317,7 +356,7 @@ def _run_ytg_qc(base: Path, site_slug: str, url: str, saved: Path,
             ytg_cfg = {}
     if ytg_cfg.get("enabled") is False:
         click.echo("  YTG disabled for this site - QC skipped.")
-        return VERDICT_SKIP
+        return VERDICT_SKIP, ""
 
     try:
         engine = YTGQualityCheck()
@@ -333,10 +372,10 @@ def _run_ytg_qc(base: Path, site_slug: str, url: str, saved: Path,
             click.echo(f"  Terms to enrich: {', '.join(res.under_optimized_terms[:8])}")
         if res.verdict == VERDICT_NEEDS_FIX and res.over_optimized_terms:
             click.echo(f"  Terms to reduce: {', '.join(res.over_optimized_terms[:8])}")
-        return res.verdict
+        return res.verdict, res.message
     except Exception as e:
         click.echo(f"  Non-blocking QC, error ignored: {str(e)[:120]}")
-        return VERDICT_SKIP
+        return VERDICT_SKIP, ""
 
 
 def _run_linking(base: Path, site_slug: str, url: str, apply_linking: bool):

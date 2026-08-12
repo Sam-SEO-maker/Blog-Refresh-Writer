@@ -272,6 +272,15 @@ class RefreshOrchestrator:
         self._wp_api_clients[site_slug] = client
         return client
 
+    def _requires_api(self, site_slug: str) -> bool:
+        """True si le site interdit le fallback scraping (wp_api_config.require_api)."""
+        try:
+            with open(self._site_paths.site_config(site_slug), "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+        except (FileNotFoundError, ValueError):
+            return False
+        return bool((cfg.get("wp_api_config") or {}).get("require_api", False))
+
     def _fetch_html(self, url: str, site_slug: str = "") -> dict:
         """
         Récupère le contenu HTML d'une URL.
@@ -318,16 +327,27 @@ class RefreshOrchestrator:
                 post_data = wp_client.get_post_by_url(url)
                 if post_data:
                     rendered = post_data["rendered"]
+                    raw = post_data["raw"]
+                    # Le contenu servi à la chaîne est le post_content (Gutenberg
+                    # source). Le `rendered` est l'expansion WordPress : les
+                    # oembed y deviennent du markup de widget (blockquote TikTok,
+                    # twitter-tweet, <script>) que Gutenberg refuse ensuite de
+                    # reparser — bloc core/freeform + <p> mal imbriqués.
+                    # Le comptage d'assets reste sur `rendered` : les regex de
+                    # _extract_assets_baseline ciblent le HTML rendu (<iframe>,
+                    # <img>), pas les commentaires de blocs.
+                    content = raw or rendered
                     assets_baseline = self.content_extractor._extract_assets_baseline(rendered)
-                    word_count = len(rendered.split())
-                    _save_temp_cache(rendered)
+                    word_count = len(content.split())
+                    _save_temp_cache(content)
                     logger.info(
-                        f"Content via wp_api (post_id={post_data['id']}): "
+                        f"Content via wp_api (post_id={post_data['id']}, "
+                        f"source={'raw' if raw else 'rendered'}): "
                         f"{word_count} words, {assets_baseline['counts']['images']} images"
                     )
                     return {
-                        "full_html": rendered,
-                        "clean_body": rendered,
+                        "full_html": content,
+                        "clean_body": content,
                         "extraction_metadata": {
                             "method_used": "wp_api",
                             "word_count": word_count,
@@ -338,9 +358,31 @@ class RefreshOrchestrator:
                         "assets_baseline": assets_baseline,
                     }
             except Exception as e:
-                logger.warning(f"WP API failed for {url}, falling back to scraping: {e}")
+                logger.warning(f"WP API failed for {url}: {e}")
 
         # --- Stratégie 2 : HTTP direct + ContentExtractor ---
+        # Sauf si le site interdit le scraping (`wp_api_config.require_api`) :
+        # le HTML public est l'expansion WordPress des blocs (widgets oembed,
+        # <script>), que Gutenberg refuse ensuite de reparser. Mieux vaut un
+        # échec visible qu'un article silencieusement construit sur ce rendu.
+        if self._requires_api(site_slug):
+            logger.error(
+                f"WP API unavailable for {url} and scraping is disabled for "
+                f"'{site_slug}' (wp_api_config.require_api). Check the "
+                f"credentials env vars, then re-run."
+            )
+            return {
+                "full_html": "",
+                "clean_body": "",
+                "extraction_metadata": {
+                    "method_used": "error",
+                    "error": "wp_api unavailable and scraping disabled (require_api)",
+                },
+                "assets_baseline": {
+                    "counts": {"images": 0, "tables": 0, "videos": 0, "internal_links": 0}
+                },
+            }
+
         try:
             resp = requests.get(
                 url,
