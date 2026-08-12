@@ -45,7 +45,7 @@
         "name": "New Growing List",
         "col_url": 0,
         "col_keyword": 1,
-        "col_status": 5
+        "col_status": 3
       },
       {
         "name": "⬆️ Growing",
@@ -57,7 +57,8 @@
         "name": "Medium Potential",
         "col_url": 0,
         "col_keyword": 1,
-        "col_status": 8
+        "col_status": 8,
+        "col_date": 9
       },
       {
         "name": "👶🏽 High Potential",
@@ -85,7 +86,8 @@
     "api_base_url": "https://www.superprof.fr/ressources/wp-json/wp/v2",
     "user_env_var": "WP_SUPERPROF_RESSOURCES_USER",
     "password_env_var": "WP_SUPERPROF_RESSOURCES_APP_PASSWORD",
-    "timeout": 30
+    "timeout": 30,
+    "require_api": true
   },
   "generation_skill": "sp-ressources-gutenberg",
   "qc_skill": "qc-sp-ressources"

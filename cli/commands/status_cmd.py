@@ -22,7 +22,9 @@ from scripts.sheets.tab_status import update_status
 @click.argument("statuts_value", metavar="STATUS")
 @site_option(required=False, dest="site")
 @click.option("--tab", default=None, help="Restrict the search to one declared tab")
-def status(url, statuts_value, site, tab):
+@click.option("--date", "date", default=None, metavar="DD/MM/YYYY",
+              help="Refresh date to write (default: today). Tabs declaring col_date only.")
+def status(url, statuts_value, site, tab, date):
     """Updates the editorial status of a URL in any declared work tab.
 
     STATUS: A faire | Rédigé | Draft in WP | Publié
@@ -37,7 +39,7 @@ def status(url, statuts_value, site, tab):
 
     site = site or "superprof.fr-ressources"
     try:
-        res = update_status(site, url, statuts_value, tab=tab)
+        res = update_status(site, url, statuts_value, tab=tab, date=date)
     except (ValueError, RuntimeError) as e:
         click.echo(f"[ERROR] {e}", err=True)
         raise SystemExit(1)
@@ -49,5 +51,6 @@ def status(url, statuts_value, site, tab):
         click.echo(f"[ERROR] {res.reason} (URL found in '{res.tab}' row {res.row})", err=True)
         raise SystemExit(1)
 
-    click.echo(f"[OK] {res.tab} (row {res.row}) → status = \"{statuts_value}\"")
+    suffix = f", date = {res.date}" if res.date else ""
+    click.echo(f"[OK] {res.tab} (row {res.row}) → status = \"{statuts_value}\"{suffix}")
     click.echo(f"     {url[:90]}")
