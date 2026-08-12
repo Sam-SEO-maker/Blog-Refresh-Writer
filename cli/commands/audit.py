@@ -199,22 +199,45 @@ def gsc_page(url, days, dry_run):
 
 @audit.command("gsc-tab")
 @site_option(required=True, dest='site')
-@click.option('--tab', required=True,
-              help='Declared tab name (sheets.tabs of site.json), e.g. "New Growing List"')
+@click.option('--tab', default=None,
+              help='Declared tab name (sheets.tabs of site.json), e.g. "New Growing List". '
+                   'Required for --source sheet, ignored for --source notion')
+@click.option('--source', type=click.Choice(['sheet', 'notion']), default='sheet',
+              help='Where the tracked URLs come from: Google Sheets tab (default) '
+                   'or the Notion publications database (notion.publications of site.json)')
 @click.option('--days', type=int, default=28, help='Current window in days (default: 28), ignored if --start/--end')
 @click.option('--start', default=None, help='Current window start YYYY-MM-DD (with --end)')
 @click.option('--end', default=None, help='Current window end YYYY-MM-DD (with --start)')
+@click.option('--compare-start', default=None,
+              help='Reference window start YYYY-MM-DD (with --compare-end). '
+                   'Use it for year-over-year; default is the period of the same '
+                   'length immediately before the current window')
+@click.option('--compare-end', default=None,
+              help='Reference window end YYYY-MM-DD (with --compare-start)')
+@click.option('--category', 'categories', multiple=True,
+              help='Restrict to these editorial categories (repeatable, accent/case '
+                   'insensitive), e.g. --category "Soutien Scolaire" --category Langues. '
+                   'Requires --source notion (a Sheet tab carries no category)')
 @click.option('--top', type=int, default=15, help='Rows per movers table (default: 15)')
 @click.option('--dry-run', is_flag=True, help='Do not write the local JSON dump')
-def gsc_tab(site, tab, days, start, end, top, dry_run):
+def gsc_tab(site, tab, source, days, start, end, compare_start, compare_end,
+            categories, top, dry_run):
     """Refresh monitoring of a work tab: GSC gains/losses vs the previous window."""
     from scripts.audit.gsc_tab_perf import run_gsc_tab
+
+    if source == 'sheet' and not tab:
+        raise click.UsageError('--tab is required with --source sheet')
+    if categories and source != 'notion':
+        raise click.UsageError('--category requires --source notion')
 
     def fmt_delta(n):
         return f"+{n:,}" if n > 0 else f"{n:,}"
 
     def fmt_pct(v):
         return "n/a" if v is None else (f"+{v}%" if v > 0 else f"{v}%")
+
+    def fmt_ctr(v):
+        return "n/a" if v is None else f"{v}%"
 
     def fmt_pos(pg):
         b, a = pg["position_before"], pg["position_after"]
@@ -223,22 +246,53 @@ def gsc_tab(site, tab, days, start, end, top, dry_run):
         arrow = "↑" if a < b else ("↓" if a > b else "=")
         return f"pos {b:>5} → {a:>5} {arrow}"
 
-    click.echo(f"\n📈 GSC TAB DELTA - {site} / {tab}")
+    click.echo(f"\n📈 GSC TAB DELTA - {site} / {tab or 'Publications Notion'} [{source}]")
     try:
-        r = run_gsc_tab(site, tab=tab, days=days, start=start, end=end, dry_run=dry_run)
+        r = run_gsc_tab(site, tab=tab, days=days, start=start, end=end,
+                        dry_run=dry_run, source=source,
+                        compare_start=compare_start, compare_end=compare_end,
+                        categories=list(categories) or None)
         p, pp, t = r["period"], r["previous_period"], r["totals"]
         click.echo(f"  Window:   {p['start']} → {p['end']}  (vs {pp['start']} → {pp['end']})")
+        if r.get("length_mismatch"):
+            click.echo(f"  ⚠️  Durées inégales : {p.get('days')} j vs {pp.get('days')} j "
+                       "— volumes de clics non directement comparables")
         click.echo(f"  URLs:     {t['urls']} | ↗ {len(r['progressions'])} | "
                    f"↘ {len(r['regressions'])} | = {len(r['stable'])}")
         click.echo(f"  Clicks:   {t['clicks_before']:,} → {t['clicks_after']:,} "
                    f"({fmt_delta(t['clicks_delta'])}, {fmt_pct(t['clicks_delta_pct'])})")
+        click.echo(f"  Impr.:    {t['impressions_before']:,} → {t['impressions_after']:,} "
+                   f"({fmt_delta(t['impressions_delta'])}, "
+                   f"{fmt_pct(t['impressions_delta_pct'])})")
+        click.echo(f"  CTR:      {fmt_ctr(t['ctr_before'])} → {fmt_ctr(t['ctr_after'])}")
 
-        click.echo(f"\n  By editorial status:")
-        for status, g in sorted(r["by_status"].items(),
-                                key=lambda kv: kv[1]["clicks_after"], reverse=True):
-            click.echo(f"    {status:<28} {g['urls']:>4} URLs | "
-                       f"{g['clicks_before']:>6,} → {g['clicks_after']:>6,} clicks "
-                       f"({fmt_delta(g['clicks_delta'])}, {fmt_pct(g['clicks_delta_pct'])})")
+        nu, lfl = r.get("new_urls") or {}, r.get("like_for_like") or {}
+        if nu.get("urls"):
+            click.echo(f"\n  ⚠️  {nu['urls']}/{t['urls']} URLs sans impression sur la période "
+                       f"de référence (+{nu['clicks_after']:,} clics, "
+                       f"+{nu['impressions_after']:,} impr créés, pas gagnés)")
+            click.echo(f"      À périmètre constant ({lfl['urls']} URLs) : "
+                       f"clics {fmt_pct(lfl['clicks_delta_pct'])}, "
+                       f"impr {fmt_pct(lfl['impressions_delta_pct'])}, "
+                       f"CTR {fmt_ctr(lfl['ctr_before'])} → {fmt_ctr(lfl['ctr_after'])}")
+
+        for axis_label, groups, sort_by_name in (
+            ("Par statut éditorial", r.get("by_status") or {}, False),
+            ("Par catégorie", r.get("by_category") or {}, False),
+            ("Par année de publication", r.get("by_year") or {}, True),
+        ):
+            if not groups:
+                continue
+            click.echo(f"\n  {axis_label}:")
+            items = sorted(groups.items()) if sort_by_name else sorted(
+                groups.items(), key=lambda kv: kv[1]["clicks_after"], reverse=True)
+            for name, g in items:
+                click.echo(f"    {name:<28} {g['urls']:>4} URLs | "
+                           f"{g['clicks_before']:>6,} → {g['clicks_after']:>6,} clics "
+                           f"({fmt_delta(g['clicks_delta'])}, {fmt_pct(g['clicks_delta_pct'])})"
+                           f" | {g['impressions_before']:>7,} → {g['impressions_after']:>7,} impr "
+                           f"({fmt_pct(g['impressions_delta_pct'])})"
+                           f" | CTR {fmt_ctr(g['ctr_before'])} → {fmt_ctr(g['ctr_after'])}")
 
         for title, rows in (("Top progressions", r["progressions"][:top]),
                             ("Top regressions", r["regressions"][:top])):

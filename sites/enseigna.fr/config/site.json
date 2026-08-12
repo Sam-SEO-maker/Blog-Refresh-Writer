@@ -59,6 +59,17 @@
     ],
     "status_col": "F"
   },
+  "notion": {
+    "publications": {
+      "database_id": "28cd6418-695a-8071-990e-dd3824d477d9",
+      "page_url": "https://app.notion.com/p/superprof/Publications-Enseigna-256d6418695a8073ad87f5f88b17f87f",
+      "col_url": "URL",
+      "col_keyword": "Mot-clé cible",
+      "col_status": "Statut de refresh",
+      "col_category": "Catégorie",
+      "col_published": "Date de publication"
+    }
+  },
   "scraping_config": {
     "article_body": "article.post-content, article.entry-content, .post-content, .entry-content",
     "exclude_selectors": [
