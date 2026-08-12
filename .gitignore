@@ -168,3 +168,9 @@ _shared/config/sheets_config.json
 _shared/config/sites.json
 # Généré depuis _local/landings-superprof-fr.csv via scripts/utils/build_superprof_landings.py
 _shared/config/superprof_landings.json
+
+# Jeux open data MESR (data.gouv) servant de sources aux tableaux Enseigna
+# supérieur : ~31 Mo, retéléchargeables à l'identique depuis data.gouv.fr.
+# Le dépôt est public : on versionne les specs (.md du même dossier), pas les
+# données brutes, qu'on ne pourrait plus retirer de l'historique ensuite.
+sites/*/donnees_*/**/*.csv

@@ -79,11 +79,24 @@ liste ou un tableau.
 - **Test** : détecter les listes/tableaux de dates dans le corps → doivent être
   des timeline ; vérifier qu'il reste ≥ 1 infobox bleue et ≥ 1 jaune.
 
-### 6. Tableaux → CSV
-Chaque `<table>` doit avoir son **CSV** associé (nommage `{slug}_tableau_{descriptif}.csv`,
-max 3 tableaux/article), les rédacteurs l'intègrent en mode code depuis le CSV.
+### 6. Au moins un tableau, et un CSV par tableau
+**Zéro tableau = À CORRIGER, toujours.** Un article sans `<table>` est
+incomplet, même si le sujet ne paraît pas tabulaire et même si l'original
+n'en avait aucun : il y a toujours une comparaison, une série de critères,
+un jeu de cas ou un récapitulatif de formules à mettre en grille. Cible 1 à 3,
+**3 maximum** (exception lexique/grammaire). Chaque `<table>` a son **CSV**
+associé (`{slug}_tableau_{descriptif}.csv`), généré par l'extracteur du
+pipeline et jamais à la main.
 
-- **Test** : compter les `<table>` et vérifier la présence d'un CSV par tableau.
+- **Test 1** : `grep -c '<!-- wp:table' f` → si `0`, **À CORRIGER** (proposer
+  le tableau manquant : colonnes + section H2 d'accueil).
+- **Test 2** : compter les `<table>` et vérifier la présence d'un CSV par tableau.
+- **Test 3 (format)** : `grep -c 'figure class="wp-block-table"' f` → doit valoir
+  `0`. Un `<table>` doit être l'enfant **direct** du bloc `<!-- wp:table -->`, et
+  `class="has-fixed-layout"` n'est admis qu'avec `{"hasFixedLayout":true}` dans
+  les attributs du bloc — sinon l'éditeur affiche « block seems broken ».
+- **Test 4 (hors bloc)** : tout `<table>` sans `<!-- wp:table -->` juste avant est
+  invisible pour l'extracteur CSV **et** bascule en `core/freeform` dans WP.
 - Réf. : [[feedback-csv-naming-tablepress]].
 
 ## Rappels transverses (déjà connus, à re-vérifier)
@@ -95,9 +108,12 @@ max 3 tableaux/article), les rédacteurs l'intègrent en mode code depuis le CSV
 - **Blocs AdvGB au format exact** (commentaires `<!-- wp:advgb/* -->`, HTML sur
   une seule ligne, `{uuid}` cohérent JSON↔classe CSS) — [[feedback-advgb-block-format]] ;
   référence canonique `sites/superprof.fr-ressources/.claude/skills/sp-ressources-gutenberg/references/reference-gutenberg.md`.
-- **5 blocs obligatoires** : 2 infobox (1 bleue + 1 jaune), 1 count-up, 1 citation,
-  1 bloc sources — [[feedback-sp-ressources-gutenberg-house-format]],
+- **6 blocs obligatoires** : 2 infobox (1 bleue + 1 jaune), 1 count-up, 1 citation,
+  **≥ 1 tableau**, 1 bloc sources — [[feedback-sp-ressources-gutenberg-house-format]],
   [[feedback-sp-sources-block-format]].
+- **`countUpNumber` commence par un chiffre** et reste parseable comme nombre :
+  `"1,25"`, `"10³⁶"`, `"40 ans"`, `"0,62 à 0,78"` cassent le compteur. Mettre le
+  nombre nu dans `countUpNumber`, l'unité et les nuances dans `descText`.
 - **Formulations positives** (jamais « pas de panique », « dans ce cours ») —
   [[feedback-language-tone-sp-ressources]].
 - **Pas de blocs Gutenberg identiques adjacents** (un par section H2 max, cf.

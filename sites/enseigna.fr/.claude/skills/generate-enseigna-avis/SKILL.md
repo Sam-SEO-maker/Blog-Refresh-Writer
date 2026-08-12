@@ -76,6 +76,27 @@ Suivre les **articles de référence publiés**, PAS `review_template.md` :
 **Convention pros/cons** (pour la conversion Gutenberg auto en `wp:columns`) :
 `<div class="pros-cons"><div class="cons"><h3>Les -</h3>…</div><div class="pros"><h3>Les +</h3>…</div></div>`.
 
+**Liste de matières/activités avec émojis** : quand la plateforme testée couvre
+plusieurs matières ou disciplines (langues, soutien scolaire, loisirs…), en
+lister quelques-unes avec un émoji devant chaque nom, pour illustrer
+concrètement la diversité de l'offre — format `emoji Nom`, une ligne par
+item, sans description ajoutée. Référence publiée : `/avis-superprof-loisirs/`
+(section sur l'abonnement Pass Élève) :
+```
+🎹 Piano
+🎸 Guitare
+🕺 Danse
+🏊‍♀️ Natation
+🔮 Tarot
+🧵 Macramé
+🎻 Viole de gambe
+🧗‍♀️ Escalade
+🛼 Roller
+```
+Choisir des émojis pertinents pour les matières réellement citées dans la
+source vérifiée (ne pas inventer de matières hors brief), viser 6-10 items
+pour donner une impression de diversité sans noyer l'article.
+
 ## Interdits Enseigna (ne jamais produire)
 
 - ❌ **Déclaration d'indépendance éditoriale** (`div.independence-statement`) —
