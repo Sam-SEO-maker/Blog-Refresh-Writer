@@ -162,13 +162,29 @@ class WordPressAPIClient:
         content: Optional[str] = None,
         meta: Optional[dict] = None,
         status: Optional[str] = None,
+        max_attempts: int = 3,
     ) -> dict:
         """
         Update an existing post via the REST API (authenticated, write).
 
         Only the provided fields are sent. Returns:
-            {"ok": bool, "status_code": int, "id": int, "error": str|None}
+            {"ok": bool, "status_code": int, "id": int, "error": str|None,
+             "attempts": int}
+
+        Retried on transient failures only (429, 5xx, network/timeout).
+        Superprof sits behind a WAF that answers a burst of writes with a 429
+        or a 503; a single POST turned each of those into a lost article that
+        had already cost a full generation. A 4xx other than 429 is a rejected
+        payload or bad credentials — retrying it would only repeat the same
+        error, so it fails immediately.
+
+        A 403 is deliberately *not* retried: WordPress returns it for a
+        revoked application password just as the WAF does for a blocked
+        request, and hammering a WAF that just refused a write is the way to
+        get the whole IP banned. It surfaces as an error to be read.
         """
+        import time
+
         endpoint = f"{self.api_base_url}/posts/{post_id}"
         payload: dict = {}
         if title is not None:
@@ -180,19 +196,55 @@ class WordPressAPIClient:
         if meta:
             payload["meta"] = meta
 
-        try:
-            resp = requests.post(
-                endpoint,
-                json=payload,
-                auth=self._auth,
-                timeout=max(self.timeout, 60),
-                headers={"User-Agent": "ContentWriter/1.0"},
-            )
-            ok = resp.status_code in (200, 202)
-            err = None if ok else (resp.text[:300])
-            return {"ok": ok, "status_code": resp.status_code, "id": post_id, "error": err}
-        except requests.RequestException as e:
-            return {"ok": False, "status_code": 0, "id": post_id, "error": str(e)[:300]}
+        last: dict = {"ok": False, "status_code": 0, "id": post_id,
+                      "error": "no attempt made", "attempts": 0}
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                resp = requests.post(
+                    endpoint,
+                    json=payload,
+                    auth=self._auth,
+                    timeout=max(self.timeout, 60),
+                    headers={"User-Agent": "ContentWriter/1.0"},
+                )
+                ok = resp.status_code in (200, 202)
+                err = None if ok else (resp.text[:300])
+                last = {"ok": ok, "status_code": resp.status_code, "id": post_id,
+                        "error": err, "attempts": attempt}
+                if ok:
+                    return last
+                retryable = resp.status_code == 429 or resp.status_code >= 500
+                if not retryable:
+                    return last
+                # Respecter le Retry-After du serveur quand il le fournit :
+                # sur un 429, un backoff plus court que la fenêtre annoncée
+                # ne fait que consommer les tentatives restantes pour rien.
+                delay = self._retry_delay(attempt, resp.headers.get("Retry-After"))
+            except requests.RequestException as e:
+                last = {"ok": False, "status_code": 0, "id": post_id,
+                        "error": str(e)[:300], "attempts": attempt}
+                delay = self._retry_delay(attempt, None)
+
+            if attempt < max_attempts:
+                logger.warning(
+                    f"WP update_post {post_id} failed "
+                    f"(attempt {attempt}/{max_attempts}, "
+                    f"status={last['status_code']}), retrying in {delay}s"
+                )
+                time.sleep(delay)
+
+        return last
+
+    @staticmethod
+    def _retry_delay(attempt: int, retry_after: Optional[str]) -> float:
+        """Backoff exponentiel (2s, 4s, 8s), borné, dominé par Retry-After."""
+        if retry_after:
+            try:
+                return min(float(retry_after), 60.0)
+            except (TypeError, ValueError):
+                pass  # Retry-After en date HTTP : on retombe sur l'exponentiel
+        return min(2.0 ** attempt, 30.0)
 
     @staticmethod
     def _extract_slug(url: str) -> str:

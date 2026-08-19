@@ -141,6 +141,14 @@ def finalize(url, site_slug, html_file, title, article_type, keyword, guide_id, 
     if verdict == "NEEDS_FIX":
         click.echo("⚠ FINALIZE OK - NEEDS_FIX verdict: the subagent must fix "
                    "the flagged terms then re-run `finalize` (loop, cap 2-3).")
+    elif verdict == "SKIP":
+        # SKIP = le QC n'a pas pu tourner (quota 429, mot-clé refusé en 400,
+        # YTG désactivé). L'article n'est PAS validé sémantiquement, et le dire
+        # comme un succès est ce qui a fait passer 3 articles du lot L71 pour
+        # bons alors qu'aucun verdict n'existait.
+        click.echo("⚠ FINALIZE terminé SANS QC sémantique (verdict SKIP) : "
+                   "contenu et assets écrits, densité NON vérifiée. "
+                   "Rejouer `finalize` quand YTG répond.")
     else:
         click.echo("✅ FINALIZE OK - article ready (content + YTG verdict + links).")
     _echo_timers(base, url, finalize_t0)
@@ -233,32 +241,31 @@ def _maybe_publish(base: Path, site_slug: str, url: str, url_slug: str, saved: P
         click.echo(f"  ⛔ Cannot publish: {gutenberg_path.name} not found.")
         return
 
-    # Metadata (title + meta_description) — save_metadata() nomme par url_slug,
-    # save_refreshed_html() par file_slug (issu du titre) : les deux peuvent
-    # différer. On tente les deux, puis un fallback glob si un seul candidat.
-    # `saved.name` porte le nom complet ("*_refreshed.gutenberg.html" ou
-    # "*.html_refreshed.gutenberg.html") : `.stem` ne retire qu'un seul
-    # ".html" final, laissant les autres suffixes accolés au slug. On les
-    # retire explicitement plutôt que de se fier à `.stem`.
-    meta_dir = saved.parent.parent / "metadata"
-    file_slug = saved.name
-    changed = True
-    while changed:
-        changed = False
-        for suffix in (".gutenberg.html", ".html_refreshed", "_refreshed", ".html"):
-            if file_slug.endswith(suffix):
-                file_slug = file_slug[: -len(suffix)]
-                changed = True
-    metadata_path = None
-    for cand in (meta_dir / f"{url_slug}_metadata.json",
-                 meta_dir / f"{file_slug}_metadata.json"):
-        if cand.exists():
-            metadata_path = cand
-            break
-    if metadata_path is None and meta_dir.exists():
-        candidates = list(meta_dir.glob("*_metadata.json"))
-        if len(candidates) == 1:
-            metadata_path = candidates[0]
+    # Le fichier a bien été converti à l'étape 1, mais le QC sémantique réécrit
+    # de la prose DANS ces blocs entre-temps : une réécriture qui reconstruit le
+    # HTML sans reporter les délimiteurs laisse un fichier nu sous un nom
+    # `.gutenberg.html`. WP l'accepte et le range en `core/freeform` : article
+    # non éditable en blocs, images et tableaux non reconnus, sur un 200.
+    # Même garde que `cw push` — le seul chemin de publication qui l'avait.
+    if "<!-- wp:" not in gutenberg_path.read_text(encoding="utf-8"):
+        click.echo(f"  ⛔ Cannot publish: {gutenberg_path.name} carries no "
+                   "Gutenberg block delimiter (bare HTML under a .gutenberg "
+                   "name). A post-conversion step stripped them - re-run the "
+                   "formatter on this file before publishing.")
+        return
+
+    # Metadata (title + meta_description) : trois conventions de nommage
+    # coexistent selon le chemin qui a écrit le fichier — appariement partagé
+    # avec `cw push` dans `output_lookup`, pour que les deux commandes poussent
+    # la même metadata pour le même article.
+    from scripts.utils.output_lookup import find_metadata, strip_output_suffixes
+
+    metadata_path = find_metadata(
+        saved.parent.parent / "metadata",
+        url=url,
+        url_slug=url_slug,
+        file_slug=strip_output_suffixes(saved.name),
+    )
     if metadata_path is None:
         click.echo("  ⚠ metadata not found - "
                    "publishing the content without title/SEOPress update.")
@@ -283,7 +290,12 @@ def _maybe_publish(base: Path, site_slug: str, url: str, url_slug: str, saved: P
         base_path=base,
     )
     if res["ok"]:
-        click.echo(f"  ✅ Published - post id={res.get('id')}")
+        attempts = res.get("attempts")
+        retried = f" (after {attempts} attempts)" if attempts else ""
+        click.echo(f"  ✅ Published - post id={res.get('id')}{retried}")
+        if res.get("warning"):
+            click.echo(f"  ⚠ {res['warning']} - open the post in the editor "
+                       "and check the blocks.")
     else:
         click.echo(f"  ❌ Publish failed: {res.get('error')}")
 
@@ -368,13 +380,22 @@ def _run_ytg_qc(base: Path, site_slug: str, url: str, saved: Path,
         res.html_path = str(saved)
         engine.persist(res)
         click.echo(f"  Verdict: {res.verdict} - {res.message}")
-        if res.verdict == VERDICT_NEEDS_FIX and res.under_optimized_terms:
-            click.echo(f"  Terms to enrich: {', '.join(res.under_optimized_terms[:8])}")
-        if res.verdict == VERDICT_NEEDS_FIX and res.over_optimized_terms:
-            click.echo(f"  Terms to reduce: {', '.join(res.over_optimized_terms[:8])}")
+        # Les termes à enrichir n'ont de sens que si l'action est d'enrichir :
+        # les afficher sous un verdict ELAGUER enverrait le maillon suivant
+        # rallonger un article déjà trop couvert.
+        action = getattr(res, "action", "")
+        if res.verdict == VERDICT_NEEDS_FIX:
+            if action in ("ENRICHIR", "") and res.under_optimized_terms:
+                click.echo(f"  Terms to enrich: {', '.join(res.under_optimized_terms[:8])}")
+            if action in ("ELAGUER", "REECRIRE", "") and res.over_optimized_terms:
+                click.echo(f"  Terms to reduce: {', '.join(res.over_optimized_terms[:8])}")
         return res.verdict, res.message
     except Exception as e:
-        click.echo(f"  Non-blocking QC, error ignored: {str(e)[:120]}")
+        # Le QC n'a PAS tourné (429, 400, panne). Sans cette mention, l'appelant
+        # affiche « FINALIZE OK » à l'identique d'un vrai passage : c'est ce qui
+        # a fait passer 3 articles du lot L71 pour validés alors qu'aucun
+        # verdict n'existait.
+        click.echo(f"  ⚠ QC NON JOUÉ (erreur ignorée, non bloquante): {str(e)[:110]}")
         return VERDICT_SKIP, ""
 
 
