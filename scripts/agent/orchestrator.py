@@ -337,7 +337,13 @@ class RefreshOrchestrator:
                     # _extract_assets_baseline ciblent le HTML rendu (<iframe>,
                     # <img>), pas les commentaires de blocs.
                     content = raw or rendered
-                    assets_baseline = self.content_extractor._extract_assets_baseline(rendered)
+                    # site_id OBLIGATOIRE : sans lui, les liens internes ecrits
+                    # en absolu (https://www.superprof.fr/...) sont classes
+                    # externes et internal_links tombe a 0, ce qui desarme la
+                    # Golden Rule sur les liens.
+                    assets_baseline = self.content_extractor._extract_assets_baseline(
+                        rendered, output_site_id or site_slug
+                    )
                     word_count = len(content.split())
                     _save_temp_cache(content)
                     logger.info(
@@ -396,7 +402,10 @@ class RefreshOrchestrator:
             clean_body, extraction_meta = self.content_extractor.extract_article_body(
                 full_html, output_site_id or site_slug, url=url
             )
-            assets_baseline = self.content_extractor._extract_assets_baseline(clean_body)
+            # site_id OBLIGATOIRE (cf. commentaire du chemin wp_api ci-dessus).
+            assets_baseline = self.content_extractor._extract_assets_baseline(
+                clean_body, output_site_id or site_slug
+            )
             word_count = len(clean_body.split())
             _save_temp_cache(clean_body)
 
@@ -1121,6 +1130,19 @@ class RefreshOrchestrator:
             audit_data["original_internal_link_tags"] = baseline.get("internal_link_tags", [])
             audit_data["assets_counts"] = baseline.get("counts", {})
 
+        # Identité WP du post, connue seulement quand le fetch est passé par
+        # l'API (`method_used == "wp_api"`). La publication la réutilise pour
+        # cibler l'ID plutôt que de re-résoudre le slug : un slug modifié entre
+        # le refresh et le push (changement de titre, migration d'URL) faisait
+        # échouer `publish_article` sur un `post_not_found` trompeur, alors que
+        # l'ID était déjà connu ici. Absent en scraping : la publication
+        # retombe alors sur la résolution par slug.
+        if extraction_result:
+            extraction_meta = extraction_result.get("extraction_metadata") or {}
+            if extraction_meta.get("wp_post_id"):
+                audit_data["wp_post_id"] = extraction_meta["wp_post_id"]
+                audit_data["wp_slug"] = extraction_meta.get("wp_slug", "")
+
         # Inject YTG semantic terms for ghostwriter (STEP 2.5 pre-generation)
         if ytg_data:
             audit_data["ytg_guide_id"] = ytg_data.get("ytg_guide_id", "")
@@ -1217,6 +1239,9 @@ class RefreshOrchestrator:
         Returns:
             tuple: (refreshed_html, optimized_title)
         """
+        # Remis a zero a chaque article : sans ca le drapeau d'un article
+        # precedent contaminerait le suivant.
+        self._last_generation_pending = False
         try:
             # STEP 1: Prepare context files (pass extraction_result for image_tags)
             context_dir = self._prepare_context_for_claude_code(original_html, action, row, extraction_result, ytg_data=ytg_data)
@@ -1274,7 +1299,14 @@ class RefreshOrchestrator:
                     print(f"[AUTO-PROCESS] Workflow continues, generation pending...")
 
                     # Return original HTML for now - content will be generated later by Claude Code
-                    # This allows the batch workflow to continue without blocking
+                    # This allows the batch workflow to continue without blocking.
+                    #
+                    # Le drapeau dit la verite au flux appelant : le contexte est
+                    # pret mais RIEN n'est encore redige. Sans lui, STEP 7 marquait
+                    # la ligne « DONE » des la preparation, donc un article intact
+                    # etait annonce comme traite et disparaissait d'un relancement
+                    # (10 lignes touchees le 2026-08-13).
+                    self._last_generation_pending = True
                     return original_html, row.title
                 else:
                     # Non-FULL_REFRESH actions: raise exception to signal manual processing needed
@@ -1324,13 +1356,24 @@ class RefreshOrchestrator:
             for r in avis_rows
         ]
 
-    # Statuts terminaux : la ligne est déjà traitée ou sortie du périmètre
-    # éditorial, on ne la repasse jamais en génération.
-    _TAB_SKIP_STATUSES = {
-        "publié",
-        "redirection 301",
-        "cannibalisation de kw",
-    }
+    # LISTE BLANCHE : seul un statut « à faire » déclenche l'audit. Tout autre
+    # libellé (et tout statut vide) est laissé intact.
+    #
+    # C'était une liste NOIRE de trois libellés exacts ("publié",
+    # "redirection 301", "cannibalisation de kw"). Deux défauts mortels :
+    #   - un libellé absent de la liste passait au travers, donc
+    #     « Prêt pour relecture » (36 lignes) était repassé en génération ;
+    #   - la comparaison étant exacte, « Cannibalisation du Main KW » ne
+    #     matchait pas « cannibalisation de kw » ("du" vs "de", + "Main").
+    # Résultat le 2026-08-12 : 40 lignes déjà traitées reprises en refresh, et
+    # les vraies « A faire » (à partir de la ligne 41) jamais atteintes.
+    # Une liste blanche échoue du bon côté : un libellé inconnu ne fait rien.
+    _TAB_TODO_STATUSES = {"a faire", "à faire"}
+
+    @classmethod
+    def _is_todo_status(cls, status: str) -> bool:
+        """Le statut autorise-t-il un refresh ? Seul « à faire » le fait."""
+        return (status or "").strip().lower() in cls._TAB_TODO_STATUSES
 
     def _tab_rows_for_refresh(self, site_slug: str, tab: str) -> list:
         """
@@ -1397,7 +1440,7 @@ class RefreshOrchestrator:
             if not url.startswith("http"):
                 continue
             status = cell(row, col_status)
-            if status.lower() in self._TAB_SKIP_STATUSES:
+            if not self._is_todo_status(status):
                 continue
             rows.append(_TabRefreshRow(
                 site_slug=site_slug,
@@ -1998,14 +2041,32 @@ class RefreshOrchestrator:
 
                 # STEP 7: Mark as done (REFONTE Feb 2026: unified status)
                 # Gate YTG : si actif et contenu sous-optimisé → révision, pas DONE.
-                new_status = "NEEDS_REVIEW" if ytg_gate_block else "DONE"
+                #
+                # Cas prioritaire : si la generation n'a fait que PREPARER le
+                # contexte (l'agent redacteur n'a pas encore tourne), la ligne
+                # n'est pas traitee. On ne touche pas a son statut : elle doit
+                # rester « A faire » pour etre reprise. Ecrire « DONE » ici
+                # annoncait un article intact comme fini et le faisait
+                # disparaitre du prochain passage.
+                if getattr(self, "_last_generation_pending", False):
+                    logger.info(
+                        f"[STEP 7] Contexte prepare, redaction en attente — statut "
+                        f"inchange pour {row.blogpost_url[:60]}"
+                    )
+                    new_status = None
+                else:
+                    new_status = "NEEDS_REVIEW" if ytg_gate_block else "DONE"
 
                 # STEP 8: Update sheet — l'écriture du statut est propre au flux.
                 # `update_refresh_status_enseigna` cible les onglets Avis/Versus
                 # d'enseigna.fr : l'appeler depuis le flux générique par onglet
                 # cherchait l'URL dans le mauvais spreadsheet et faisait échouer
                 # l'article après une génération réussie.
-                if tab:
+                if new_status is None:
+                    # Preparation seule : aucune ecriture dans la Sheet.
+                    update_ok = True
+                    label = "(statut inchange)"
+                elif tab:
                     # Flux générique config-driven : le statut vit dans la colonne
                     # déclarée (`col_status`) de l'onglet lu, pas dans Avis/Versus.
                     update_ok = self._update_tab_status(

@@ -44,7 +44,9 @@
       {
         "name": "Avis",
         "col_url": 0,
-        "col_keyword": 1
+        "col_keyword": 1,
+        "col_status": 3,
+        "header_row": 1
       },
       {
         "name": "Versus",

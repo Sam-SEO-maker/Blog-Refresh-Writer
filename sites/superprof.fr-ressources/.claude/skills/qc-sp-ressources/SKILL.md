@@ -99,6 +99,22 @@ pipeline et jamais à la main.
   invisible pour l'extracteur CSV **et** bascule en `core/freeform` dans WP.
 - Réf. : [[feedback-csv-naming-tablepress]].
 
+### 7. Aucun shortcode `[caption]` résiduel
+L'ancien contenu porte ses images en `[caption id="attachment_NNN"
+align="aligncenter" width="W"]<img …/> Légende[/caption]`. Recopié tel quel, ce
+shortcode se retrouve **hors de tout bloc** : `wpautop` l'enveloppe alors d'un
+`<p>`, ce qui casse le parsing, et WordPress affiche
+`[caption id="attachment_NNN" …]` **en clair** au-dessus de l'image en prod.
+
+- **Test** : `grep -c '\[caption' f` → doit valoir `0`. Sinon **À CORRIGER** :
+  convertir en bloc `wp:image` (`id` → `{"id":NNN}`, `align="aligncenter"` →
+  `{"align":"center"}` + classe `aligncenter`, classe `size-*` → `sizeSlug`,
+  texte de fin → `<figcaption class="wp-element-caption">`).
+- Le markup legacy `<div class="wp-block-image"><figure class="aligncenter …">`
+  est **valide** dès lors qu'il est encapsulé dans `<!-- wp:image -->` : ne pas
+  le signaler, il est hors de portée de `wpautop`.
+- Réf. : `format-wordpress` § Dual Gutenberg output.
+
 ## Rappels transverses (déjà connus, à re-vérifier)
 
 - **Accents corrects partout**, y compris dans le JSON des blocs (jamais

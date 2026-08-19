@@ -52,6 +52,15 @@ is used for publication**; delete the bare one after generation. Ref.
   it emit `sizes="auto, …"`, and the browser's own stylesheet then applies
   `contain:size !important` — the image is cut off from its real size and inherits the
   declared intrinsic size instead (observed: a 1920x1280 image rendered 35694px tall).
+- **Never leave a bare `[caption]` shortcode.** Legacy content carries images as
+  `[caption id="attachment_NNN" align="aligncenter" width="W"]<img …/> Legend[/caption]`,
+  and copying that through verbatim ships a shortcode sitting outside any block.
+  `wpautop` then wraps it in a `<p>`, which breaks the shortcode parsing: WordPress
+  gives up and prints `[caption id="attachment_NNN" …]` **in plain text** above the
+  image. Convert every one to a `wp:image` block, mapping `id` → `{"id":NNN}`,
+  `align="aligncenter"` → `{"align":"center"}` + `aligncenter` class, the `size-*`
+  class → `sizeSlug`, and the trailing text → `<figcaption class="wp-element-caption">`.
+  Test: `grep -c '\[caption' file.gutenberg.html` must return 0.
 - **Pros/cons convention** (Enseigna): `<div class="pros-cons"><div class="cons">…</div><div class="pros">…</div></div>`
   → auto-converted to `wp:columns`.
 

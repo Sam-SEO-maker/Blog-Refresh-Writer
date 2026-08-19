@@ -122,6 +122,8 @@ def refresh(spreadsheet_id, action, blog, tab, limit, parallel):
 
         click.echo(f"\n📋 Work plan: {results['plan_path']}")
         click.echo("Next: the agent reads the plan and runs the writing subagents.")
+        click.echo("Each prepared article carries its `finalize_command` "
+                   "(publishes on OPTIMAL verdict) - fill in --html-file.")
         return
 
     # Run batch refresh
