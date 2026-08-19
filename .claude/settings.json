@@ -10,7 +10,6 @@
 
       "Edit(sites/**/outputs/**)",
       "MultiEdit(sites/**/outputs/**)",
-      "NotebookEdit(sites/**/outputs/**)",
       "Write(sites/**/outputs/**)",
       "Write(_shared/context/**)",
       "Write(_shared/benchmarks/**)",
