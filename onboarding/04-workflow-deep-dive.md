@@ -17,13 +17,13 @@ Python fait quoi.
 Les étapes d'un refresh sont les suivantes :
 
 ```
-1     Identification (Sheet) / ingestion de l'URL
+1     Identification (STSEO) / ingestion de l'URL
 2     Audit (GSC, SERP, intention)
   2.1   GSC (performance actuelle)
   2.2   SERP / DataForSEO (concurrence + PAA)
   2.3   Intention de recherche
-  2.4   Cannibalisation SEO (GSC + sitemap, tout le site)
-2.5   Guide sémantique YTG (enrichissement optionnel, non-bloquant)
+  2.4   Cannibalisation SEO detection (GSC + sitemap, tout le site)
+2.5   Guide sémantique YTG (création du guide sur mot-clé)
 3     Décision de stratégie (moteur data-driven)
 3.1   Vérification anti-doublon de titre (Notion, périmètre limité, non-bloquant)
 3.2   Recherche de sources (brief E-E-A-T)          ← skill, hors STEP du moteur

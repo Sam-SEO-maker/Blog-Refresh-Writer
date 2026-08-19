@@ -80,8 +80,77 @@ dépasse la moyenne de sa propre SERP.
 3. Corrige dans le HTML (`Edit`) :
    - **sous-optimisé** → introduire le terme **naturellement**, dans une phrase
      qui dit quelque chose. Jamais d'énumération de mots-clés.
-   - **sur-optimisé** → remplacer par des synonymes ou reformuler, sans perdre
-     le sens.
+   - **sur-optimisé** → **réécrire à volume constant** (voir ci-dessous).
+
+## La cible est une PLAGE, et le verdict te dit quoi faire
+
+Le QC lit désormais le **« Recommended score » du guide YTG**
+(`target_SOSEO_min/max`, `target_DSEO_min/max`) : c'est la **zone verte** de
+l'interface. Le SOSEO a donc un **maximum**, pas seulement un plancher.
+
+Le verdict te donne une **action** explicite, à suivre telle quelle :
+
+| Action | Situation | Ce que tu fais |
+|---|---|---|
+| **ELAGUER** | SOSEO **au-dessus** du max de sa plage | **Tu coupes.** Les deux scores suivent la longueur : élaguer les redites, digressions et exemples surnuméraires fait redescendre SOSEO *et* DSEO ensemble. |
+| **REECRIRE** | SOSEO dans la plage, DSEO trop haut | Réécriture à volume constant (section suivante). |
+| **ENRICHIR** | SOSEO **sous** le plancher | Introduire les termes manquants dans des phrases qui disent quelque chose. |
+
+**Élaguer n'est pas amputer.** Tu retires des redites, des exemples
+redondants, des digressions hors sujet et des reformulations qui n'ajoutent
+rien — jamais un fait sourcé, une statistique, une citation, un tableau, une
+image ou un lien (Golden Rule). Si un passage porte une source unique, il
+reste.
+
+## Corriger un DSEO trop haut : réécrire, jamais amputer
+
+*(cas **REECRIRE** : le SOSEO est DANS sa plage, seule la densité dépasse)*
+
+Ici le SOSEO est **dans sa plage** et seul le DSEO dépasse. Couper serait
+**faux** : le SOSEO retomberait sous son plancher et tu aurais échangé une
+erreur contre l'autre. (Si le SOSEO est *au-dessus du maximum*, c'est l'autre
+cas : voir **ELAGUER** plus haut.)
+
+Les deux scores suivent la longueur, mais pas la **répétition** de la même
+façon : le SOSEO compte les termes *distincts* couverts, le DSEO compte
+l'insistance sur les mêmes. Le levier est donc la **réécriture à volume
+constant**, le travail d'un rédacteur humain :
+
+1. **Reformuler** la phrase plutôt que la supprimer : même fait, autre tournure.
+2. **Substituer des synonymes** aux termes `red` (`over_optimized_terms` : cette
+   liste EST ta liste de travail).
+3. **Pronominaliser** les 2ᵉ et 3ᵉ mentions dans un paragraphe
+   (« la suite majorée » → « elle », « cette dernière »).
+4. **Monter en généralité** : « majorant » → « cette borne », « ce réel »,
+   « la valeur qui plafonne la suite ».
+5. **Vérifier la cohérence et harmoniser** ensuite : un synonyme introduit en §3
+   ne doit pas contredire la définition posée en §1, et un terme doit rester
+   stable là où il est l'objet technique de la phrase.
+
+Aucun fait sourcé, statistique, citation, tableau ou image ne disparaît dans
+cette passe. Le nombre de mots reste à ±5 %.
+
+**Ne touche jamais une phrase de définition.** Dans « un majorant est un réel M
+tel que… », le mot est l'objet défini : le remplacer casse la pédagogie.
+Substitue dans les phrases de **commentaire**, jamais dans la définition,
+l'énoncé d'un théorème ou celui d'un exercice.
+
+## Deux cibles qu'il ne faut PAS chercher à atteindre
+
+- **Termes LaTeX réclamés en sous-optimisé.** `under_optimized_terms` contient
+  parfois `mathbb`, `dfrac`, `overrightarrow`, `geqslant`, `displaystyle`,
+  `sqrt`, `text` : les concurrents publient du LaTeX brut. Mesuré le
+  14/08/2026 : 3 articles scientifiques sur 5. **Ce site ne rend pas le
+  LaTeX** (Unicode dans `<code>`, règle projet). Les ajouter réintroduirait le
+  bug d'affichage que le refresh vient de corriger. **Ignore-les.** Si l'écart
+  SOSEO restant n'est fait que de ces artefacts, l'article est terminé :
+  signale l'écart, ne le comble pas.
+- **Cible DSEO ≤ 3 %.** Artefact, pas objectif éditorial. Ces cibles à 1-3 %
+  venaient du repli sur les moyennes SERP, que des résultats non rédactionnels
+  (vidéos, pages sans texte) tirent vers zéro ; le « Recommended score » du
+  guide est bien plus large (0-24 à 0-32 sur les mêmes articles). Si une telle
+  cible apparaît encore — donc que le guide n'exposait aucune plage —, signale
+  et arrête-toi.
 
 ## Contraintes à ne pas casser en corrigeant
 
@@ -102,3 +171,13 @@ Ton message final est un **rapport court** : verdict final, SOSEO/DSEO de
 l'article **face aux moyennes TOP 3 / TOP 10** (les chiffres bruts seuls ne
 veulent rien dire), termes traités, nombre d'itérations, et l'état des assets
 avant/après. Jamais de HTML dans le chat.
+
+Distingue explicitement, dans ce rapport, **l'écart corrigeable de l'écart
+artefact** : un `NEEDS_FIX` qui ne tient plus qu'à des macros LaTeX réclamées
+ou à une cible DSEO ≤ 3 % n'est pas un article à retravailler, c'est une limite
+du guide. Dis-le en une phrase plutôt que de laisser croire à un défaut de
+rédaction — sans quoi le maillon suivant relancera une correction inutile.
+
+Signale aussi le cas où le QC n'a **pas tourné** : sur 429 ou 400, `finalize`
+affiche `✅ FINALIZE OK` **sans ligne `Verdict:`**, à l'identique d'un vrai
+passage. Absence de `Verdict:` = QC non joué, jamais « article validé ».

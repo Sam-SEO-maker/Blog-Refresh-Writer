@@ -1,14 +1,16 @@
 {
   "_doc": "Binding explicite fichier de sortie Gutenberg -> URL live de l'article enseigna. Les noms de fichiers dérivent du H1 (pas du slug d'URL) et plusieurs marques se répètent (superprof, voscours), donc AUCUN rapprochement automatique n'est fiable : cette table est la source de vérité, éditée à la main. Ajouter une ligne à chaque nouvel article refreshé. Clé = nom de fichier relatif sous sites/enseigna/outputs/html/avis/ (sous-dossier avis|versus selon le type).",
-  "_updated": "2026-07-09",
+  "_updated": "2026-08-18",
   "bindings": {
-    "avis/articles_8_juillet_2026/avis-rosetta-stone-mon-temoignage-sur-les-cours-dallemand_refreshed.gutenberg.html": "https://enseigna.fr/rosetta-stone-avis-apprentissage-langues/",
-    "avis/articles_8_juillet_2026/avis-schoolmouv-mon-experience-personnelle-et-objective_refreshed.gutenberg.html": "https://enseigna.fr/avis-soutien-scolaire-schoolmouv/",
-    "avis/articles_8_juillet_2026/avis-voscours-loisirs_refreshed.gutenberg.html": "https://enseigna.fr/avis-voscours-loisirs/",
-    "avis/articles_8_juillet_2026/decouverte-des-cours-de-langues-chez-superprof_refreshed.gutenberg.html": "https://enseigna.fr/superprof-avis-cours-langue/",
-    "avis/articles_8_juillet_2026/gostudent-avis-mon-ressenti-suite-a-mon-experience-des-cours-de-soutien-scolaire_refreshed.gutenberg.html": "https://enseigna.fr/avis-gostudent-soutien-scolaire/",
-    "avis/articles_8_juillet_2026/mon-avis-busuu-mon-experience-avec-les-cours-ditalien-en-ligne_refreshed.gutenberg.html": "https://enseigna.fr/busuu-avis-apprentissage-litalien/",
-    "avis/articles_8_juillet_2026/vos-cours-avis-soutien-scolaire-sur-la-plateforme_refreshed.gutenberg.html": "https://enseigna.fr/avis-voscours-soutien-scolaire/",
-    "avis/articles_8_juillet_2026/wall-street-english-avis-comment-se-deroulent-les-cours_refreshed.gutenberg.html": "https://enseigna.fr/avis-wall-street-english-les-cours-danglais/"
+    "avis/rosetta-stone-avis-apprentissage-langues_refreshed.gutenberg.html": "https://enseigna.fr/rosetta-stone-avis-apprentissage-langues/",
+    "avis/avis-soutien-scolaire-schoolmouv_refreshed.gutenberg.html": "https://enseigna.fr/avis-soutien-scolaire-schoolmouv/",
+    "avis/avis-voscours-loisirs_refreshed.gutenberg.html": "https://enseigna.fr/avis-voscours-loisirs/",
+    "avis/superprof-avis-cours-langue_refreshed.gutenberg.html": "https://enseigna.fr/superprof-avis-cours-langue/",
+    "avis/avis-gostudent-soutien-scolaire_refreshed.gutenberg.html": "https://enseigna.fr/avis-gostudent-soutien-scolaire/",
+    "avis/busuu-avis-apprentissage-litalien_refreshed.gutenberg.html": "https://enseigna.fr/busuu-avis-apprentissage-litalien/",
+    "avis/avis-wall-street-english-les-cours-danglais_refreshed.gutenberg.html": "https://enseigna.fr/avis-wall-street-english-les-cours-danglais/",
+    "avis/avis-voscours-soutien-scolaire_refreshed.gutenberg.html": "https://enseigna.fr/avis-voscours-soutien-scolaire/",
+    "avis/italki-les-cours-de-langues-avec-des-natifs_refreshed.gutenberg.html": "https://enseigna.fr/italki-les-cours-de-langues-avec-des-natifs/",
+    "avis/avis-cours-loisirs-preply_refreshed.gutenberg.html": "https://enseigna.fr/avis-cours-loisirs-preply/"
   }
 }

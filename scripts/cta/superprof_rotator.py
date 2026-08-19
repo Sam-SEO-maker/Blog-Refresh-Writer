@@ -347,10 +347,19 @@ class SuperprofRotator:
         for prefix in ("https://", "http://", "www."):
             if site_id.startswith(prefix):
                 site_id = site_id[len(prefix):]
-        # Retirer TLD (.fr, .com, .net, .org, etc.)
+        # Retirer le TLD, qu'il termine le slug (`enseigna.fr`) ou qu'il soit
+        # ENCLAVE dedans (`superprof.fr-ressources`). L'ancien test `endswith`
+        # seul laissait le `.fr` interne en place : `superprof.fr-ressources`
+        # ne trouvait alors aucune landing (la config est clefee sur le slug
+        # legacy `superprof-ressources`) et tout article prepare en batch
+        # sortait sans son lien CTA Superprof, pourtant obligatoire.
         for tld in (".fr", ".com", ".net", ".org", ".io", ".co"):
             if site_id.endswith(tld):
                 site_id = site_id[: -len(tld)]
+                break
+            # `.fr-ressources`, `.es-apuntes`, `.de-lernplattform`...
+            if f"{tld}-" in site_id:
+                site_id = site_id.replace(f"{tld}-", "-", 1)
                 break
         return site_id
 

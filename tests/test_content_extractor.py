@@ -265,18 +265,24 @@ class TestContentExtractor:
                 </table>
                 <video src="/video.mp4"></video>
                 <a href="/internal-page">Internal link</a>
+                <a href="https://www.superprof.fr/cours/physique/france/">Absolute self link</a>
+                <a href="#chapitre_2">Fragment anchor</a>
                 <a href="https://external.com">External link</a>
             </article>
         </body>
         </html>
         """
 
-        assets = extractor._extract_assets_baseline(html)
+        assets = extractor._extract_assets_baseline(html, "superprof.fr-ressources")
 
         assert assets["counts"]["images"] == 2
         assert assets["counts"]["tables"] == 1
         assert assets["counts"]["videos"] == 1
-        assert assets["counts"]["internal_links"] >= 1  # At least the /internal-page link
+        # Comptage par HOTE, pas par forme d'URL : le lien relatif ET le lien
+        # absolu self-domain comptent ; l'ancre de fragment et l'externe non.
+        # Un `>= 1` laissait passer le bug ou internal_links valait 0 sur les
+        # sites qui ecrivent leurs liens internes en absolu.
+        assert assets["counts"]["internal_links"] == 2
         assert len(assets["details"]["image_urls"]) == 2
         assert "/image1.jpg" in assets["details"]["image_urls"]
 
@@ -294,7 +300,7 @@ class TestContentExtractor:
         </html>
         """
 
-        assets = extractor._extract_assets_baseline(html)
+        assets = extractor._extract_assets_baseline(html, "superprof.fr-ressources")
 
         # YouTube and Vimeo iframes should be counted as videos
         assert assets["counts"]["videos"] == 2

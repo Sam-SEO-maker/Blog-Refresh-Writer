@@ -37,12 +37,17 @@ from cli.options import blog_option
                    "recreated). Carry it over from the `cw refresh` output.")
 @click.option("--apply-linking", is_flag=True, default=False,
               help="Apply the internal linking (writes the files). Otherwise dry-run.")
-@click.option("--publish", is_flag=True, default=False,
-              help="Publish to WordPress (REST) after QC OK. Blast radius: "
-                   "human confirmation required. Refused on NEEDS_FIX/BLOCKED verdict.")
-@click.option("--yes", "assume_yes", is_flag=True, default=False,
-              help="Skip the interactive publish confirmation (informed batch usage).")
-def finalize(url, site_slug, html_file, title, article_type, keyword, guide_id, apply_linking, publish, assume_yes):
+@click.option("--publish/--no-publish", "publish", default=True,
+              help="Publish to WordPress (REST) once QC verdict is OPTIMAL. "
+                   "On by default. Refused on NEEDS_FIX/BLOCKED/SKIP verdict "
+                   "unless --force-publish.")
+@click.option("--force-publish", "force_publish", is_flag=True, default=False,
+              help="Publish even on NEEDS_FIX/SKIP (never BLOCKED): pushes the "
+                   "best draft obtained so far for human editors to finish. "
+                   "Explicit opt-in, off by default.")
+@click.option("--yes", "assume_yes", is_flag=True, default=True,
+              help="Deprecated no-op: publish no longer prompts for confirmation.")
+def finalize(url, site_slug, html_file, title, article_type, keyword, guide_id, apply_linking, publish, force_publish, assume_yes):
     """
     Post-generation chain: save → assets → YTG QC → internal linking.
 
@@ -97,15 +102,28 @@ def finalize(url, site_slug, html_file, title, article_type, keyword, guide_id, 
     # 3. QC sémantique YTG
     # -------------------------------------------------------------------
     click.echo("\n[3/4] YTG semantic QC...")
-    verdict = _run_ytg_qc(base, site_slug, url, saved, main_keyword=keyword, guide_id=guide_id)
+    verdict, ytg_message = _run_ytg_qc(base, site_slug, url, saved, main_keyword=keyword, guide_id=guide_id)
 
-    # BLOCKED = problème de fond → arrêt + alerte humaine (pas de maillage)
+    # BLOCKED recouvre deux causes distinctes (cf. scripts/audit/ytg_qc.py) :
+    # sur-optimisation sévère de contenu (vrai problème de fond) OU panne
+    # d'infra (API YTG en erreur/429, "Analyse YTG échouée (API)") - la
+    # docstring du module classe volontairement les deux ensemble, mais
+    # seule la première justifie un arrêt qu'aucun --force-publish ne doit
+    # franchir. La seconde n'a jamais vérifié le contenu : elle reste
+    # bloquante par défaut, mais --force-publish peut la traverser (le
+    # contenu peut être publiable même si l'API n'a pas pu le confirmer).
     if verdict == "BLOCKED":
-        click.echo("\n❌ BLOCKED verdict - stopping. Severe over-optimization: "
-                   "human review required, no automatic re-generation.")
-        click.echo("   Internal linking NOT applied (article cannot be finalized as is).")
-        _echo_timers(base, url, finalize_t0)
-        return
+        api_failure = "API)" in (ytg_message or "") or "introuvable" in (ytg_message or "")
+        if api_failure and force_publish:
+            click.echo(f"\n⚠ BLOCKED verdict (infra: {ytg_message}) - "
+                       "bypassed by --force-publish, content not semantically verified.")
+            verdict = "SKIP"
+        else:
+            click.echo(f"\n❌ BLOCKED verdict - stopping ({ytg_message}). "
+                       "Human review required, no automatic re-generation.")
+            click.echo("   Internal linking NOT applied (article cannot be finalized as is).")
+            _echo_timers(base, url, finalize_t0)
+            return
 
     # -------------------------------------------------------------------
     # 4. Maillage interne
@@ -114,15 +132,23 @@ def finalize(url, site_slug, html_file, title, article_type, keyword, guide_id, 
     _run_linking(base, site_slug, url, apply_linking)
 
     # -------------------------------------------------------------------
-    # 5. Publication WordPress (optionnelle, --publish) — fort blast radius
+    # 5. Publication WordPress (auto sur verdict OPTIMAL, --no-publish pour désactiver)
     # -------------------------------------------------------------------
     if publish:
-        _maybe_publish(base, site_slug, url, url_slug, saved, verdict, assume_yes)
+        _maybe_publish(base, site_slug, url, url_slug, saved, verdict, assume_yes, force_publish)
 
     click.echo(f"\n{'='*70}")
     if verdict == "NEEDS_FIX":
         click.echo("⚠ FINALIZE OK - NEEDS_FIX verdict: the subagent must fix "
                    "the flagged terms then re-run `finalize` (loop, cap 2-3).")
+    elif verdict == "SKIP":
+        # SKIP = le QC n'a pas pu tourner (quota 429, mot-clé refusé en 400,
+        # YTG désactivé). L'article n'est PAS validé sémantiquement, et le dire
+        # comme un succès est ce qui a fait passer 3 articles du lot L71 pour
+        # bons alors qu'aucun verdict n'existait.
+        click.echo("⚠ FINALIZE terminé SANS QC sémantique (verdict SKIP) : "
+                   "contenu et assets écrits, densité NON vérifiée. "
+                   "Rejouer `finalize` quand YTG répond.")
     else:
         click.echo("✅ FINALIZE OK - article ready (content + YTG verdict + links).")
     _echo_timers(base, url, finalize_t0)
@@ -130,24 +156,38 @@ def finalize(url, site_slug, html_file, title, article_type, keyword, guide_id, 
 
 
 def _echo_timers(base: Path, url: str, finalize_t0: float) -> None:
-    """Affiche la durée du finalize et, si disponible, celle du pipeline complet.
+    """Affiche ET persiste les durées machine de l'article.
 
-    Le départ du pipeline (`refresh_started_at`) est écrit par `cw refresh` dans
-    `_shared/context/{slug}/timing.json`. Absent (finalize rejoué seul, contexte
-    archivé…) → seule la durée du finalize est affichée.
+    `refresh_started_at` est écrit à la préparation, aussi bien par `cw refresh`
+    que par `cw batch refresh`, dans `_shared/context/{slug}/timing.json`.
+    Les durées y sont réinjectées pour rester exploitables après coup : sans
+    persistance, le temps machine par URL n'existait qu'à l'écran et disparaissait
+    avec le scrollback.
     """
     import time
     from datetime import datetime
 
-    click.echo(f"⏱ Finalize: {_fmt_duration(time.perf_counter() - finalize_t0)}")
+    finalize_seconds = time.perf_counter() - finalize_t0
+    click.echo(f"⏱ Finalize: {_fmt_duration(finalize_seconds)}")
 
     try:
         from scripts.audit.ytg_qc import url_to_context_slug
         timing_path = (base / "_shared" / "context"
                        / url_to_context_slug(url) / "timing.json")
-        started = json.loads(timing_path.read_text(encoding="utf-8"))["refresh_started_at"]
-        total = (datetime.now() - datetime.fromisoformat(started)).total_seconds()
+        data = json.loads(timing_path.read_text(encoding="utf-8"))
+        started = data["refresh_started_at"]
+        ended = datetime.now()
+        total = (ended - datetime.fromisoformat(started)).total_seconds()
         click.echo(f"⏱ Full pipeline (refresh → finalize): {_fmt_duration(total)}")
+
+        data.update({
+            "finalize_ended_at": ended.isoformat(),
+            "finalize_seconds": round(finalize_seconds, 1),
+            "total_seconds": round(total, 1),
+        })
+        timing_path.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
     except Exception:
         pass  # pas de timing.json exploitable — durée totale omise
 
@@ -164,43 +204,68 @@ def _fmt_duration(seconds: float) -> str:
 
 
 def _maybe_publish(base: Path, site_slug: str, url: str, url_slug: str, saved: Path,
-                   verdict: str, assume_yes: bool) -> None:
+                   verdict: str, assume_yes: bool, force_publish: bool = False) -> None:
     """Publie l'article sur WordPress via REST, uniquement si le QC est OK.
 
-    Garde-fous (fort blast radius, site public) :
-    - refus si verdict NEEDS_FIX ou BLOCKED (BLOCKED n'atteint jamais ce point) ;
-    - confirmation humaine explicite avant le POST, sauf --yes.
+    Garde-fou restant (fort blast radius, site public) : refus si verdict
+    NEEDS_FIX/SKIP, sauf --force-publish (décision du 2026-08-06 : pousser le
+    meilleur brouillon obtenu pour finition par des rédacteurs humains — cf.
+    memory project_finalize_autopublish_default). BLOCKED n'atteint jamais ce
+    point (return plus haut dans `finalize`) : jamais publiable, même forcé.
     """
     from scripts.utils.push_to_wp import build_client, publish_article
 
     click.echo("\n[5/5] Publishing to WordPress (REST)...")
 
-    if verdict == "NEEDS_FIX":
-        click.echo("  ⛔ Publish refused: NEEDS_FIX verdict. "
-                   "Fix the article then re-run `finalize --publish`.")
+    # Whitelist explicite, pas blacklist : un verdict SKIP (YTG désactivé,
+    # ou API en erreur/429 - cf. `_run_ytg_qc`'s except-clause) ne veut pas
+    # dire "QC passée", seulement "QC pas faite". Le laisser filtrer au même
+    # titre qu'OPTIMAL a publié un NEEDS_FIX réel sous un 429 (incident du
+    # 2026-08-06) : seul OPTIMAL, vérifié, ouvre la publication par défaut.
+    if verdict != "OPTIMAL" and not force_publish:
+        click.echo(f"  ⛔ Publish refused: verdict is {verdict}, not OPTIMAL. "
+                   "Fix the article, re-run `finalize --publish`, or use "
+                   "--force-publish to push the current draft as-is.")
         return
+    if verdict != "OPTIMAL":
+        click.echo(f"  ⚠ Force-publishing despite verdict {verdict} "
+                   "(--force-publish): draft pushed for human editors to finish.")
 
     # Contenu à pousser = .gutenberg.html adjacent au HTML nu sauvegardé.
-    gutenberg_path = saved.with_name(saved.stem + ".gutenberg.html")
+    # `saved` est déjà nommé "*_refreshed.gutenberg.html" (voir save_refreshed_html) :
+    # ne pas rajouter ".gutenberg.html" à son stem, qui le contient déjà, sous peine
+    # de produire "*.gutenberg.gutenberg.html" (fichier inexistant).
+    gutenberg_path = saved if saved.suffixes[-2:] == [".gutenberg", ".html"] \
+        else saved.with_name(saved.stem + ".gutenberg.html")
     if not gutenberg_path.exists():
         click.echo(f"  ⛔ Cannot publish: {gutenberg_path.name} not found.")
         return
 
-    # Metadata (title + meta_description) — save_metadata() nomme par url_slug,
-    # save_refreshed_html() par file_slug (issu du titre) : les deux peuvent
-    # différer. On tente les deux, puis un fallback glob si un seul candidat.
-    meta_dir = saved.parent.parent / "metadata"
-    file_slug = saved.stem[: -len("_refreshed")] if saved.stem.endswith("_refreshed") else saved.stem
-    metadata_path = None
-    for cand in (meta_dir / f"{url_slug}_metadata.json",
-                 meta_dir / f"{file_slug}_metadata.json"):
-        if cand.exists():
-            metadata_path = cand
-            break
-    if metadata_path is None and meta_dir.exists():
-        candidates = list(meta_dir.glob("*_metadata.json"))
-        if len(candidates) == 1:
-            metadata_path = candidates[0]
+    # Le fichier a bien été converti à l'étape 1, mais le QC sémantique réécrit
+    # de la prose DANS ces blocs entre-temps : une réécriture qui reconstruit le
+    # HTML sans reporter les délimiteurs laisse un fichier nu sous un nom
+    # `.gutenberg.html`. WP l'accepte et le range en `core/freeform` : article
+    # non éditable en blocs, images et tableaux non reconnus, sur un 200.
+    # Même garde que `cw push` — le seul chemin de publication qui l'avait.
+    if "<!-- wp:" not in gutenberg_path.read_text(encoding="utf-8"):
+        click.echo(f"  ⛔ Cannot publish: {gutenberg_path.name} carries no "
+                   "Gutenberg block delimiter (bare HTML under a .gutenberg "
+                   "name). A post-conversion step stripped them - re-run the "
+                   "formatter on this file before publishing.")
+        return
+
+    # Metadata (title + meta_description) : trois conventions de nommage
+    # coexistent selon le chemin qui a écrit le fichier — appariement partagé
+    # avec `cw push` dans `output_lookup`, pour que les deux commandes poussent
+    # la même metadata pour le même article.
+    from scripts.utils.output_lookup import find_metadata, strip_output_suffixes
+
+    metadata_path = find_metadata(
+        saved.parent.parent / "metadata",
+        url=url,
+        url_slug=url_slug,
+        file_slug=strip_output_suffixes(saved.name),
+    )
     if metadata_path is None:
         click.echo("  ⚠ metadata not found - "
                    "publishing the content without title/SEOPress update.")
@@ -212,14 +277,9 @@ def _maybe_publish(base: Path, site_slug: str, url: str, url_slug: str, saved: P
         click.echo(f"  ⛔ WP client unavailable for '{site_slug}': {e}")
         return
 
-    # Confirmation humaine — le seul Y/N qui doit subsister (blast radius).
     click.echo(f"  Target: {url}")
     click.echo(f"  Site: {site_slug}  |  QC verdict: {verdict}")
     click.echo(f"  Content: {gutenberg_path.name}")
-    if not assume_yes:
-        if not click.confirm("  ⚠ PUBLISH to the public site now?", default=False):
-            click.echo("  Publish cancelled by the user.")
-            return
 
     res = publish_article(
         client=client,
@@ -230,7 +290,12 @@ def _maybe_publish(base: Path, site_slug: str, url: str, url_slug: str, saved: P
         base_path=base,
     )
     if res["ok"]:
-        click.echo(f"  ✅ Published - post id={res.get('id')}")
+        attempts = res.get("attempts")
+        retried = f" (after {attempts} attempts)" if attempts else ""
+        click.echo(f"  ✅ Published - post id={res.get('id')}{retried}")
+        if res.get("warning"):
+            click.echo(f"  ⚠ {res['warning']} - open the post in the editor "
+                       "and check the blocks.")
     else:
         click.echo(f"  ❌ Publish failed: {res.get('error')}")
 
@@ -283,8 +348,8 @@ def _validate_assets(base: Path, site_slug: str, url: str, html: str, saved: Pat
 
 
 def _run_ytg_qc(base: Path, site_slug: str, url: str, saved: Path,
-                main_keyword: str = "", guide_id: str = "") -> str:
-    """Lance YTGQualityCheck.check_html sur le HTML sauvegardé. Retourne le verdict.
+                main_keyword: str = "", guide_id: str = "") -> tuple:
+    """Lance YTGQualityCheck.check_html sur le HTML sauvegardé. Retourne (verdict, message).
 
     main_keyword/guide_id (issus du STEP 2.5 de `cw refresh`) évitent de re-résoudre
     le mot-clé sur le slug et de recréer un guide.
@@ -303,7 +368,7 @@ def _run_ytg_qc(base: Path, site_slug: str, url: str, saved: Path,
             ytg_cfg = {}
     if ytg_cfg.get("enabled") is False:
         click.echo("  YTG disabled for this site - QC skipped.")
-        return VERDICT_SKIP
+        return VERDICT_SKIP, ""
 
     try:
         engine = YTGQualityCheck()
@@ -315,14 +380,23 @@ def _run_ytg_qc(base: Path, site_slug: str, url: str, saved: Path,
         res.html_path = str(saved)
         engine.persist(res)
         click.echo(f"  Verdict: {res.verdict} - {res.message}")
-        if res.verdict == VERDICT_NEEDS_FIX and res.under_optimized_terms:
-            click.echo(f"  Terms to enrich: {', '.join(res.under_optimized_terms[:8])}")
-        if res.verdict == VERDICT_NEEDS_FIX and res.over_optimized_terms:
-            click.echo(f"  Terms to reduce: {', '.join(res.over_optimized_terms[:8])}")
-        return res.verdict
+        # Les termes à enrichir n'ont de sens que si l'action est d'enrichir :
+        # les afficher sous un verdict ELAGUER enverrait le maillon suivant
+        # rallonger un article déjà trop couvert.
+        action = getattr(res, "action", "")
+        if res.verdict == VERDICT_NEEDS_FIX:
+            if action in ("ENRICHIR", "") and res.under_optimized_terms:
+                click.echo(f"  Terms to enrich: {', '.join(res.under_optimized_terms[:8])}")
+            if action in ("ELAGUER", "REECRIRE", "") and res.over_optimized_terms:
+                click.echo(f"  Terms to reduce: {', '.join(res.over_optimized_terms[:8])}")
+        return res.verdict, res.message
     except Exception as e:
-        click.echo(f"  Non-blocking QC, error ignored: {str(e)[:120]}")
-        return VERDICT_SKIP
+        # Le QC n'a PAS tourné (429, 400, panne). Sans cette mention, l'appelant
+        # affiche « FINALIZE OK » à l'identique d'un vrai passage : c'est ce qui
+        # a fait passer 3 articles du lot L71 pour validés alors qu'aucun
+        # verdict n'existait.
+        click.echo(f"  ⚠ QC NON JOUÉ (erreur ignorée, non bloquante): {str(e)[:110]}")
+        return VERDICT_SKIP, ""
 
 
 def _run_linking(base: Path, site_slug: str, url: str, apply_linking: bool):

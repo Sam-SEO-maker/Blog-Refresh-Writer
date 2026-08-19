@@ -7,6 +7,26 @@ from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 
 
 _WP_IMAGE_CLASS_RE = re.compile(r"wp-image-(\d+)")
+_SIZE_CLASS_RE = re.compile(r"^size-(thumbnail|medium|large|full)$")
+
+# Attributs de l'<img> source a reconduire tels quels dans le bloc genere.
+# `width`/`height` portent le ratio intrinseque, `style` protege les vignettes
+# sans entree de mediatheque.
+#
+# `srcset`/`sizes`/`loading`/`decoding` sont volontairement ABSENTS : ce sont
+# des attributs que WordPress calcule au rendu depuis la mediatheque. Recopier
+# un `srcset` fige dans le contenu lui fait emettre `sizes="auto, ..."`, et la
+# feuille du navigateur applique alors :
+#
+#     img:is([sizes="auto" i],[sizes^="auto," i]){contain:size !important;
+#                                                 contain-intrinsic-size:300px 150px}
+#
+# `contain:size` coupe l'image de sa taille reelle : sa hauteur ne vient plus
+# du fichier mais de la taille intrinseque declaree, d'ou des hauteurs
+# aberrantes (constate : 35694px sur une image 1920x1280). Laisser WordPress
+# generer ces attributs -- il le fait correctement quand le contenu ne les
+# impose pas.
+_IMG_PASSTHROUGH_ATTRS = ("style", "width", "height")
 
 _YELLOW = {"bg": "#fffbf0", "border": "#ffcf3b"}  # Info Box Jaune
 _BLUE = {"bg": "#e8f2ff", "border": "#157dfe"}    # Info Box Bleue
@@ -73,6 +93,14 @@ def _list(tag: Tag) -> str:
     return f"{open_comment}\n<{wrap}>{items_html}</{wrap}>\n<!-- /wp:list -->"
 
 
+def _is_latex_img(img: Tag) -> bool:
+    """Image de formule LaTeX : classe `img-latex` ou URL servie depuis /latex/."""
+    classes = img.get("class", []) or []
+    if "img-latex" in classes:
+        return True
+    return "/latex/" in (img.get("src", "") or "")
+
+
 def _image(tag: Tag) -> str:
     # tag may be <figure> or <img>
     if tag.name == "figure":
@@ -83,6 +111,13 @@ def _image(tag: Tag) -> str:
         figcaption = None
     if img is None:
         return str(tag)
+
+    # Formules LaTeX : images fonctionnelles de ~150px generees par le plugin,
+    # inline dans le texte. Les envelopper dans un wp:image `size-large` les
+    # etire au gabarit d'une illustration pleine largeur (formule floue et
+    # disproportionnee). On les rend nues, comme le fait WordPress lui-meme.
+    if _is_latex_img(img):
+        return str(img)
 
     img_classes = img.get("class", []) or []
     img_id = None
@@ -97,10 +132,20 @@ def _image(tag: Tag) -> str:
         except ValueError:
             img_id = None
 
+    # La taille reelle vient de la classe `size-*` de l'original. La forcer a
+    # "large" faisait servir le fichier full avec le dimensionnement du large,
+    # d'ou des images distordues. Defaut "large" quand rien n'est detectable.
+    size_slug = "large"
+    for c in img_classes:
+        m = _SIZE_CLASS_RE.match(c)
+        if m:
+            size_slug = m.group(1)
+            break
+
     attrs_json_parts = []
     if img_id is not None:
         attrs_json_parts.append(f'"id":{img_id}')
-    attrs_json_parts.append('"sizeSlug":"large"')
+    attrs_json_parts.append(f'"sizeSlug":"{size_slug}"')
     attrs_json_parts.append('"linkDestination":"none"')
     attrs_json = "{" + ",".join(attrs_json_parts) + "}"
 
@@ -113,6 +158,12 @@ def _image(tag: Tag) -> str:
     img_html = f'<img src="{src}" alt="{alt}"'
     if img_class_attr:
         img_html += f' class="{img_class_attr}"'
+    for attr in _IMG_PASSTHROUGH_ATTRS:
+        val = img.get(attr)
+        if isinstance(val, list):
+            val = " ".join(val)
+        if val not in (None, ""):
+            img_html += f' {attr}="{val}"'
     img_html += "/>"
 
     caption_html = ""
@@ -121,7 +172,7 @@ def _image(tag: Tag) -> str:
 
     return (
         f'<!-- wp:image {attrs_json} -->\n'
-        f'<figure class="wp-block-image size-large">{img_html}{caption_html}</figure>\n'
+        f'<figure class="wp-block-image size-{size_slug}">{img_html}{caption_html}</figure>\n'
         f'<!-- /wp:image -->'
     )
 

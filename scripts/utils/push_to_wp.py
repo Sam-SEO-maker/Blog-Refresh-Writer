@@ -48,6 +48,29 @@ def build_client(site: str = _DEFAULT_SITE, base_path: Optional[Path] = None) ->
     )
 
 
+def resolve_wp_post_id(url: str, base_path: Optional[Path] = None) -> Optional[int]:
+    """Récupère le `wp_post_id` mémorisé au fetch, s'il l'a été.
+
+    L'orchestrateur connaît l'ID dès l'extraction via l'API WP et le persiste
+    dans `audit_data.json`. Le relire évite une résolution par slug à la
+    publication : entre le refresh et le push, un titre retravaillé peut avoir
+    changé le slug, et la recherche `?slug=` renvoie alors un `post_not_found`
+    alors que le post existe. Absent quand le contenu vient du scraping.
+    """
+    try:
+        from scripts.audit.ytg_qc import url_to_context_slug
+
+        base = Path(base_path) if base_path else Path.cwd()
+        audit_path = base / "_shared" / "context" / url_to_context_slug(url) / "audit_data.json"
+        if not audit_path.exists():
+            return None
+        data = json.loads(audit_path.read_text(encoding="utf-8"))
+        pid = data.get("wp_post_id")
+        return int(pid) if pid else None
+    except Exception:
+        return None
+
+
 def publish_article(
     client: WordPressAPIClient,
     site: str,
@@ -56,20 +79,23 @@ def publish_article(
     metadata_path: Optional[Path] = None,
     base_path: Optional[Path] = None,
     status: str = "publish",
+    post_id: Optional[int] = None,
 ) -> dict:
     """Publie un article déjà généré sur WP (paths explicites, multi-site).
 
     Args:
         client: client WP REST du site.
         site: id du site (pour localiser wp_backups/).
-        url: URL de l'article live (résolution du post par slug).
+        url: URL de l'article live.
         gutenberg_path: fichier `.gutenberg.html` à pousser (contenu).
         metadata_path: JSON {title, meta_description} pour title + meta SEOPress.
             Si absent/illisible, on pousse le contenu sans toucher au titre/meta.
         status: statut WP cible (défaut `publish`).
+        post_id: ID WP explicite. À défaut, on relit celui mémorisé au fetch,
+            puis on retombe sur la résolution par slug d'URL.
 
     Returns:
-        {"url", "id", "ok", "error"}
+        {"url", "id", "ok", "error", "warning"}
     """
     gutenberg_path = Path(gutenberg_path)
     if not gutenberg_path.exists():
@@ -86,9 +112,15 @@ def publish_article(
             except Exception:
                 meta = {}
 
-    post = client.get_post_by_url(url)
+    # Résolution du post : ID explicite > ID mémorisé au fetch > slug d'URL.
+    pid = post_id or resolve_wp_post_id(url, base_path)
+    post = client.get_post_by_id(pid) if pid else client.get_post_by_url(url)
     if not post:
-        return {"url": url, "ok": False, "error": "post_not_found"}
+        # Un ID mémorisé qui ne répond plus (post supprimé, mauvais site)
+        # ne doit pas condamner la publication : le slug reste tentable.
+        post = client.get_post_by_url(url) if pid else None
+        if not post:
+            return {"url": url, "ok": False, "error": "post_not_found"}
     pid = post["id"]
 
     # Backup once (par site)
@@ -115,7 +147,38 @@ def publish_article(
         meta=wp_meta or None,
         status=status,
     )
-    return {"url": url, "id": pid, "ok": res["ok"], "error": res["error"]}
+    out = {"url": url, "id": pid, "ok": res["ok"], "error": res["error"]}
+    if res.get("attempts", 1) > 1:
+        out["attempts"] = res["attempts"]
+    if res["ok"]:
+        warning = _verify_blocks(client, pid)
+        if warning:
+            out["warning"] = warning
+    return out
+
+
+def _verify_blocks(client: WordPressAPIClient, post_id: int) -> Optional[str]:
+    """Relit le post publié et signale un contenu que WP n'a pas parsé en blocs.
+
+    WordPress accepte n'importe quel HTML : un contenu mal délimité est stocké
+    tel quel et l'éditeur le présente en `core/freeform` (bloc « HTML classique »),
+    non éditable en blocs. Le POST renvoie alors un 200 parfaitement trompeur.
+    On relit donc le `raw` pour vérifier qu'il porte bien des délimiteurs et
+    qu'aucun `core/freeform` n'est apparu. Diagnostic seulement : la publication
+    a eu lieu, on ne la défait pas.
+    """
+    try:
+        post = client.get_post_by_id(post_id)
+        if not post:
+            return "post published but re-fetch failed - blocks not verified"
+        raw = post.get("raw") or ""
+        if "wp:freeform" in raw:
+            return "WP stored part of the content as core/freeform (classic block)"
+        if "<!-- wp:" not in raw:
+            return "WP stored the content without any block delimiter"
+        return None
+    except Exception as e:
+        return f"blocks not verified ({str(e)[:60]})"
 
 
 def push_url(client: WordPressAPIClient, url: str, site: str = _DEFAULT_SITE) -> dict:

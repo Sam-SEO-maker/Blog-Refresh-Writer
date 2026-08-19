@@ -69,6 +69,29 @@ class ArticleResult:
         return asdict(self)
 
 
+def _finalize_command(result: "ArticleResult") -> str:
+    """Commande `finalize` complète d'un article préparé (publication incluse).
+
+    `--html-file` est laissé en placeholder : il désigne le fichier que le
+    subagent de rédaction va écrire, inconnu à la préparation.
+    """
+    import shlex
+
+    parts = [
+        "python3", "content_writer.py", "finalize",
+        shlex.quote(result.url),
+        "--site", shlex.quote(result.site_slug),
+        "--html-file", "<HTML_FILE>",
+    ]
+    if result.main_keyword:
+        parts += ["--main-keyword", shlex.quote(result.main_keyword)]
+    if result.ytg_guide_id:
+        parts += ["--guide-id", shlex.quote(str(result.ytg_guide_id))]
+    if result.article_type:
+        parts += ["--type", shlex.quote(result.article_type)]
+    return " ".join(parts)
+
+
 # Actions qui sortent du batch : rien à générer.
 TERMINAL_ACTIONS = {
     "NO_ACTION",
@@ -208,6 +231,22 @@ class ParallelBatchPreparer:
         point de passage entre la phase déterministe et la phase rédactionnelle.
         """
         prepared = [r for r in results if r.status == "PREPARED"]
+
+        # Commande de finalisation prête à copier, par article. `finalize`
+        # publie sur verdict OPTIMAL, donc c'est bien elle qui ferme la chaîne
+        # jusqu'à WordPress. Elle est écrite ici plutôt que reconstruite à la
+        # main article par article : --main-keyword et --guide-id doivent être
+        # repris de la préparation, et les omettre fait recréer un guide YTG
+        # sur le slug (quota brûlé, termes incohérents avec ceux qui ont servi
+        # à écrire). Le --html-file reste à compléter : lui seul dépend de ce
+        # que le subagent de rédaction aura écrit.
+        articles = []
+        for r in results:
+            entry = r.to_dict()
+            if r.status == "PREPARED":
+                entry["finalize_command"] = _finalize_command(r)
+            articles.append(entry)
+
         payload = {
             "summary": {
                 "total": len(results),
@@ -215,7 +254,7 @@ class ParallelBatchPreparer:
                 "skipped": sum(1 for r in results if r.status == "SKIPPED"),
                 "failed": sum(1 for r in results if r.status == "FAILED"),
             },
-            "articles": [r.to_dict() for r in results],
+            "articles": articles,
         }
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(

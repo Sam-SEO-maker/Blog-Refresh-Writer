@@ -22,7 +22,6 @@ import re
 import shutil
 import unicodedata
 from datetime import datetime
-import locale
 import logging
 
 
@@ -38,24 +37,52 @@ def title_to_slug(title: str) -> str:
 
 
 def dated_batch_folder_name(dt: Optional[datetime] = None) -> str:
-    """Nom de sous-dossier de lot daté, ex. 'articles_7_juillet_2026'.
+    """Nom de sous-dossier de lot daté, format `articles_YYMMDD`.
 
-    Utilisé pour ranger html/, csv_zips/ et json/ par date de génération plutôt
-    que de tout accumuler à plat dans un seul dossier (cf. réorganisation
-    manuelle du 2026-07-07 en articles_juin_2026 / articles_7_juillet_2026).
+    Ex. 'articles_260731' pour le 31 juillet 2026.
+
+    Le format est numérique et à largeur fixe pour que **l'ordre alphabétique
+    des dossiers soit l'ordre chronologique**. L'ancien nommage en toutes
+    lettres (`articles_7_juillet_2026`) triait « avril » avant « juillet » avant
+    « mars », rendait `ls` inexploitable et le jour non zéro-padé cassait même
+    l'ordre à l'intérieur d'un mois (`articles_10_...` avant `articles_7_...`).
     """
     dt = dt or datetime.now()
-    try:
-        locale.setlocale(locale.LC_TIME, "fr_FR.UTF-8")
-    except locale.Error:
-        pass
-    mois_fr = [
-        "janvier", "fevrier", "mars", "avril", "mai", "juin",
-        "juillet", "aout", "septembre", "octobre", "novembre", "decembre",
-    ]
-    return f"articles_{dt.day}_{mois_fr[dt.month - 1]}_{dt.year}"
+    return f"articles_{dt:%y%m%d}"
 
 logger = logging.getLogger(__name__)
+
+
+def _cleanup_bare_html(bare: Path, gutenberg: Path) -> None:
+    """Supprime le HTML nu une fois la version Gutenberg écrite.
+
+    Un article ne doit laisser qu'UN fichier publiable dans `html/`. Le nu est
+    un intermédiaire : il sert à produire le `.gutenberg.html`, puis n'a plus
+    d'usage — les maillons QC sémantique et format n'éditent que ce dernier.
+
+    Le garder créait un piège silencieux : deux fichiers au contenu proche mais
+    non identique (le nu reste figé à la sortie du rédacteur, sans les
+    corrections de densité ni la typographie). Publier le mauvais était possible,
+    et `ytg qc --slug` échouait sur « 2 files currently match ».
+
+    Ne supprime que si le `.gutenberg.html` existe et n'est pas vide : une
+    conversion ratée doit laisser le nu intact plutôt que perdre le travail.
+    """
+    try:
+        if not gutenberg.exists() or gutenberg.stat().st_size == 0:
+            logger.warning(
+                "[CLEANUP] %s conservé : conversion Gutenberg absente ou vide.",
+                bare.name,
+            )
+            return
+        if bare.resolve() == gutenberg.resolve():
+            return
+        bare.unlink(missing_ok=True)
+        logger.info("[CLEANUP] HTML nu supprimé (%s) — publier %s",
+                    bare.name, gutenberg.name)
+    except OSError as exc:
+        # Un nettoyage qui échoue ne doit jamais faire perdre l'article.
+        logger.warning("[CLEANUP] suppression de %s impossible : %s", bare.name, exc)
 
 
 class OutputManager:
@@ -372,12 +399,23 @@ class OutputManager:
         output_file = html_dir / f"{file_slug}_refreshed.html"
 
         output_file.write_text(html_content, encoding="utf-8")
-        logger.info(f"Saved refreshed HTML: {output_file}")
 
+        # Conversion en blocs Gutenberg : c'est CE fichier qui part en
+        # publication, et le seul que les maillons QC et format éditent.
         from scripts.utils.gutenberg_formatter import to_gutenberg
         gutenberg_file = html_dir / f"{file_slug}_refreshed.gutenberg.html"
         gutenberg_file.write_text(to_gutenberg(html_content), encoding="utf-8")
         logger.info(f"Saved Gutenberg HTML: {gutenberg_file}")
+
+        # Le HTML nu n'a plus d'utilité une fois converti : le garder laissait
+        # 2 à 3 fichiers par article dans `html/`, dont deux au contenu
+        # identique. Conséquences observées en production : `ytg qc --slug`
+        # échouait sur « 2 files currently match », un agent a copié le mauvais
+        # fichier, et le risque permanent était de publier la version d'avant
+        # QC (sans les corrections de densité ni la typographie).
+        # La suppression n'intervient qu'après écriture réussie du .gutenberg —
+        # en cas d'échec de conversion, le nu reste comme filet de sécurité.
+        _cleanup_bare_html(output_file, gutenberg_file)
 
         from scripts.utils.table_csv_extractor import extract_tables_to_csv
         csv_dir = self.get_site_output_dir(site_id) / "csv"
@@ -404,7 +442,11 @@ class OutputManager:
         # Clean up temp file for this article after successful delivery
         self._cleanup_temp(site_id, url_slug)
 
-        return output_file
+        # Renvoie le fichier PUBLIABLE, pas l'intermédiaire : le nu vient d'être
+        # supprimé par `_cleanup_bare_html`, renvoyer son chemin donnerait un
+        # Path inexistant aux appelants (qui l'affichent ou le relisent).
+        # Si la conversion a échoué, le nu subsiste et reste la valeur de repli.
+        return gutenberg_file if gutenberg_file.exists() else output_file
 
     def save_metadata(
         self,
@@ -525,8 +567,15 @@ class OutputManager:
         metadata_dir = output_dir / "metadata"
         editorial_dir = output_dir / "editorial_audits"
 
+        file_slug = self._title_to_slug(title) if title else url_slug
+
         return {
-            "refreshed_html": html_dir / f"{self._title_to_slug(title) if title else url_slug}_refreshed.html",
+            # Chemin d'ÉCRITURE du rédacteur (maillon 2). Intermédiaire :
+            # `save_refreshed_html()` le convertit en Gutenberg puis le supprime.
+            "refreshed_html": html_dir / f"{file_slug}_refreshed.html",
+            # Fichier PUBLIABLE, seul persistant, et seul édité par les maillons
+            # QC sémantique et format. C'est celui à pousser sur WordPress.
+            "gutenberg_html": html_dir / f"{file_slug}_refreshed.gutenberg.html",
             "metadata": metadata_dir / f"{url_slug}_metadata.json",
             "audit": metadata_dir / f"{url_slug}_audit.json",
             "serp": metadata_dir / f"{url_slug}_serp.json",

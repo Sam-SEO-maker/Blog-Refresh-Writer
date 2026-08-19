@@ -44,13 +44,15 @@ Le fichier nu `{slug}_refreshed.html` de debug est supprimé après génération
   title. Réf. [[feedback-superprof-h1-body]].
 - **Intro** : 2 paragraphes de hook, **aucun bloc spécial**, aucune infobox.
 
-## Les 5 blocs obligatoires (dans le corps, après le 1er H2)
+## Les 6 blocs obligatoires (dans le corps, après le 1er H2)
 
 1. **Info Box bleue** (`wp:advgb/infobox`, `#e8f2ff`/`#157dfe`).
 2. **Info Box jaune** « bon réflexe » (`wp:advgb/infobox`, `#fffbf0`/`#ffcf3b`).
 3. **Count-Up** (`wp:advgb/count-up`) — `countUpNumber` **commence par un chiffre**.
 4. **Citation** (`wp:superprof/quote-block`).
-5. **Bloc Sources** (`wp:group` → `wp-block-wp-sp-gutenberg-blocks-block-sources`,
+5. **Tableau** (`wp:table`) — **au moins 1 par article, sans exception**, 3 max.
+   Voir « Tableaux » ci-dessous.
+6. **Bloc Sources** (`wp:group` → `wp-block-wp-sp-gutenberg-blocks-block-sources`,
    titre `Sources 📚`, `<ol class="references">`). Format exact validé (Andra,
    mai 2026) : [[feedback-sp-sources-block-format]].
 
@@ -76,8 +78,23 @@ ces blocs. Réf. [[feedback-advgb-block-format]].
   remplace une infobox, garder 1 bleue + 1 jaune.
 - **FAQ** : chaque question (H3) commence par un **emoji** (palette 🤔💡🔍📌🧐📖❓💬)
   et finit par « ?». Réf. [[feedback-faq-question-emoji]].
-- **Tableaux → CSV** dans `csv/`, max 3/article (exception lexique/grammaire),
-  aucun shortcode dans le HTML. Réf. [[feedback-csv-naming-tablepress]].
+- **Tableaux : au moins 1 par article, jamais zéro.** Même quand le sujet ne
+  paraît pas « tabulaire », il y a toujours une comparaison, une série de
+  critères, un jeu de cas ou un récapitulatif de formules à mettre en grille
+  (formule VSEPR / géométrie / exemple, régime / comportement / seuil,
+  symbole / unité / rôle). Cible 1 à 3, **3 maximum** (exception
+  lexique/grammaire). Un tableau doit condenser ce que la prose dit de façon
+  dispersée : jamais un tableau de 2 lignes décoratif, jamais une liste à puces
+  reformatée.
+- **Format du bloc** : `<!-- wp:table -->` avec `<table>` en enfant **direct**.
+  Pas de `<figure class="wp-block-table">`, pas de `class="has-fixed-layout"`
+  sans l'attribut `{"hasFixedLayout":true}` correspondant — un désaccord
+  markup/attributs fait afficher « block seems broken » dans l'éditeur. Une
+  `<figcaption class="wp-element-caption">` se place **dans** le bloc.
+- **Tableaux → CSV** dans `csv/`, aucun shortcode dans le HTML. Générer les CSV
+  avec l'extracteur du pipeline, jamais à la main :
+  `scripts/utils/generate_table_csv.gen_for(slug, html, batch_folder)`.
+  Réf. [[feedback-csv-naming-tablepress]].
 - **Articles sur un ouvrage littéraire** → ACF fiche de lecture
   `acf/{slug}_acf.json` (book_name/author_name/genre/date_published).
   Réf. [[feedback-sp-ressources-acf-fiche-lecture]].
@@ -95,6 +112,22 @@ ces blocs. Réf. [[feedback-advgb-block-format]].
 - ❌ « Consulté le [date] » dans les sources — [[feedback-no-consulte-le]].
 - Accents corrects partout (y compris JSON). Ancres sans `<strong>`, pas de lien
   dans les H2/H3. Listes : `<li>` en virgule, dernier en point.
+- **Typographie française — à appliquer dès la rédaction**, pas à laisser au QC :
+  - apostrophe **typographique** `’` (U+2019) dans toute la prose : `l’élève`,
+    `qu’il`, `d’un`. Jamais l’apostrophe droite `'`.
+  - **espace insécable** (U+00A0) avant `? ! ; :` et à l’intérieur des `«  »`,
+    ainsi que dans les groupes de milliers (`2 163`).
+  - Ces règles valent aussi **à l’intérieur du JSON des blocs** (`title`, `text`,
+    `descText`, `quote`…) : Gutenberg re-rend depuis le JSON, une apostrophe
+    droite qui y subsiste réapparaît à la première ouverture de l’éditeur. JSON
+    et miroir HTML doivent être modifiés **ensemble**.
+  - ⚠️ **Exceptions — laisser l’apostrophe droite** : notation mathématique
+    (`f'`, `OA'`, `F'A'`), code dans `<code>` ou `<script>`, attributs HTML,
+    URL, et markup d’embed tiers (blockquote TikTok/Twitter). Les typographier
+    y serait une faute, pas une correction.
+  - Les exemples de `references/reference-gutenberg.md` sont du **code à
+    reproduire à l’identique** : leurs apostrophes droites ne sont pas un modèle
+    typographique pour la prose.
 - **Nom de marque** : toujours **Superprof** — jamais « Super Prof », « SuperProf »
   ni « SP ». La marque n'est ni « il » ni « elle ». Les autres marques gardent la
   casse officielle de leur site (YouTube, TikTok — pas « Youtube », « Tiktok »).

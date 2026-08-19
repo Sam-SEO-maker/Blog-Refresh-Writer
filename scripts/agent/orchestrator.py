@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, field
 import logging
+import re
 import requests
 import time
 import json
@@ -271,6 +272,15 @@ class RefreshOrchestrator:
         self._wp_api_clients[site_slug] = client
         return client
 
+    def _requires_api(self, site_slug: str) -> bool:
+        """True si le site interdit le fallback scraping (wp_api_config.require_api)."""
+        try:
+            with open(self._site_paths.site_config(site_slug), "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+        except (FileNotFoundError, ValueError):
+            return False
+        return bool((cfg.get("wp_api_config") or {}).get("require_api", False))
+
     def _fetch_html(self, url: str, site_slug: str = "") -> dict:
         """
         Récupère le contenu HTML d'une URL.
@@ -317,16 +327,33 @@ class RefreshOrchestrator:
                 post_data = wp_client.get_post_by_url(url)
                 if post_data:
                     rendered = post_data["rendered"]
-                    assets_baseline = self.content_extractor._extract_assets_baseline(rendered)
-                    word_count = len(rendered.split())
-                    _save_temp_cache(rendered)
+                    raw = post_data["raw"]
+                    # Le contenu servi à la chaîne est le post_content (Gutenberg
+                    # source). Le `rendered` est l'expansion WordPress : les
+                    # oembed y deviennent du markup de widget (blockquote TikTok,
+                    # twitter-tweet, <script>) que Gutenberg refuse ensuite de
+                    # reparser — bloc core/freeform + <p> mal imbriqués.
+                    # Le comptage d'assets reste sur `rendered` : les regex de
+                    # _extract_assets_baseline ciblent le HTML rendu (<iframe>,
+                    # <img>), pas les commentaires de blocs.
+                    content = raw or rendered
+                    # site_id OBLIGATOIRE : sans lui, les liens internes ecrits
+                    # en absolu (https://www.superprof.fr/...) sont classes
+                    # externes et internal_links tombe a 0, ce qui desarme la
+                    # Golden Rule sur les liens.
+                    assets_baseline = self.content_extractor._extract_assets_baseline(
+                        rendered, output_site_id or site_slug
+                    )
+                    word_count = len(content.split())
+                    _save_temp_cache(content)
                     logger.info(
-                        f"Content via wp_api (post_id={post_data['id']}): "
+                        f"Content via wp_api (post_id={post_data['id']}, "
+                        f"source={'raw' if raw else 'rendered'}): "
                         f"{word_count} words, {assets_baseline['counts']['images']} images"
                     )
                     return {
-                        "full_html": rendered,
-                        "clean_body": rendered,
+                        "full_html": content,
+                        "clean_body": content,
                         "extraction_metadata": {
                             "method_used": "wp_api",
                             "word_count": word_count,
@@ -337,9 +364,31 @@ class RefreshOrchestrator:
                         "assets_baseline": assets_baseline,
                     }
             except Exception as e:
-                logger.warning(f"WP API failed for {url}, falling back to scraping: {e}")
+                logger.warning(f"WP API failed for {url}: {e}")
 
         # --- Stratégie 2 : HTTP direct + ContentExtractor ---
+        # Sauf si le site interdit le scraping (`wp_api_config.require_api`) :
+        # le HTML public est l'expansion WordPress des blocs (widgets oembed,
+        # <script>), que Gutenberg refuse ensuite de reparser. Mieux vaut un
+        # échec visible qu'un article silencieusement construit sur ce rendu.
+        if self._requires_api(site_slug):
+            logger.error(
+                f"WP API unavailable for {url} and scraping is disabled for "
+                f"'{site_slug}' (wp_api_config.require_api). Check the "
+                f"credentials env vars, then re-run."
+            )
+            return {
+                "full_html": "",
+                "clean_body": "",
+                "extraction_metadata": {
+                    "method_used": "error",
+                    "error": "wp_api unavailable and scraping disabled (require_api)",
+                },
+                "assets_baseline": {
+                    "counts": {"images": 0, "tables": 0, "videos": 0, "internal_links": 0}
+                },
+            }
+
         try:
             resp = requests.get(
                 url,
@@ -353,7 +402,10 @@ class RefreshOrchestrator:
             clean_body, extraction_meta = self.content_extractor.extract_article_body(
                 full_html, output_site_id or site_slug, url=url
             )
-            assets_baseline = self.content_extractor._extract_assets_baseline(clean_body)
+            # site_id OBLIGATOIRE (cf. commentaire du chemin wp_api ci-dessus).
+            assets_baseline = self.content_extractor._extract_assets_baseline(
+                clean_body, output_site_id or site_slug
+            )
             word_count = len(clean_body.split())
             _save_temp_cache(clean_body)
 
@@ -439,8 +491,17 @@ class RefreshOrchestrator:
             # Extraire les métriques
             word_count = len(html_result.text_content.split()) if html_result.text_content else 0
 
-            # Compter les images
-            images_count = len(html_result.images) if html_result.images else 0
+            # Compter les images — baseline de la Règle d'Or.
+            #
+            # On compte les `<img>` distinctes par `src` directement dans le HTML,
+            # et non `html_result.images` : cette liste exclut la featured image
+            # (voir HTMLAnalyzer.analyze) et sert l'analyse éditoriale, pas la
+            # préservation des assets. Sur ce corpus WordPress, les formules
+            # mathématiques sont rendues en images (fichiers nommés par un hash,
+            # sans `alt`) : les sous-compter faisait passer un article de 22
+            # images pour un article de 10, et le rédacteur les supprimait de
+            # bonne foi en les transcrivant en `<code>`.
+            images_count = self._count_unique_images(html)
 
             # Compter les liens internes
             internal_links_count = 0
@@ -456,6 +517,28 @@ class RefreshOrchestrator:
         except Exception as e:
             logger.warning(f"Failed to extract content metrics: {str(e)[:100]}")
             return self._get_empty_metrics()
+
+    @staticmethod
+    def _count_unique_images(html: str) -> int:
+        """Nombre de `<img>` distinctes par `src` dans le HTML.
+
+        Compte volontairement TOUTES les images, y compris la featured image et
+        les formules mathématiques rendues en images par l'éditeur WordPress
+        (fichiers nommés par un hash, dépourvus d'attribut `alt`). C'est la
+        baseline de la Règle d'Or : `assets_after >= assets_before`.
+
+        La déduplication par `src` évite de gonfler la baseline quand une même
+        image apparaît deux fois dans l'article — sans elle, un doublon rendrait
+        l'invariant impossible à satisfaire sans dupliquer aussi à la sortie.
+        """
+        if not html:
+            return 0
+        srcs = set()
+        for tag in re.finditer(r"<img[^>]*>", html, re.I):
+            src = re.search(r'src=["\']([^"\']+)["\']', tag.group(0), re.I)
+            if src:
+                srcs.add(src.group(1).strip())
+        return len(srcs)
 
     def _get_empty_metrics(self) -> dict:
         """Retourne des métriques vides."""
@@ -1047,6 +1130,19 @@ class RefreshOrchestrator:
             audit_data["original_internal_link_tags"] = baseline.get("internal_link_tags", [])
             audit_data["assets_counts"] = baseline.get("counts", {})
 
+        # Identité WP du post, connue seulement quand le fetch est passé par
+        # l'API (`method_used == "wp_api"`). La publication la réutilise pour
+        # cibler l'ID plutôt que de re-résoudre le slug : un slug modifié entre
+        # le refresh et le push (changement de titre, migration d'URL) faisait
+        # échouer `publish_article` sur un `post_not_found` trompeur, alors que
+        # l'ID était déjà connu ici. Absent en scraping : la publication
+        # retombe alors sur la résolution par slug.
+        if extraction_result:
+            extraction_meta = extraction_result.get("extraction_metadata") or {}
+            if extraction_meta.get("wp_post_id"):
+                audit_data["wp_post_id"] = extraction_meta["wp_post_id"]
+                audit_data["wp_slug"] = extraction_meta.get("wp_slug", "")
+
         # Inject YTG semantic terms for ghostwriter (STEP 2.5 pre-generation)
         if ytg_data:
             audit_data["ytg_guide_id"] = ytg_data.get("ytg_guide_id", "")
@@ -1143,6 +1239,9 @@ class RefreshOrchestrator:
         Returns:
             tuple: (refreshed_html, optimized_title)
         """
+        # Remis a zero a chaque article : sans ca le drapeau d'un article
+        # precedent contaminerait le suivant.
+        self._last_generation_pending = False
         try:
             # STEP 1: Prepare context files (pass extraction_result for image_tags)
             context_dir = self._prepare_context_for_claude_code(original_html, action, row, extraction_result, ytg_data=ytg_data)
@@ -1200,7 +1299,14 @@ class RefreshOrchestrator:
                     print(f"[AUTO-PROCESS] Workflow continues, generation pending...")
 
                     # Return original HTML for now - content will be generated later by Claude Code
-                    # This allows the batch workflow to continue without blocking
+                    # This allows the batch workflow to continue without blocking.
+                    #
+                    # Le drapeau dit la verite au flux appelant : le contexte est
+                    # pret mais RIEN n'est encore redige. Sans lui, STEP 7 marquait
+                    # la ligne « DONE » des la preparation, donc un article intact
+                    # etait annonce comme traite et disparaissait d'un relancement
+                    # (10 lignes touchees le 2026-08-13).
+                    self._last_generation_pending = True
                     return original_html, row.title
                 else:
                     # Non-FULL_REFRESH actions: raise exception to signal manual processing needed
@@ -1250,13 +1356,24 @@ class RefreshOrchestrator:
             for r in avis_rows
         ]
 
-    # Statuts terminaux : la ligne est déjà traitée ou sortie du périmètre
-    # éditorial, on ne la repasse jamais en génération.
-    _TAB_SKIP_STATUSES = {
-        "publié",
-        "redirection 301",
-        "cannibalisation de kw",
-    }
+    # LISTE BLANCHE : seul un statut « à faire » déclenche l'audit. Tout autre
+    # libellé (et tout statut vide) est laissé intact.
+    #
+    # C'était une liste NOIRE de trois libellés exacts ("publié",
+    # "redirection 301", "cannibalisation de kw"). Deux défauts mortels :
+    #   - un libellé absent de la liste passait au travers, donc
+    #     « Prêt pour relecture » (36 lignes) était repassé en génération ;
+    #   - la comparaison étant exacte, « Cannibalisation du Main KW » ne
+    #     matchait pas « cannibalisation de kw » ("du" vs "de", + "Main").
+    # Résultat le 2026-08-12 : 40 lignes déjà traitées reprises en refresh, et
+    # les vraies « A faire » (à partir de la ligne 41) jamais atteintes.
+    # Une liste blanche échoue du bon côté : un libellé inconnu ne fait rien.
+    _TAB_TODO_STATUSES = {"a faire", "à faire"}
+
+    @classmethod
+    def _is_todo_status(cls, status: str) -> bool:
+        """Le statut autorise-t-il un refresh ? Seul « à faire » le fait."""
+        return (status or "").strip().lower() in cls._TAB_TODO_STATUSES
 
     def _tab_rows_for_refresh(self, site_slug: str, tab: str) -> list:
         """
@@ -1323,7 +1440,7 @@ class RefreshOrchestrator:
             if not url.startswith("http"):
                 continue
             status = cell(row, col_status)
-            if status.lower() in self._TAB_SKIP_STATUSES:
+            if not self._is_todo_status(status):
                 continue
             rows.append(_TabRefreshRow(
                 site_slug=site_slug,
@@ -1438,6 +1555,11 @@ class RefreshOrchestrator:
 
         def prepare_fn(row, sheets_lock):
             """Phase déterministe d'un article. Exécutée dans un thread."""
+            # Départ du chrono machine pour CET article. `cw refresh` l'écrivait
+            # déjà (cli/commands/refresh.py), pas le chemin batch : un lot entier
+            # ne laissait donc aucune trace de durée, et `cw finalize` affichait
+            # la durée totale seulement pour les URLs passées à l'unité.
+            prepare_started_at = datetime.now()
             extraction_result = self._fetch_html(row.blogpost_url, row.site_slug)
             if not extraction_result.get("clean_body"):
                 raise ValueError(f"Failed to fetch HTML for {row.blogpost_url}")
@@ -1493,6 +1615,26 @@ class RefreshOrchestrator:
                 extraction_result, ytg_data=ytg_pre_data,
             )
 
+            # Horodatage machine de la préparation, écrit APRÈS
+            # `_prepare_context_for_claude_code` (qui archive la passe
+            # précédente et emporterait le fichier). `prepare_seconds` mesure la
+            # phase déterministe — fetch WP, GSC, SERP, guide YTG — et
+            # `refresh_started_at` sert de point zéro à `cw finalize` pour la
+            # durée totale du pipeline.
+            import json as _json
+            prepare_ended_at = datetime.now()
+            (context_dir / "timing.json").write_text(
+                _json.dumps({
+                    "url": row.blogpost_url,
+                    "refresh_started_at": prepare_started_at.isoformat(),
+                    "prepare_ended_at": prepare_ended_at.isoformat(),
+                    "prepare_seconds": round(
+                        (prepare_ended_at - prepare_started_at).total_seconds(), 1
+                    ),
+                }, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
             output_slug = row.blogpost_url.rstrip('/').rsplit('/', 1)[-1]
             if output_slug.endswith('.html'):
                 output_slug = output_slug[:-len('.html')]
@@ -1504,6 +1646,9 @@ class RefreshOrchestrator:
                 "action": action,
                 "context_dir": context_dir.absolute(),
                 "generation_prompt": context_dir.absolute() / "generation_prompt.txt",
+                "prepare_seconds": round(
+                    (prepare_ended_at - prepare_started_at).total_seconds(), 1
+                ),
                 "output_html": outputs["refreshed_html"],
                 "output_json": outputs["metadata"],
                 "strategy": action,
@@ -1896,14 +2041,32 @@ class RefreshOrchestrator:
 
                 # STEP 7: Mark as done (REFONTE Feb 2026: unified status)
                 # Gate YTG : si actif et contenu sous-optimisé → révision, pas DONE.
-                new_status = "NEEDS_REVIEW" if ytg_gate_block else "DONE"
+                #
+                # Cas prioritaire : si la generation n'a fait que PREPARER le
+                # contexte (l'agent redacteur n'a pas encore tourne), la ligne
+                # n'est pas traitee. On ne touche pas a son statut : elle doit
+                # rester « A faire » pour etre reprise. Ecrire « DONE » ici
+                # annoncait un article intact comme fini et le faisait
+                # disparaitre du prochain passage.
+                if getattr(self, "_last_generation_pending", False):
+                    logger.info(
+                        f"[STEP 7] Contexte prepare, redaction en attente — statut "
+                        f"inchange pour {row.blogpost_url[:60]}"
+                    )
+                    new_status = None
+                else:
+                    new_status = "NEEDS_REVIEW" if ytg_gate_block else "DONE"
 
                 # STEP 8: Update sheet — l'écriture du statut est propre au flux.
                 # `update_refresh_status_enseigna` cible les onglets Avis/Versus
                 # d'enseigna.fr : l'appeler depuis le flux générique par onglet
                 # cherchait l'URL dans le mauvais spreadsheet et faisait échouer
                 # l'article après une génération réussie.
-                if tab:
+                if new_status is None:
+                    # Preparation seule : aucune ecriture dans la Sheet.
+                    update_ok = True
+                    label = "(statut inchange)"
+                elif tab:
                     # Flux générique config-driven : le statut vit dans la colonne
                     # déclarée (`col_status`) de l'onglet lu, pas dans Avis/Versus.
                     update_ok = self._update_tab_status(

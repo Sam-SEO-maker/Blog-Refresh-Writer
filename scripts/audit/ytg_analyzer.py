@@ -80,6 +80,15 @@ class YTGGuideResult:
     top3_dseo: float         # DSEO moyen TOP 3 (%)
     top10_soseo: float       # SOSEO moyen TOP 10 (%)
     top10_dseo: float        # DSEO moyen TOP 10 (%)
+    # Plages « Recommended score » de YTG (target_SOSEO_min/max,
+    # target_DSEO_min/max). Ce sont les bornes de la zone verte affichée dans
+    # l'interface : la référence de l'outil, à préférer aux moyennes SERP qui
+    # se laissent tirer vers le bas par des résultats non rédactionnels
+    # (vidéos YouTube à 0/0). `None` si le guide ne les expose pas.
+    reco_soseo_min: Optional[float] = None
+    reco_soseo_max: Optional[float] = None
+    reco_dseo_min: Optional[float] = None
+    reco_dseo_max: Optional[float] = None
     our_soseo: Optional[float] = None   # SOSEO de notre contenu (si analysé)
     our_dseo: Optional[float] = None    # DSEO de notre contenu (si analysé)
     terms: list[YTGTerm] = field(default_factory=list)
@@ -666,6 +675,10 @@ class YTGAnalyzer:
             top3_dseo=top3_dseo,
             top10_soseo=top10_soseo,
             top10_dseo=top10_dseo,
+            reco_soseo_min=target_soseo_min or None,
+            reco_soseo_max=target_soseo_max or None,
+            reco_dseo_min=float(raw.get("target_DSEO_min") or 0),
+            reco_dseo_max=target_dseo_max or None,
             terms=terms,
             semantic_terms=semantic_terms,
             term_colors=term_colors,

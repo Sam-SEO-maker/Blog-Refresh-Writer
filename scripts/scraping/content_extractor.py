@@ -426,7 +426,7 @@ class ContentExtractor:
         # Extract assets from CLEAN BODY (not full HTML)
         # Full HTML includes sidebar, related posts, footer images that pollute
         # the asset baseline — e.g. yoga-chaise images appearing in Pilates articles
-        assets_baseline = self._extract_assets_baseline(clean_body)
+        assets_baseline = self._extract_assets_baseline(clean_body, site_id)
 
         return {
             "clean_body": clean_body,
@@ -435,7 +435,64 @@ class ContentExtractor:
             "assets_baseline": assets_baseline
         }
 
-    def _extract_assets_baseline(self, html: str) -> Dict[str, any]:
+    def _site_domain(self, site_id: str) -> str:
+        """Domaine du site audité (ex: 'superprof.fr'), depuis sa config."""
+        if not site_id:
+            return ""
+        config = self.blog_configs.get(site_id) or {}
+        return str(config.get("domain") or "").lower()
+
+    @staticmethod
+    def _is_internal_href(href: str, site_domain: str) -> bool:
+        """Un href pointe-t-il vers le site lui-même ?
+
+        Test par HÔTE, pas par forme d'URL. L'ancien test ("commence par /
+        ou pas par http") comptait 0 lien interne sur les sites qui écrivent
+        leurs liens en absolu — c'est le cas de superprof.fr-ressources — donc
+        la Golden Rule ne protégeait plus les liens internes : un article
+        pouvait en perdre 5 et valider quand même. Symétriquement, il comptait
+        les ancres de fragment (#chapitre_2) comme des liens internes et
+        gonflait la baseline. Même correctif que
+        HTMLAnalyzer._classify_link (48de374), porté ici parce que c'est
+        cette fonction qui alimente réellement assets_counts.
+        """
+        href = (href or "").strip()
+        if not href:
+            return False
+
+        # Ni les fragments purs ni les pseudo-protocoles ne sont des liens.
+        if href.startswith("#"):
+            return False
+        if href.lower().startswith(("mailto:", "tel:", "javascript:")):
+            return False
+
+        # Liens d'ADMINISTRATION WordPress : jamais du contenu éditorial.
+        # L'expansion du shortcode TablePress ajoute un « Modifier » vers
+        # `wp-admin/admin.php?page=tablepress&action=edit&table_id=...`, visible
+        # du seul administrateur connecté et absent de la page publique.
+        # Compté dans la baseline, il oblige la Golden Rule à « préserver » un
+        # lien d'admin qui ne doit surtout pas être publié — et sur un article
+        # dont c'était l'unique lien, la baseline ne demandait plus que ça.
+        low = href.lower()
+        if "/wp-admin/" in low or "/wp-login" in low or "wp-json" in low:
+            return False
+
+        if href.startswith("//"):
+            netloc = href[2:].split("/", 1)[0].lower()
+        elif re.match(r"^https?://", href, re.I):
+            netloc = re.sub(r"^https?://", "", href, flags=re.I).split("/", 1)[0].lower()
+        else:
+            # Relatif ("/cours/...", "page.html") => interne par construction.
+            return True
+
+        netloc = netloc.split("@")[-1].split(":")[0]
+        if not site_domain:
+            return False
+        # Égalité ou vrai sous-domaine. Un simple "in" classerait
+        # notsuperprof.fr.evil.com comme interne.
+        return netloc == site_domain or netloc.endswith("." + site_domain)
+
+    def _extract_assets_baseline(self, html: str, site_id: str) -> Dict[str, any]:
         """
         Extract asset counts AND full tags from full HTML for Rule of Gold.
 
@@ -444,6 +501,9 @@ class ContentExtractor:
 
         Args:
             html: Full HTML content
+            site_id: Blog identifier, used to resolve the site's own domain so
+                that absolute self-domain links count as internal (see
+                _is_internal_href)
 
         Returns:
             {
@@ -521,9 +581,10 @@ class ContentExtractor:
 
         # Extract internal links with full tag data
         links = soup.find_all("a", href=True)
+        site_domain = self._site_domain(site_id)
         internal_links = [
             link for link in links
-            if link["href"].startswith("/") or not link["href"].startswith("http")
+            if self._is_internal_href(link["href"], site_domain)
         ]
         internal_link_tags = []
         for link in internal_links:

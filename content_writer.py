@@ -52,10 +52,12 @@ from cli.commands import statuts as statuts_cmd
 from cli.commands import ngl_status as ngl_status_cmd
 from cli.commands import site as site_cmd
 from cli.commands import status_cmd
+from cli.commands import push as push_cmd
 
 # Enregistrer les commandes
 cli.add_command(refresh.refresh)
 cli.add_command(finalize_cmd.finalize)
+cli.add_command(push_cmd.push)
 cli.add_command(audit.audit)
 cli.add_command(batch.batch)
 cli.add_command(linking.linking)

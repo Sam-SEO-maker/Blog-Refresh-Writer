@@ -63,10 +63,24 @@ The site→skill mapping is **no longer hardcoded here**: it is resolved from th
 site's config (§4bis-C lifted). Procedure:
 
 1. Read `sites/{site_slug}/config/site.json`.
-2. Load (via the Skill tool) the skill named in **`generation_skill`**, then the
-   two cross-cutting skills **`edito-refresh`** (SEO/GEO/E-E-A-T ranking rules)
-   and **`format-wordpress`** (HTML/WP formatting rules).
-3. If the site has a **`qc_skill`** field, run that skill before finalising.
+2. Load the **site** skill named in **`generation_skill`** by **reading its file
+   directly**:
+   `sites/{site_slug}/.claude/skills/{generation_skill}/SKILL.md` (Read tool).
+   **Do not use the Skill tool for it.** Scoped per-site skills are NOT exposed to
+   subagents: `Skill(sp-ressources-gutenberg)` fails with `Unknown skill`, in every
+   form (bare, `site:skill`, `sites/site:skill`). Verified 2026-08-04. Reading the
+   SKILL.md by path is the working path, and the file is the same content.
+   If the SKILL.md references files in its own `references/`, read those too.
+3. Load the two cross-cutting skills **via the Skill tool** (they ARE exposed):
+   **`edito-refresh`** (SEO/GEO/E-E-A-T ranking rules) and **`format-wordpress`**
+   (HTML/WP formatting rules).
+4. If the site has a **`qc_skill`** field, apply it before finalising — same rule
+   as step 2: read `sites/{site_slug}/.claude/skills/{qc_skill}/SKILL.md` by path.
+
+**Never silently skip the site skill.** If its SKILL.md cannot be read, stop and
+report it instead of generating: without it you lose the mandatory blocks, the
+forbidden things and the site's tone, and the output looks plausible while being
+off-format.
 
 Examples (values read from the config, not hardwired):
 
@@ -93,6 +107,15 @@ prompts and the feedback memories.
 2. **Golden Rule (asset preservation)**: `assets_after ≥ assets_before` for
    images, tables, videos, internal links. Never remove an existing link
    (even to a competitor). Report the before/after counts in the JSON.
+2bis. **At least one `<table>` per article — no exception.** Zero tables is an
+   incomplete article, even when the original had none and the topic looks
+   non-tabular: there is always a comparison, a set of criteria, a list of
+   cases or a recap of formulas to lay out in a grid. Target 1-3, hard cap 3.
+   Wrap it in `<!-- wp:table -->` with `<table>` as the **direct** child — no
+   `<figure class="wp-block-table">` wrapper, no `has-fixed-layout` class
+   without the matching `{"hasFixedLayout":true}` attribute, or the editor
+   reports "block seems broken". A table must condense what the prose says in a
+   scattered way, never decorate.
 3. **Verified sources only**: `eeat_sources` comes from the brief of the
    source-research step. **Never invent** a source, a statistic or a
    numbered anecdote.

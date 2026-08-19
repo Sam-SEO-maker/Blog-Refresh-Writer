@@ -58,8 +58,15 @@ class YTGQCResult:
     our_dseo: Optional[float] = None
     target_soseo: Optional[float] = None
     target_dseo: Optional[float] = None
+    # Bornes hautes de la zone verte (« Recommended score » YTG). Le SOSEO a un
+    # maximum : au-delà, l'article est sur-optimisé et doit être élagué.
+    target_soseo_max: Optional[float] = None
+    target_dseo_min: Optional[float] = None
     soseo_ok: Optional[bool] = None
     dseo_ok: Optional[bool] = None
+    # Action recommandée quand le verdict n'est pas OPTIMAL :
+    # "ELAGUER" | "ENRICHIR" | "REECRIRE" | "" (rien à faire).
+    action: str = ""
     under_optimized_terms: list[str] = field(default_factory=list)  # bleu/absent
     over_optimized_terms: list[str] = field(default_factory=list)   # rouge
     message: str = ""
@@ -76,6 +83,111 @@ class YTGQualityCheck:
     Réutilise YTGAnalyzer (API), KeywordResolver (mot-clé) et le RateLimiter.
     Graceful : renvoie un verdict SKIP si YTG non configuré ou blog désactivé.
     """
+
+    # En deçà de ce rapport TOP3/TOP10 sur le SOSEO, le TOP 3 est considéré
+    # comme non représentatif de la SERP et écarté du calcul des cibles.
+    TOP3_DEGENERATE_RATIO = 0.5
+
+    # Un DSEO de référence sous ce plancher n'est pas un objectif : aucun
+    # article réellement rédigé sur son sujet ne descend à 0,7 % de densité
+    # sur-optimisée. C'est le symptôme d'une SERP dégénérée (positions hors
+    # sujet, pages très courtes), pas une cible.
+    DSEO_FLOOR = 3.0
+
+    @classmethod
+    def resolve_ranges(
+        cls,
+        guide,
+    ) -> tuple[Optional[float], Optional[float], Optional[float], Optional[float]]:
+        """Plages cibles (zone verte) SOSEO/DSEO.
+
+        **Le « Recommended score » de YTG fait référence.** Le guide expose
+        `target_SOSEO_min/max` et `target_DSEO_min/max` : ce sont les bornes de
+        la zone verte de l'interface, calculées par l'outil sur l'ensemble de
+        la SERP. On les préfère aux moyennes concurrentes, que quelques
+        résultats non rédactionnels suffisent à fausser — cas mesuré le
+        14/08/2026 sur « majorée et minorée » : 4 résultats sur 9 (3 YouTube +
+        1 page sans texte) scoraient 0/0 et tiraient la cible DSEO à 10,3
+        quand YTG recommandait 0-27.
+
+        Le SOSEO a un **maximum**, pas seulement un minimum : au-delà, l'article
+        est sur-optimisé en couverture et il faut ÉLAGUER (voir `check_html`).
+        L'ancien modèle ne testait que `SOSEO >= cible` et ne voyait donc jamais
+        ce cas.
+
+        Repli sur les moyennes concurrentes uniquement si le guide n'expose pas
+        ses plages (`None`), via `resolve_targets()`.
+
+        Returns:
+            (soseo_min, soseo_max, dseo_min, dseo_max) — `None` si indéterminable.
+        """
+        s_min = getattr(guide, "reco_soseo_min", None)
+        s_max = getattr(guide, "reco_soseo_max", None)
+        d_min = getattr(guide, "reco_dseo_min", None)
+        d_max = getattr(guide, "reco_dseo_max", None)
+
+        if s_min and d_max:
+            return s_min, s_max, (d_min or 0.0), d_max
+
+        # Guide muet sur ses plages : on retombe sur les moyennes concurrentes.
+        logger.warning(
+            "[YTG] Guide sans « Recommended score » : repli sur les moyennes "
+            "concurrentes TOP 3 / TOP 10."
+        )
+        t_s, t_d = cls.resolve_targets(
+            guide.top3_soseo, guide.top3_dseo, guide.top10_soseo, guide.top10_dseo,
+        )
+        # Sans borne haute connue, seul le plancher SOSEO et le plafond DSEO
+        # sont contraints : on n'invente pas un maximum.
+        return t_s, None, 0.0, t_d
+
+    @classmethod
+    def resolve_targets(
+        cls,
+        top3_soseo: Optional[float],
+        top3_dseo: Optional[float],
+        top10_soseo: Optional[float],
+        top10_dseo: Optional[float],
+    ) -> tuple[Optional[float], Optional[float]]:
+        """Cibles SOSEO/DSEO à partir des moyennes concurrentes du guide.
+
+        Repli historique, utilisé seulement quand le guide n'expose pas ses
+        plages recommandées (cf. `resolve_ranges`).
+
+        La cible n'est pas le seul TOP 3 : le CLAUDE.md impose de battre les
+        moyennes TOP 3 **et** TOP 10. On retient la contrainte la plus stricte
+        des deux — `max()` côté SOSEO (dépasser la plus haute), `min()` côté
+        DSEO (rester sous la plus basse).
+
+        Une moyenne nulle n'est jamais une cible : elle signale une donnée
+        absente (quota API) ou une SERP dégénérée, pas un objectif atteint.
+        Elle est écartée, et si plus aucune référence ne subsiste la cible vaut
+        `None` — le verdict devient indéterminé plutôt qu'OPTIMAL.
+
+        Enfin, un TOP 3 dont le SOSEO est très inférieur au TOP 10 trahit des
+        premières positions hors sujet ; son DSEO, mécaniquement proche de 0,
+        imposerait une cible inatteignable. Cas réel : TOP 3 = 5.0/0.7 contre
+        TOP 10 = 32.4/8.8. Le TOP 10 fait alors seul référence.
+
+        Returns:
+            (target_soseo, target_dseo) — `None` si indéterminable.
+        """
+        if (
+            top3_soseo and top10_soseo
+            and top3_soseo < top10_soseo * cls.TOP3_DEGENERATE_RATIO
+        ):
+            logger.warning(
+                "[YTG] TOP 3 non représentatif (SOSEO %.1f vs TOP 10 %.1f) : "
+                "cibles calculées sur le TOP 10 seul.", top3_soseo, top10_soseo
+            )
+            top3_soseo = top3_dseo = None
+
+        soseo_refs = [v for v in (top3_soseo, top10_soseo) if v]
+        dseo_refs = [v for v in (top3_dseo, top10_dseo) if v]
+        return (
+            max(soseo_refs) if soseo_refs else None,
+            min(dseo_refs) if dseo_refs else None,
+        )
 
     def __init__(
         self,
@@ -207,11 +319,11 @@ class YTGQualityCheck:
             result.message = f"Guide YTG introuvable/non créé pour '{main_keyword}'"
             return result
 
-        # 4. Cibles concurrents (TOP3) — via le guide
+        # 4. Zone verte — « Recommended score » du guide (voir `resolve_ranges`).
         guide = analyzer.get_guide(guide_id, keyword=main_keyword)
         if guide:
-            result.target_soseo = guide.top3_soseo
-            result.target_dseo = guide.top3_dseo
+            (result.target_soseo, result.target_soseo_max,
+             result.target_dseo_min, result.target_dseo) = self.resolve_ranges(guide)
 
         # 5. Analyse du contenu
         text = BeautifulSoup(html, "html.parser").get_text(separator=" ", strip=True)
@@ -233,25 +345,74 @@ class YTGQualityCheck:
         result.over_optimized_terms = [t for t, c in colors.items() if c == "red"]
 
         # 6. Verdict
-        target_s = result.target_soseo or 0
-        target_d = result.target_dseo or 0
-        result.soseo_ok = (result.our_soseo >= target_s) if target_s else True
-        result.dseo_ok = (result.our_dseo <= target_d) if target_d else True
+        target_s = result.target_soseo
+        target_d = result.target_dseo
+
+        # Une cible absente rend le verdict INDÉTERMINÉ, jamais OPTIMAL : sans
+        # référence concurrente, rien ne prouve que le contenu est au niveau.
+        # L'ancienne version validait d'office (`if target else True`), ce qui
+        # transformait un guide muet — quota API, SERP dégénérée — en succès.
+        if target_s is None or target_d is None:
+            result.verdict = VERDICT_BLOCKED
+            missing = "SOSEO" if target_s is None else "DSEO"
+            if target_s is None and target_d is None:
+                missing = "SOSEO et DSEO"
+            result.message = (
+                f"Plage cible indisponible ({missing}) pour le guide "
+                f"{guide_id} : verdict impossible. Vérifier le quota YTG ou la "
+                f"qualité de la SERP du mot-clé."
+            )
+            return result
+
+        # Zone verte : le SOSEO doit rester DANS sa plage, pas seulement au-dessus
+        # du plancher. Un SOSEO au-dessus du maximum est une sur-couverture, et
+        # elle se corrige en ÉLAGUANT — c'est le seul cas où retirer du texte est
+        # la bonne réponse, puisque les deux scores redescendent ensemble.
+        s_max = result.target_soseo_max
+        d_min = result.target_dseo_min or 0.0
+
+        soseo_low = result.our_soseo < target_s
+        soseo_high = bool(s_max) and result.our_soseo > s_max
+        result.soseo_ok = not (soseo_low or soseo_high)
+        result.dseo_ok = d_min <= result.our_dseo <= target_d
+
+        s_range = f"{target_s:.0f}-{s_max:.0f}%" if s_max else f"≥ {target_s:.0f}%"
+        d_range = f"{d_min:.0f}-{target_d:.0f}%"
 
         if result.soseo_ok and result.dseo_ok:
             result.verdict = VERDICT_OPTIMAL
+            result.action = ""
             result.message = (
-                f"SOSEO {result.our_soseo:.0f}% ≥ cible {target_s:.0f}% | "
-                f"DSEO {result.our_dseo:.0f}% ≤ cible {target_d:.0f}%"
+                f"SOSEO {result.our_soseo:.0f}% dans {s_range} | "
+                f"DSEO {result.our_dseo:.0f}% dans {d_range}"
             )
+            return result
+
+        warnings = []
+        if soseo_low:
+            warnings.append(f"SOSEO {result.our_soseo:.0f}% < plage {s_range}")
+        if soseo_high:
+            warnings.append(f"SOSEO {result.our_soseo:.0f}% > plage {s_range}")
+        if not result.dseo_ok:
+            sense = "<" if result.our_dseo < d_min else ">"
+            warnings.append(f"DSEO {result.our_dseo:.0f}% {sense} plage {d_range}")
+
+        # Action : ce que le maillon suivant doit faire, plutôt que de le laisser
+        # deviner. Les deux scores suivent la longueur, donc un SOSEO trop haut
+        # ET un DSEO trop haut se traitent d'un seul geste — élaguer.
+        if soseo_high:
+            result.action = "ELAGUER"
+        elif soseo_low and result.dseo_ok:
+            result.action = "ENRICHIR"
+        elif result.our_dseo > target_d:
+            # SOSEO dans la plage mais densité trop concentrée : réécrire à
+            # volume constant (synonymes, pronoms, reformulation).
+            result.action = "REECRIRE"
         else:
-            warnings = []
-            if not result.soseo_ok:
-                warnings.append(f"SOSEO {result.our_soseo:.0f}% < cible {target_s:.0f}%")
-            if not result.dseo_ok:
-                warnings.append(f"DSEO {result.our_dseo:.0f}% > cible {target_d:.0f}%")
-            result.verdict = VERDICT_NEEDS_FIX
-            result.message = " | ".join(warnings)
+            result.action = "ENRICHIR"
+
+        result.verdict = VERDICT_NEEDS_FIX
+        result.message = " | ".join(warnings) + f" → {result.action}"
 
         return result
 

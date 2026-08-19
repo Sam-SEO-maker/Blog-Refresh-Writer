@@ -48,9 +48,17 @@ DEFAULT_BLOG_ID = "superprof.fr-ressources"
 # Même plafond par défaut que `cw batch refresh` : chaque URL coûte un fetch WP
 # + un audit GSC + un appel SERP + un guide YTG, payés d'avance.
 DEFAULT_LIMIT = 50
-# Statuts terminaux : la ligne est déjà traitée ou hors périmètre éditorial.
-# Aligné sur RefreshOrchestrator._TAB_SKIP_STATUSES (`/batch --tab`).
-SKIP_STATUSES = {"publié", "redirection 301", "cannibalisation de kw"}
+# LISTE BLANCHE : seul « à faire » déclenche l'audit, tout autre libellé (et le
+# vide) est laissé intact. Aligné sur RefreshOrchestrator._TAB_TODO_STATUSES.
+# L'ancienne liste noire de libellés exacts laissait passer « Prêt pour
+# relecture » et ne matchait pas « Cannibalisation du Main KW » : 40 lignes
+# déjà traitées ont été reprises en refresh le 2026-08-12.
+TODO_STATUSES = {"a faire", "à faire"}
+
+
+def is_todo_status(status: str) -> bool:
+    """Le statut autorise-t-il un refresh ? Seul « à faire » le fait."""
+    return (status or "").strip().lower() in TODO_STATUSES
 
 
 def resolve_tab_layout(site_slug: str, tab: str | None) -> dict:
@@ -215,9 +223,10 @@ def main() -> int:
             logger.warning("[%2d/%d] ABSENT de '%s' — ignoré: %s", i, len(urls), layout["name"], url)
             skipped.append((url, "not_in_sheet"))
             continue
-        if info["status"].lower() in SKIP_STATUSES:
-            logger.info("[%2d/%d] SKIP (status=%s): %s", i, len(urls), info["status"], url)
-            skipped.append((url, info["status"]))
+        if not is_todo_status(info["status"]):
+            logger.info("[%2d/%d] SKIP (statut=%r, seul « à faire » est traité): %s",
+                        i, len(urls), info["status"], url)
+            skipped.append((url, info["status"] or "(vide)"))
             continue
 
         logger.info("[%2d/%d] %s", i, len(urls), url)
