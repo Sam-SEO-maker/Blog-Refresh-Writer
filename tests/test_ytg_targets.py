@@ -80,3 +80,74 @@ class TestNoFalseOptimal:
         """Après correction, l'article corrigé passe légitimement."""
         soseo, dseo = YTGQualityCheck.resolve_targets(0.0, 0.0, 41.8, 13.5)
         assert 52.0 >= soseo and 5.0 <= dseo
+
+
+class TestRecommendedRanges:
+    """La zone verte de YTG (`Recommended score`) prime sur les moyennes SERP.
+
+    Mesuré le 14/08/2026 sur « majorée et minorée » : 4 résultats SERP sur 9
+    (3 YouTube + 1 page sans texte) scoraient 0/0 et tiraient la cible DSEO à
+    10,3, quand le guide recommandait 0-27. Le pipeline visait donc 2 à 3 fois
+    plus sévère que l'outil lui-même.
+    """
+
+    @staticmethod
+    def _guide(**kw):
+        from types import SimpleNamespace
+        base = dict(reco_soseo_min=None, reco_soseo_max=None,
+                    reco_dseo_min=None, reco_dseo_max=None,
+                    top3_soseo=0.0, top3_dseo=0.0,
+                    top10_soseo=0.0, top10_dseo=0.0)
+        base.update(kw)
+        return SimpleNamespace(**base)
+
+    def test_recommended_range_wins_over_serp_averages(self):
+        g = self._guide(reco_soseo_min=85, reco_soseo_max=102,
+                        reco_dseo_min=0, reco_dseo_max=27,
+                        top3_soseo=25.7, top3_dseo=10.3,
+                        top10_soseo=41.6, top10_dseo=13.6)
+        assert YTGQualityCheck.resolve_ranges(g) == (85, 102, 0.0, 27)
+
+    def test_falls_back_to_serp_when_guide_is_silent(self):
+        """Guide sans plages : on retombe sur les moyennes, sans inventer de max."""
+        g = self._guide(top3_soseo=60.0, top3_dseo=8.0,
+                        top10_soseo=50.0, top10_dseo=12.0)
+        s_min, s_max, d_min, d_max = YTGQualityCheck.resolve_ranges(g)
+        assert (s_min, d_max) == (60.0, 8.0)
+        assert s_max is None, "aucun maximum ne doit être inventé"
+
+
+class TestActionFromRange:
+    """Le verdict dit quoi faire, pas seulement que ça ne va pas."""
+
+    @staticmethod
+    def _decide(our_soseo, our_dseo, s_min, s_max, d_min, d_max):
+        """Reproduit la décision de `check_html` (zone verte + action)."""
+        low = our_soseo < s_min
+        high = bool(s_max) and our_soseo > s_max
+        dseo_ok = d_min <= our_dseo <= d_max
+        if not (low or high) and dseo_ok:
+            return ""
+        if high:
+            return "ELAGUER"
+        if low and dseo_ok:
+            return "ENRICHIR"
+        if our_dseo > d_max:
+            return "REECRIRE"
+        return "ENRICHIR"
+
+    def test_soseo_above_max_means_prune(self):
+        """volume-fraction-resolution : SOSEO 146 > 102 et DSEO 67 > 27."""
+        assert self._decide(146, 67, 85, 102, 0, 27) == "ELAGUER"
+
+    def test_soseo_below_min_means_enrich(self):
+        """projet-redaction-ebauche : SOSEO 40 < 84, DSEO dans la plage."""
+        assert self._decide(40, 10, 84, 101, 0, 32) == "ENRICHIR"
+
+    def test_soseo_in_range_but_dseo_high_means_rewrite(self):
+        """Couverture correcte, densité concentrée : réécrire à volume constant."""
+        assert self._decide(70, 40, 65, 78, 0, 26) == "REECRIRE"
+
+    def test_inside_both_ranges_is_optimal(self):
+        """mecanique-deplacement : SOSEO 68 dans 65-78, DSEO 20 dans 0-26."""
+        assert self._decide(68, 20, 65, 78, 0, 26) == ""

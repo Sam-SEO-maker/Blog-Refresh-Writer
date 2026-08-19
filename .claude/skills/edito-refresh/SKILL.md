@@ -65,6 +65,17 @@ field) without **over-optimising** (repetition). Caps:
   `top3_soseo`/`top3_dseo`, `top10_soseo`/`top10_dseo`); the article must have a
   **SOSEO above** those averages and a **DSEO strictly below** those
   averages. Details + examples: `references/semantic-density.md`.
+- The target is a **range**, read from the guide's `Recommended score`
+  (`target_SOSEO_min/max`, `target_DSEO_min/max`) — YTG's green zone. The SOSEO
+  has a **maximum**, not just a floor.
+- Which fix applies depends on where the SOSEO sits:
+  **above its max → PRUNE** (both scores follow length, so cutting redundancy
+  brings them down together); **inside the range but DSEO too high → REWRITE at
+  constant volume** (reformulate, synonyms, pronouns, harmonise); **below the
+  floor → ENRICH**. Procedure and worked example: `references/semantic-density.md`.
+- Two targets you must **not** chase: LaTeX macros listed as under-optimised
+  (this site renders Unicode in `<code>`, not LaTeX) and a DSEO target ≤ 3%
+  (guide artefact). Report the gap instead of closing it.
 
 ## 5. AI-extractable formats
 
