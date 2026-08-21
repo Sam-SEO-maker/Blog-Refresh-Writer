@@ -528,7 +528,13 @@ class ContentExtractor:
             css_str = " ".join(css_class) if isinstance(css_class, list) else str(css_class)
             is_wp_content = "wp-image" in css_str
             is_in_caption = img.find_parent(text=re.compile(r"\[caption")) is not None or img.find_parent("figure") is not None
-            if is_wp_content or is_in_caption:
+            # Une image hebergee dans /wp-content/uploads/ EST une image de contenu,
+            # meme sans classe wp-image ni <figure> parent. Des schemas inseres a la
+            # main dans un <p> (equations nucleaires, fronts d'onde) echappaient aux
+            # deux tests ci-dessus : la baseline annoncait 4 images pour 6 reelles, et
+            # la Regle d'Or laissait donc passer leur suppression silencieuse.
+            is_uploaded = "/wp-content/uploads/" in src
+            if is_wp_content or is_in_caption or is_uploaded:
                 images.append(img)
         image_urls = [img.get("src", "") for img in images if img.get("src")]
         image_tags = []
