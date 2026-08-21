@@ -36,6 +36,18 @@ logger = logging.getLogger(__name__)
 # Ordre de priorité par défaut si la config blog ne le précise pas.
 DEFAULT_KEYWORD_SOURCES = ["notion", "sheet", "gsc", "slug"]
 
+# Sources DÉCLARATIVES : un humain a saisi le mot-clé (Notion, Sheet). Elles sont
+# faillibles — une colonne "Main Keyword" peut contenir un fragment récupéré à
+# l'arrachée ("un exemple", "des signaux") qui n'est la requête de personne.
+# Ces sources sont donc CONFRONTÉES à GSC avant usage (cf. _validate_against_gsc).
+# `gsc` et `slug` ne le sont pas : la première EST la mesure, la seconde est un
+# dernier recours qui n'a de toute façon rien à valider.
+_DECLARATIVE_SOURCES = ("notion", "sheet")
+
+# Dernier verdict de validation GSC, pour journalisation par l'appelant
+# (persisté dans audit_data.json). Réinitialisé à chaque resolve().
+KEYWORD_VALIDATION_KEY = "keyword_validation"
+
 # Mapping site_slug → (env var du spreadsheet, onglets à scanner, index colonne du mot-clé)
 # Les onglets et index sont ceux VÉRIFIÉS EN LIVE (juillet 2026).
 _SHEET_LAYOUT = {
@@ -85,6 +97,11 @@ def _resolve_sheet_layout(site_slug: str) -> dict | None:
     return _SHEET_LAYOUT.get(site_slug)
 
 
+def _norm_kw(kw: str) -> str:
+    """Normalise un mot-clé pour comparaison avec les requêtes GSC."""
+    return re.sub(r"\s+", " ", (kw or "").strip().lower())
+
+
 def _norm_url(url: str) -> str:
     """Normalise une URL pour comparaison (minuscules, sans slash final)."""
     return (url or "").strip().rstrip("/").lower()
@@ -101,6 +118,31 @@ def slug_to_keyword(url_or_slug: str) -> str:
     slug = url_or_slug.strip().rstrip("/").split("/")[-1]
     slug = re.sub(r"\.(html?|php)$", "", slug)
     return slug.replace("-", " ").replace("_", " ").strip()
+
+
+# Un clic isolé n'est pas un signal : sur une page à faible trafic, une requête
+# parasite peut capter 1 clic accidentel et supplanter une requête à 16, 39 ou 270
+# impressions qui, elle, décrit vraiment le sujet de la page. En dessous de ce
+# seuil, les clics sont considérés comme absents et les impressions tranchent.
+MIN_SIGNIFICANT_CLICKS = 3
+
+# Nombre de requêtes GSC lues par URL pour l'arbitrage. > 20 pour sortir du
+# plafond MCP (cf. _validate_against_gsc).
+_GSC_QUERY_ROWS = 200
+
+
+def _best_gsc_candidate(top: list[dict]) -> Optional[dict]:
+    """Meilleure requête GSC : le plus de clics, sinon le plus d'impressions.
+
+    « Sinon » couvre l'absence de clics SIGNIFICATIFS, pas seulement le zéro
+    absolu (cf. MIN_SIGNIFICANT_CLICKS).
+    """
+    if not top:
+        return None
+    clicked = [k for k in top if (k.get("clicks") or 0) >= MIN_SIGNIFICANT_CLICKS]
+    if clicked:
+        return max(clicked, key=lambda k: (k.get("clicks") or 0, k.get("impressions") or 0))
+    return max(top, key=lambda k: (k.get("impressions") or 0, k.get("clicks") or 0))
 
 
 class KeywordResolver:
@@ -132,6 +174,9 @@ class KeywordResolver:
         # Cache par blog pour éviter de relire un onglet à chaque URL.
         self._sheet_index_cache: dict[str, dict] = {}
         self._notion_cache: dict[str, dict] = {}
+        # Verdict de la dernière validation GSC (cf. _validate_against_gsc).
+        # Toujours présent : l'appelant le persiste sans avoir à tester l'attribut.
+        self.last_validation: dict = {}
 
     # ------------------------------------------------------------------
     # Point d'entrée
@@ -171,6 +216,8 @@ class KeywordResolver:
 
             if kw:
                 logger.info(f"[KeywordResolver] {site_slug} '{url}' → '{kw}' (source={src})")
+                if src in _DECLARATIVE_SOURCES:
+                    kw, src = self._validate_against_gsc(site_slug, url, kw, src)
                 return kw, src
 
         # Aucun résultat même via slug
@@ -213,6 +260,90 @@ class KeywordResolver:
             self._sheet_index_cache[site_slug] = index
 
         return index.get(_norm_url(url), "")
+
+    def _validate_against_gsc(
+        self, site_slug: str, url: str, declared: str, src: str
+    ) -> tuple[str, str]:
+        """Confronte un mot-clé DÉCLARÉ (Notion/Sheet) aux requêtes réelles GSC.
+
+        Pourquoi : les sources déclaratives sont faillibles et leur erreur est
+        invisible en aval — toute la chaîne (SERP, guide YTG, sources, rédaction)
+        répond alors à une requête que personne ne tape, silencieusement, une fois
+        par URL. GSC est la seule source qui observe le comportement réel.
+
+        Règle d'arbitrage (arbitrage métier, SEO Manager) : le mot-clé retenu est
+        celui qui a le PLUS DE CLICS ; si les clics sont absents (page à zéro clic
+        sur la fenêtre), celui qui a le PLUS D'IMPRESSIONS. C'est exactement le tri
+        de `fetch_top_keywords_12m` — on lui délègue plutôt que de le redériver.
+
+        Trois issues :
+          * déclaré présent dans les requêtes GSC → validé (source `<src>+gsc`) ;
+          * déclaré absent et GSC a du signal    → CORRIGÉ vers le top GSC ;
+          * GSC muet (page neuve, 0 impression)  → déclaré conservé, non vérifié.
+
+        Ne lève jamais : GSC indisponible ne doit pas bloquer un refresh.
+        """
+        self.last_validation = {
+            "declared": declared,
+            "declared_source": src,
+            "status": "unverified",
+            "final": declared,
+        }
+
+        try:
+            gsc = self._get_gsc(site_slug)
+            if gsc is None:
+                return declared, src
+            # NB fenêtre : le MCP plafonne à 20 lignes ET les renvoie triées par
+            # clics. Sur une page à faible trafic, les requêtes fortes en
+            # IMPRESSIONS tombent alors hors fenêtre : « ensemble de définition
+            # exercice corrigé » (39 impressions) était invisible, et l'arbitrage
+            # se faisait sur un reliquat à 6 impressions. On demande donc un
+            # volume large, ce qui route la lecture vers le service account
+            # (paginé) au lieu du MCP tronqué.
+            top = gsc.fetch_top_keywords_12m(url, limit=_GSC_QUERY_ROWS)
+        except Exception as e:
+            logger.warning(f"[KeywordResolver] validation GSC impossible ({e}) — mot-clé déclaré conservé.")
+            return declared, src
+
+        if not top:
+            logger.info(
+                f"[KeywordResolver] GSC muet pour '{url}' — '{declared}' conservé (non vérifié)."
+            )
+            return declared, src
+
+        best = _best_gsc_candidate(top)
+        if best is None:
+            return declared, src
+        if _norm_kw(declared) == _norm_kw(best.get("query") or ""):
+            self.last_validation.update(status="confirmed")
+            logger.info(f"[KeywordResolver] '{declared}' confirmé par GSC (top requête).")
+            return declared, f"{src}+gsc"
+
+        candidate = (best.get("query") or "").strip()
+        if not candidate:
+            return declared, src
+
+        self.last_validation.update(
+            status="corrected",
+            final=candidate,
+            gsc_clicks=best.get("clicks", 0),
+            gsc_impressions=best.get("impressions", 0),
+            basis="clics" if (best.get("clicks") or 0) >= MIN_SIGNIFICANT_CLICKS else "impressions",
+            top_queries=[
+                {"query": k.get("query"), "clicks": k.get("clicks"), "impressions": k.get("impressions")}
+                for k in top[:5]
+            ],
+        )
+        by_clicks = (best.get("clicks") or 0) >= MIN_SIGNIFICANT_CLICKS
+        basis = "clics" if by_clicks else "impressions"
+        value = best.get("clicks") if by_clicks else best.get("impressions")
+        logger.warning(
+            f"[KeywordResolver] CONFLIT mot-clé sur '{url}' : déclaré '{declared}' "
+            f"n'est pas la requête dominante → corrigé en '{candidate}' "
+            f"({basis}={value})."
+        )
+        return candidate, f"gsc_corrected(from_{src})"
 
     def _from_gsc(self, site_slug: str, url: str) -> str:
         """Top query GSC 12 mois pour cette URL."""

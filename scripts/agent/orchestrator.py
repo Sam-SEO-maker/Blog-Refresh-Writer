@@ -8,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, field
+import logging as _logging
+_kw_logger = _logging.getLogger(__name__)
 import logging
 import re
 import requests
@@ -1105,6 +1107,11 @@ class RefreshOrchestrator:
             "url": row.blogpost_url,
             "title": row.title,
             "main_keyword": row.main_keyword,
+            # Provenance du mot-clé et verdict de la validation GSC. Sans eux,
+            # impossible de savoir après coup si le mot-clé venait de la Sheet,
+            # de GSC ou du slug — ni qu'une correction automatique a eu lieu.
+            "main_keyword_source": getattr(row, "main_keyword_source", "") or "",
+            "keyword_validation": getattr(row, "keyword_validation", None) or {},
             "action": action,
             "post_type": str(row.post_type) if row.post_type else "",
             "impressions_30d": row.impressions_30d,
@@ -1412,6 +1419,10 @@ class RefreshOrchestrator:
             site_slug: str = ""
             blogpost_url: str = ""
             main_keyword: str = ""
+            # Provenance et verdict de validation du mot-clé : persistés dans
+            # audit_data.json pour qu'une correction automatique reste traçable.
+            main_keyword_source: str = ""
+            keyword_validation: dict = field(default_factory=dict)
             title: str = ""
             post_type: str = ""
             impressions_30d: int = 0
@@ -1442,16 +1453,79 @@ class RefreshOrchestrator:
             status = cell(row, col_status)
             if not self._is_todo_status(status):
                 continue
+            # Mot-clé pris tel quel ici : la validation GSC est DIFFÉRÉE aux
+            # seules lignes réellement retenues (cf. _validate_keywords_for_rows).
+            # La valider ici coûterait un appel GSC par ligne de l'onglet — 662
+            # sur "Medium Potential" — pour n'en traiter que --limit.
             rows.append(_TabRefreshRow(
                 site_slug=site_slug,
                 blogpost_url=url,
                 main_keyword=cell(row, col_kw),
+                main_keyword_source="sheet",
                 title="",  # pas de colonne title fiable : le ghostwriter part du H1 scrapé
                 post_type="",
                 row_index=i,
                 status=status,
             ))
         return rows
+
+    def _validate_keywords_for_rows(self, rows: list) -> list:
+        """Confronte à GSC le mot-clé de chaque ligne RETENUE, avant tout usage.
+
+        Appelée après application de `--limit` : la validation coûte un appel GSC
+        par URL, il ne faut la payer que pour les lignes effectivement traitées.
+
+        Une ligne dont le mot-clé est corrigé voit `main_keyword` remplacé et le
+        verdict conservé dans `keyword_validation`, qui est persisté dans
+        audit_data.json — une correction automatique doit rester traçable.
+        """
+        for r in rows:
+            kw, src, verdict = self._validated_keyword(
+                r.site_slug, r.blogpost_url, getattr(r, "main_keyword", "") or ""
+            )
+            if kw:
+                r.main_keyword = kw
+            r.main_keyword_source = src
+            try:
+                r.keyword_validation = verdict
+            except Exception:
+                pass
+            if verdict.get("status") == "corrected":
+                _kw_logger.warning(
+                    f"[KW] {r.blogpost_url} : mot-clé Sheet {verdict.get('declared')!r} "
+                    f"corrigé en {kw!r} (clics={verdict.get('gsc_clicks')}, "
+                    f"impressions={verdict.get('gsc_impressions')})"
+                )
+        return rows
+
+    def _validated_keyword(
+        self, site_slug: str, url: str, declared: str
+    ) -> tuple[str, str, dict]:
+        """Mot-clé à utiliser pour cette URL, après confrontation à GSC.
+
+        Retourne (mot_clé, source, verdict). Ne lève jamais : une validation
+        impossible (GSC muet, en panne, hors périmètre) conserve le déclaré —
+        le refresh ne doit pas dépendre de la disponibilité de GSC.
+        """
+        if not declared:
+            # Rien de déclaré : la cascade complète du résolveur s'applique.
+            try:
+                from scripts.audit.keyword_resolver import KeywordResolver
+                r = KeywordResolver()
+                kw, src = r.resolve(site_slug, url=url)
+                return kw, src, dict(r.last_validation or {})
+            except Exception as e:
+                _kw_logger.warning(f"[KW] résolution échouée pour {url}: {e}")
+                return "", "none", {}
+
+        try:
+            from scripts.audit.keyword_resolver import KeywordResolver
+            r = KeywordResolver()
+            kw, src = r._validate_against_gsc(site_slug, url, declared, "sheet")
+            return kw, src, dict(r.last_validation or {})
+        except Exception as e:
+            _kw_logger.warning(f"[KW] validation GSC échouée pour {url}: {e}")
+            return declared, "sheet", {}
 
     def _update_tab_status(self, site_slug: str, tab: str, row_index: int, status: str) -> bool:
         """
@@ -1518,7 +1592,7 @@ class RefreshOrchestrator:
             rows = [r for r in rows if r.post_type == post_type]
         if limit and limit > 0:
             rows = rows[:limit]
-        return rows
+        return self._validate_keywords_for_rows(rows)
 
     def batch_prepare_parallel(self, action: str, site_slug: Optional[str] = None,
                                post_type: Optional[str] = None, limit: Optional[int] = None,
@@ -1748,6 +1822,9 @@ class RefreshOrchestrator:
         # Limit number of rows to process
         if limit and limit > 0:
             rows = rows[:limit]
+
+        # Mot-clé confronté à GSC sur les seules lignes retenues (cf. méthode).
+        rows = self._validate_keywords_for_rows(rows)
 
         results = {
             "processed": 0,
