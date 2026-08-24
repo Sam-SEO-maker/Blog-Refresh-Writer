@@ -38,7 +38,10 @@ Signals: transparent disclaimers, methodology explained, visible dates, verifiab
 
 ## Institutional sources (cross-cutting principle)
 
-**Minimum: ≥ 3 institutional sources cited with a link** (uniform, all sites).
+**3 to 5 institutional sources cited with a link** (uniform, all sites).
+5 is a hard ceiling: past that the block reads as a bibliography, dilutes the
+authority signal and inflates the YTG score (source titles and URLs are scored
+like body text).
 
 **Types of domains to target** (valid whatever the site):
 - **Governmental / official**: ministries, public agencies, regulatory authorities.

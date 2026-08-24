@@ -103,9 +103,15 @@ emphasis**; use bold sparingly instead.
 French content:
 
 - **Lowercase**: languages (`l'espagnol`), school subjects (`les mathématiques`),
-  grade levels (`la terminale`), days and months (`lundi 15 mars`, `en septembre`).
+  days and months (`lundi 15 mars`, `en septembre`), lower-secondary grade levels
+  (`la sixième`, `la quatrième`, `la troisième`).
 - **Uppercase**: exam names (`le Baccalauréat`, `le Brevet`, `le Bac`),
-  institutions (`l'Éducation nationale`).
+  institutions (`l'Éducation nationale`), and **the three upper-secondary grade
+  levels: `la Seconde`, `la Première`, `la Terminale`** (editorial rule, Superprof
+  SEO lead). Capitalised whether or not the subject follows: `en Terminale`,
+  `le programme de Première`, `un élève de Seconde`.
+  - ✅ `Ce chapitre est au programme de Première.`
+  - 🚫 `Ce chapitre est au programme de première.`
 - **Titles and headings: sentence case**, never Title Case.
   - ✅ `Oral d'espagnol au bac : exemples de thèmes et conseils`
   - 🚫 `Oral d'Espagnol au Bac : Exemples de Thèmes et Conseils`

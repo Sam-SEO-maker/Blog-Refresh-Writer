@@ -132,6 +132,17 @@ Return a structured list `sujet` / `sources[]` (`source`, `url`, `year`,
 generation does not cite a source out of its scope). **Full schema, filled
 example and injection flow**: `references/brief-schema.md`.
 
+> **`sources[]` holds AT MOST 5 entries.** The brief is not a bibliography: it
+> is the shortlist the writer will actually cite, and the published article is
+> capped at 5 sources (`edito-refresh` § 3). Handing over 15 or 30 sources does
+> not raise quality, it moves the selection to the link least equipped to make
+> it -- the writer, who cannot re-open a page to compare. Research widely, then
+> **arbitrate**: keep the most authoritative source per claim, prefer one source
+> covering several claims over several covering one each, and drop the
+> redundant. A claim whose only source did not survive the cut goes to
+> `lacunes[]`, exactly like an unsourced claim -- never cite a weaker source
+> just to fill the list.
+
 > The brief travels **as an argument** to the generation subagent (`content-generator`),
 > it feeds the content and the `eeat_sources` field; it does not go through
 > `generation_prompt.txt`. Details in `references/brief-schema.md`.

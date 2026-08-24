@@ -130,10 +130,14 @@ prompts and the feedback memories.
 5. **Output format**: comply with format-wordpress (clean HTML without WP wrappers,
    correct accents, no em dash `—`, anchors without `<strong>`, no
    links inside H2/H3, punctuated lists). Dual Gutenberg output per the site's
-   skill.
+   skill. **Upper-secondary grade levels take a capital**: `la Seconde`, `la
+   Première`, `la Terminale`, whatever the position (`en Terminale`, `le
+   programme de Première`, `un élève de Seconde`). Lower-secondary levels stay
+   lowercase (`la sixième`, `la quatrième`, `la troisième`).
 6. **Ranking rules**: load and apply `edito-refresh` (direct answer at the
-   start of each H2, at least 2 statistics and at least 1 sourced quote, at least 3
-   institutional sources, density by occurrences and not in %). This is a
+   start of each H2, at least 2 statistics and at least 1 sourced quote, **3 to 5
+   institutional sources (5 is a hard ceiling)**, density by occurrences and not
+   in %). This is a
    MANDATORY cross-cutting skill, just like format-wordpress, never optional.
 
 ## Procedure

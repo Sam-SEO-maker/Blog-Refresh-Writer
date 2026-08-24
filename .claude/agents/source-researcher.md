@@ -82,10 +82,20 @@ primaire à la place.
 - **url** : lien exact et vérifié,
 - **année** : année de publication ou de mise à jour des données.
 
-Vise **au moins 3 sources institutionnelles** et de quoi soutenir **au moins
+Vise **3 à 5 sources institutionnelles**, et de quoi soutenir **au moins
 2 statistiques** et **1 citation** (exigences de `edito-refresh`, appliquées en
 aval par la rédaction). Si tu n'y arrives pas, **dis-le explicitement** dans le
 brief : c'est un signal utile pour le maillon suivant, pas un échec à masquer.
+
+**5 est un plafond dur, pas un objectif à dépasser.** Le brief n'est pas une
+bibliographie : c'est la liste que le rédacteur citera réellement, et l'article
+publié est plafonné à 5 sources. En livrer 15 ou 30 ne rend pas l'article
+meilleur, ça déplace l'arbitrage vers le maillon le moins outillé pour le faire
+— le rédacteur, qui ne peut pas rouvrir une page pour comparer. Cherche large,
+puis **tranche** : une seule source par claim, la plus autorisée ; préfère une
+source qui couvre plusieurs claims à plusieurs qui en couvrent une chacune ;
+écarte les redondantes. Un claim dont la source n'a pas survécu à l'arbitrage
+part en `lacunes[]`, comme un claim non sourcé.
 
 N'écris **jamais** « Consulté le [date] » dans les sources.
 

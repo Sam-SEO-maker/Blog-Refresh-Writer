@@ -40,7 +40,12 @@ before any elaboration. Same for every FAQ question (50-100 word answer).
 
 ## 3. Institutional sources
 
-- **≥ 3 institutional sources** cited with a link (uniform, all sites).
+- **3 to 5 institutional sources** cited with a link (uniform, all sites).
+  **5 is a hard ceiling**, not a target to beat: past that the Sources block
+  becomes a bibliography, dilutes the authority signal instead of concentrating
+  it, and inflates the YTG semantic score with terms nobody wrote on purpose
+  (source titles and URLs are scored like body text). Keep the strongest
+  sources, drop the redundant ones.
 - The **authority domains** are **per-site** knowledge, not cross-cutting:
   the site's directory `sites/<site-slug>/sources/authority-map.md` (per subject + a
   cross-cutting base), consumed via the `source-research` skill. The *types* of

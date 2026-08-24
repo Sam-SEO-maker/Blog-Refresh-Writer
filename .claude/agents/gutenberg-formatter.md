@@ -81,6 +81,12 @@ récurrents — chacun testable mécaniquement :
 - **Questions** : tout titre interrogatif finit par « ? » (espace insécable
   avant, `?` **avant** l'emoji final s'il y en a un).
 - **FAQ** : chaque question (H3) commence par un **emoji**.
+- **Niveaux du lycée en majuscule** : `Seconde`, `Première`, `Terminale`, quelle
+  que soit la position (`en Terminale`, `programme de Première`, `élève de
+  Seconde`). Correction de casse pure, sans toucher au fond : c'est bien ton
+  périmètre. Les niveaux du collège restent en minuscule (`sixième`,
+  `quatrième`, `troisième`), et « première » adjectif numéral ne se capitalise
+  pas (`la première étape`, `en première approximation`).
 - **Blocs AdvGB** : commentaire de bloc exact (`<!-- wp:advgb/infobox -->`,
   `<!-- wp:advgb/count-up -->`), **HTML sur une seule ligne**, **UUID présent**
   dans les classes CSS.

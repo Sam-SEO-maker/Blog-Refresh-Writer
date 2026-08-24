@@ -55,6 +55,10 @@ Le fichier nu `{slug}_refreshed.html` de debug est supprimé après génération
 6. **Bloc Sources** (`wp:group` → `wp-block-wp-sp-gutenberg-blocks-block-sources`,
    titre `Sources 📚`, `<ol class="references">`). Format exact validé (Andra,
    mai 2026) : [[feedback-sp-sources-block-format]].
+   **3 à 5 références, 5 est un plafond dur** (cf. `edito-refresh` § 3) : au-delà
+   le bloc vire à la bibliographie, dilue le signal d'autorité et gonfle le score
+   sémantique YTG, qui compte les titres et les URL des sources comme du corps de
+   texte. Garder les plus fortes, écarter les redondantes.
 
 **Format AdvGB exact** (sinon Gutenberg affiche le HTML brut) : commentaires
 `<!-- wp:advgb/* -->`, **HTML sur une seule ligne**, `{uuid}` identique entre le
