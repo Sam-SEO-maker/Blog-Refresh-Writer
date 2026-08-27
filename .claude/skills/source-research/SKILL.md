@@ -53,6 +53,21 @@ session and apply it **a priori**:
 >   "Acadomia propose un tarif de X€/h"): a factual mention with no link is
 >   not a citation in the E-E-A-T sense and is not blocked. It never carries
 >   a `href`, and it is not what makes it into `eeat_sources`.
+>
+> - **Collecting the independent review score of the reviewed platform.** For
+>   a *review* article, the site's data model may **require** it: the enseigna
+>   ACF template (`acf-fields-template.md`) demands a Trustpilot score
+>   "checked live on publication day" (`note_trustpilot_sur_5`). Review
+>   aggregators stay inadmissible as *authority sources* for general claims,
+>   but the independent score of the platform under review is **data about
+>   the subject itself** — collect it, date it, give the review count and
+>   star distribution, and state its scope (whole platform vs the vertical
+>   reviewed). Omitting it forces the writer into a false "no third-party
+>   score exists", which is worse than citing one honestly qualified.
+> - **Never assert a domain is blacklisted from memory.** Trustpilot has been
+>   wrongly listed as blacklisted in a brief when it is not in the file. The
+>   only authority is `references/blacklisted-domains.md`: grep it for the
+>   exact domain before writing "blacklisted" anywhere in a brief.
 > - **Reading a blacklisted page for competitive analysis** (structure,
 >   angle, the gap it covers): `WebFetch`-ing a competitor's article to
 >   understand *why* it ranks is the same purpose the top-10 SERP scrape at
@@ -65,8 +80,12 @@ The two exceptions are defined in `references/blacklisted-domains.md` and prevai
 the **Golden Rule** on existing content, and **comparison articles**
 (`enseigna.fr` review/versus), where **every compared platform** — not only the one
 in the title — is a primary source **about itself** (pricing, subjects, features) and
-must be fetched to get those facts right. Linking stays restricted to the article's
-subject, and no competitor is ever an authority on a general claim.
+must be fetched to get those facts right. **Fetched, not linked**: the reviewed
+platform's facts are cited in the text with their retrieval date, but carry **no
+`href`** and never appear in the Références block — a review article gives no
+backlink to the platform it reviews (house precedent: the published italki
+article links only institutional sources). No competitor is ever an authority
+on a general claim.
 
 ## Cascading research (3 tiers)
 

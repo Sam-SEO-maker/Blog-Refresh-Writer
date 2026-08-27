@@ -240,6 +240,50 @@ class TestOutputMethods:
         # Le contenu éditorial traverse la conversion.
         assert "Refreshed content" in saved_path.read_text(encoding="utf-8")
 
+    def test_save_refreshed_html_strips_url_extension(self, output_mgr):
+        """Un url_slug portant `.html` ne doit pas produire un second fichier.
+
+        Régression : `cw finalize` dérive `url_slug` du dernier segment de
+        l'URL, extension comprise. Le nom devenait
+        `<slug>.html_refreshed.gutenberg.html` alors que le rédacteur avait
+        écrit `<slug>_refreshed.html` ; le cleanup du HTML nu ciblait donc un
+        fichier inexistant et `html/` accumulait deux à trois copies du même
+        article (constaté sur le lot Medium Potential 91-110).
+        """
+        html = "<p>contenu</p>"
+
+        saved_path = output_mgr.save_refreshed_html(
+            site_id="enseigna.fr",
+            url_slug="mon-article.html",
+            html_content=html,
+        )
+
+        assert saved_path.name == "mon-article_refreshed.gutenberg.html"
+        # Ni le nu, ni la variante au nom pollué par l'extension.
+        html_dir = saved_path.parent
+        assert not (html_dir / "mon-article_refreshed.html").exists()
+        assert not (html_dir / "mon-article.html_refreshed.gutenberg.html").exists()
+        assert sorted(f.name for f in html_dir.glob("mon-article*")) == [
+            "mon-article_refreshed.gutenberg.html"
+        ]
+
+    def test_get_output_files_matches_save_naming(self, output_mgr):
+        """Le chemin annoncé au rédacteur doit être celui qu'écrit la sauvegarde.
+
+        Les deux dérivent le nom du fichier HTML : s'ils normalisent
+        différemment, le rédacteur écrit à un endroit et `finalize` en lit un
+        autre, ce qui recrée le doublon par un autre chemin.
+        """
+        files = output_mgr.get_output_files("enseigna.fr", "mon-article.html")
+        saved = output_mgr.save_refreshed_html(
+            site_id="enseigna.fr",
+            url_slug="mon-article.html",
+            html_content="<p>x</p>",
+        )
+
+        assert files["gutenberg_html"].name == saved.name
+        assert files["refreshed_html"].name == "mon-article_refreshed.html"
+
     def test_save_refreshed_html_article_type_routes_subdir(self, output_mgr):
         """article_type route la sortie HTML dans html/{type}/ (ex. avis|versus)."""
         html = "<p>versus content</p>"

@@ -34,8 +34,8 @@
   "prompt_overrides": {
     "intro_style": "Commencer par un verdict rapide (note/10 + résumé 1 phrase)",
     "structure_requirement": "Tableau comparatif obligatoire en début d'article",
-    "tone_requirement": "Ton de testeur expert, objectif et impartial",
-    "cta_format": "Section 'Notre verdict final' avec recommandation claire"
+    "tone_requirement": "Première personne du singulier, vouvoiement du lecteur. Une personne avec une situation concrète (apprenant, parent) raconte son parcours sur le service à d'autres élèves : vécu, attentes et préférences libres ; tout fait vérifiable (tarif, effectifs, conditions, chiffre, citation) sourcé dans sources_brief.md. Intro ancrée dans une situation humaine, jamais dans une institution ni un chiffre. Modèle : https://enseigna.fr/avis-superprof-soutien-scolaire/. Détail : site.md.",
+    "cta_format": "Section 'Mon verdict final' avec recommandation claire, assumée à la première personne"
   },
   "sheets": {
     "spreadsheet_id": "1rNRU2WzlqfsAvFDjJHDN3ChCZ3u0NIfRaPoM4s1MzEM",

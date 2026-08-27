@@ -91,6 +91,15 @@ def push(url, site_slug, html_file, article_type, status, post_id, dry_run, forc
                    "Run `cw finalize` to convert it before pushing.", err=True)
         raise click.Abort()
 
+    # Le bloc pros/cons resté à sa forme source : WP le rangerait en bloc
+    # « HTML classique », non éditable en colonnes. Arrive quand le fichier a
+    # été édité à la main après le dernier finalize. Même garde que `finalize`.
+    if 'class="pros-cons"' in content:
+        click.echo("[ERROR] This file still carries a raw <div class=\"pros-cons\"> "
+                   "instead of the converted wp:columns block. "
+                   "Run `cw finalize` to convert it before pushing.", err=True)
+        raise click.Abort()
+
     # ------------------------------------------------------------------
     # 2. Verdict QC — la publication reste conditionnée à la validation
     # ------------------------------------------------------------------

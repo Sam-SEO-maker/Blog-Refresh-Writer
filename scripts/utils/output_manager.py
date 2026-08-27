@@ -253,6 +253,20 @@ class OutputManager:
     def _title_to_slug(title: str) -> str:
         return title_to_slug(title)
 
+    @staticmethod
+    def _html_file_slug(url_slug: str) -> str:
+        """Slug de nommage des fichiers HTML, sans extension parasite.
+
+        `url_slug` vient du dernier segment de l'URL, qui porte son extension
+        (`configuration-structure-tete.html`). Utilisé tel quel, il produisait
+        `<slug>.html_refreshed.gutenberg.html` alors que le rédacteur avait
+        écrit `<slug>_refreshed.html` : les deux noms cohabitaient, le cleanup
+        du HTML nu ciblait un fichier inexistant, et `html/` accumulait deux
+        à trois copies du même article. On retire donc l'extension ici, au seul
+        endroit où le nom de fichier se construit.
+        """
+        return re.sub(r"\.(x?html?|php)$", "", (url_slug or "").strip(), flags=re.I)
+
     # =========================================================================
     # TEMP CACHE METHODS (for scraped HTML)
     # =========================================================================
@@ -395,7 +409,7 @@ class OutputManager:
             html_dir = html_dir / self._validate_article_type(article_type)
         html_dir.mkdir(parents=True, exist_ok=True)
 
-        file_slug = self._title_to_slug(title) if title else url_slug
+        file_slug = self._title_to_slug(title) if title else self._html_file_slug(url_slug)
         output_file = html_dir / f"{file_slug}_refreshed.html"
 
         output_file.write_text(html_content, encoding="utf-8")
@@ -567,7 +581,10 @@ class OutputManager:
         metadata_dir = output_dir / "metadata"
         editorial_dir = output_dir / "editorial_audits"
 
-        file_slug = self._title_to_slug(title) if title else url_slug
+        # Même normalisation que `save_refreshed_html` : les deux doivent
+        # dériver le nom HTML à l'identique, sinon le chemin annoncé au
+        # rédacteur et celui écrit à la sauvegarde divergent à nouveau.
+        file_slug = self._title_to_slug(title) if title else self._html_file_slug(url_slug)
 
         return {
             # Chemin d'ÉCRITURE du rédacteur (maillon 2). Intermédiaire :

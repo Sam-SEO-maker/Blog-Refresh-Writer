@@ -1,0 +1,36 @@
+{
+  "_doc": "Binding URL live enseigna.fr -> ID du post WordPress. Sert à écrire le shortcode [monthly_price post_id=ID] dans le contenu généré, et plus largement à cibler un post sans le résoudre par slug. À remplir à la main : sur enseigna.fr le contenu est récupéré par scraping (l'API REST est bloquée), donc `wp_post_id` n'est jamais renseigné dans audit_data.json et aucune résolution automatique n'est possible. L'ID se lit dans l'URL d'édition du back-office : /wp-admin/post.php?post=<ID>&action=edit",
+  "_updated": "2026-08-20",
+  "_shortcode": {
+    "syntaxe": "[monthly_price post_id=<ID>]",
+    "rend": "le champ ACF « Prix mensuel moyen » (site_services_price) du post visé",
+    "alimentation_auto": "Seuls les posts listés dans `superprof_pass_eleve` ont ce champ mis à jour toutes les 24 h depuis la route API AW. Pour tout autre post, le champ est saisi à la main : y pointer un shortcode n'apporte rien.",
+    "usage": "Tout montant du Pass Élève Superprof s'écrit avec le shortcode, jamais en dur. L'ID est celui du post qui PORTE le prix, pas de l'article qui l'affiche : un versus ou un avis concurrent qui cite le tarif Superprof écrit donc lui aussi post_id=67."
+  },
+  "superprof_pass_eleve": {
+    "_doc": "Posts dont le champ ACF `site_services_price` est alimenté automatiquement toutes les 24 h depuis la route API AW. Ces 3 IDs sont ceux du ticket, qui photographiait l'état du site en 2023. D'autres articles Superprof ont été publiés depuis (2025, 2026) ; savoir s'ils ont été raccordés à l'automatisation demande une vérification en back-office. Liste donc potentiellement INCOMPLÈTE, à tenir à jour à la main.",
+    "_regle_de_repli": "Dans le doute, écrire [monthly_price post_id=67] : ce post est vérifié comme alimenté, et le shortcode rend le prix du post visé, pas celui de l'article qui l'affiche. Un article Superprof récent peut donc afficher le tarif à jour sans que son propre champ soit branché.",
+    "67": "https://enseigna.fr/superprof-avis-cours-langue/",
+    "334": "https://enseigna.fr/avis-superprof-loisirs/",
+    "372": "https://enseigna.fr/avis-superprof-soutien-scolaire/"
+  },
+  "versus": {
+    "_doc": "Articles « Superprof vs concurrent » (onglet Versus de la Sheet). Tous comparent des tarifs et citent donc le Pass Élève : ils ont besoin du shortcode. Aucun n'est alimenté par l'API, ils écrivent donc [monthly_price post_id=67]. Leur ID sert à cibler le post sans le résoudre par slug (un titre retravaillé change le slug et casse la recherche par ?slug=).",
+    "https://enseigna.fr/superprof-vs-completude/": 2114,
+    "https://enseigna.fr/superprof-vs-anacours/": 2040,
+    "https://enseigna.fr/superprof-vs-acadomia/": 1974,
+    "https://enseigna.fr/superprof-vs-voscours/": 1908,
+    "https://enseigna.fr/superprof-vs-les-sherpas/": 1746
+  },
+  "bindings": {
+    "_doc": "Table plate URL -> ID, tous types d'articles confondus. C'est celle à consulter pour retrouver l'ID d'un post.",
+    "https://enseigna.fr/superprof-avis-cours-langue/": 67,
+    "https://enseigna.fr/avis-superprof-loisirs/": 334,
+    "https://enseigna.fr/avis-superprof-soutien-scolaire/": 372,
+    "https://enseigna.fr/superprof-vs-les-sherpas/": 1746,
+    "https://enseigna.fr/superprof-vs-voscours/": 1908,
+    "https://enseigna.fr/superprof-vs-acadomia/": 1974,
+    "https://enseigna.fr/superprof-vs-anacours/": 2040,
+    "https://enseigna.fr/superprof-vs-completude/": 2114
+  }
+}
