@@ -12,8 +12,18 @@ disable-model-invocation: true
 # Génération article avis — Enseigna
 
 Produit un article **avis/review** pour `enseigna.fr` (soutien scolaire). Ton :
-vouvoiement, expert analytique. YMYL medium. Cette skill porte la **structure et
-les interdits** ; le fond (stats, experts, vocabulaire) vient du prompt site.
+testeur à la **première personne du singulier** (« j'ai testé », « j'ai relevé »,
+« je préfère »), **vouvoiement du lecteur**. Le testeur est **une personne
+avec une situation concrète** (apprenant, parent) qui raconte son parcours sur
+le service à d'autres élèves : vécu, attentes, impressions et préférences sont
+libres ; **tout fait vérifiable** (tarif, effectifs, conditions, chiffre,
+citation) vient d'une source réelle de `sources_brief.md`. L'intro part d'une
+situation humaine, jamais d'une institution ni d'un chiffre, et n'annonce pas
+le plan. Modèle de ton : https://enseigna.fr/avis-superprof-soutien-scolaire/.
+Détail de la règle, tics interdits et exemples ❌/✅ : sections « Persona »,
+« Personne et voix » et « Mots interdits » de `site.md`.
+YMYL medium. Cette skill porte la **structure et les interdits** ; le fond
+(stats, experts, vocabulaire) vient du prompt site.
 
 > **Source de vérité (à référencer, pas dupliquer)** :
 > `sites/enseigna.fr/prompts/site.md` (prompt principal),
@@ -50,7 +60,18 @@ communs** aux deux types (clés par slug).
    `prix_mensuel_moyen`, avis positif/neutre/négatif (date + texte), etc.
    `note_globale_5` **doit** correspondre au verdict /10 du corps (cohérence rich
    snippet).
-3. `sites/enseigna.fr/outputs/csv/{slug-à-tirets}_tableau_{descriptif}.csv` — chaque
+   **Clés = strictement celles du template**, jamais de clé inventée
+   (`statuts_enseignants`, `politique_annulation`, `commentaire_avis`… sont
+   des champs qui n'existent pas dans WordPress et sont perdus). **Valeurs =
+   valeurs de fiche technique, pas des phrases** : un prix est un nombre entier
+   arrondi (« 14 € », moyenne de la fourchette si le tarif varie, fourchette
+   reportée dans `asterisque_prix` en une ligne), un nombre de cours est un
+   nombre, un téléphone absent est « Non communiqué », les dates d'avis au
+   format `JJ/MM/AAAA`, les verbatims d'avis en une phrase + attribution.
+3. `sites/enseigna.fr/outputs/csv/{slug-à-tirets}_tableau_{colonnes}.csv` — `{colonnes}`
+   = les en-têtes du tableau en minuscules sans accents, reliés par `_`
+   (ex. `_tableau_critere_note_commentaire.csv`), pour retrouver le bon
+   fichier dans le Finder ; jamais un nom « descriptif » inventé. Chaque
    `<table>` du corps exporté en CSV (dossier **`csv/`**, jamais `tables/`), **max
    3/article**. Aucun shortcode `[table id=X /]` dans le HTML : les rédacteurs
    importent le CSV dans TablePress puis insèrent en mode code. Réf.
@@ -66,15 +87,34 @@ communs** aux deux types (clés par slug).
 Suivre les **articles de référence publiés**, PAS `review_template.md` :
 
 1. **Intro** : 2-3 `<!-- wp:paragraph --><p>…</p>` sans classe.
-2. **Premier H2 structurant** (« Ce que nous avons évalué » / « Ce que disent les
+2. **Premier H2 structurant** (« Ce que j'ai évalué » / « Ce que disent les
    avis »), puis les H2 d'analyse.
 3. **Fin d'article** : pros/cons (`wp:columns`) → note finale → **verdict rapide**
    (`<!-- wp:html --><div class="verdict-rapide">…</div>`) → **FAQ**.
    Le verdict rapide va à la **FIN, avant la FAQ** — jamais au début. Réf.
    [[feedback-enseigna-verdict-rapide-position]].
 
-**Convention pros/cons** (pour la conversion Gutenberg auto en `wp:columns`) :
+**Convention pros/cons.** À la **génération**, écrire le `div` brut :
 `<div class="pros-cons"><div class="cons"><h3>Les -</h3>…</div><div class="pros"><h3>Les +</h3>…</div></div>`.
+`cw finalize` le convertit ensuite en blocs `wp:columns` — c'est cette forme
+convertie, et elle seule, qui part en production :
+
+```
+<!-- wp:columns {"className":"pros-cons-wrapper"} -->
+<div class="wp-block-columns pros-cons-wrapper">
+<!-- wp:column {"className":"cons-block"} -->…<!-- /wp:column -->
+<!-- wp:column {"className":"pros-block"} -->…<!-- /wp:column -->
+</div>
+<!-- /wp:columns -->
+```
+
+> ⚠️ **Un `.gutenberg.html` qui contient encore `<div class="pros-cons">` n'est
+> pas publiable** : WordPress le rangerait en bloc « HTML classique », non
+> éditable en colonnes. Le cas se produit quand le fichier est édité à la main
+> **après** le dernier passage de `finalize`. Contrôle avant publication :
+> `grep -c 'pros-cons-wrapper'` doit renvoyer 2, et `grep -c 'class="pros-cons"'`
+> doit renvoyer 0. Même logique pour `div.verdict-rapide`, qui reste lui
+> volontairement dans un bloc `wp:html`.
 
 **Liste de matières/activités avec émojis** : quand la plateforme testée couvre
 plusieurs matières ou disciplines (langues, soutien scolaire, loisirs…), en
