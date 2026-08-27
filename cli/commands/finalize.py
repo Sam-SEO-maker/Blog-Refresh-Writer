@@ -247,11 +247,26 @@ def _maybe_publish(base: Path, site_slug: str, url: str, url_slug: str, saved: P
     # `.gutenberg.html`. WP l'accepte et le range en `core/freeform` : article
     # non éditable en blocs, images et tableaux non reconnus, sur un 200.
     # Même garde que `cw push` — le seul chemin de publication qui l'avait.
-    if "<!-- wp:" not in gutenberg_path.read_text(encoding="utf-8"):
+    gutenberg_html = gutenberg_path.read_text(encoding="utf-8")
+    if "<!-- wp:" not in gutenberg_html:
         click.echo(f"  ⛔ Cannot publish: {gutenberg_path.name} carries no "
                    "Gutenberg block delimiter (bare HTML under a .gutenberg "
                    "name). A post-conversion step stripped them - re-run the "
                    "formatter on this file before publishing.")
+        return
+
+    # Même piège, un cran plus fin : le fichier porte bien des délimiteurs, mais
+    # le bloc pros/cons est resté à sa forme SOURCE (`<div class="pros-cons">`),
+    # que la génération écrit et que l'étape 1 convertit normalement en
+    # `wp:columns`. Une édition manuelle du `.gutenberg.html` APRÈS le dernier
+    # finalize le laisse à l'état brut : WP le range alors en bloc « HTML
+    # classique », non éditable en colonnes, sur un 200 parfaitement trompeur.
+    if 'class="pros-cons"' in gutenberg_html:
+        click.echo(f"  ⛔ Cannot publish: {gutenberg_path.name} still carries a "
+                   "raw <div class=\"pros-cons\"> instead of the converted "
+                   "wp:columns block (WP would store it as a classic-HTML "
+                   "block, not editable as columns). Re-run the formatter on "
+                   "this file before publishing.")
         return
 
     # Metadata (title + meta_description) : trois conventions de nommage
