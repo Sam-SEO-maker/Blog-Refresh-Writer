@@ -800,10 +800,27 @@ Retourne l'article complet réécrit en HTML:
         """
         current_year = datetime.now().year
 
+        new_article = bool(audit_data.get("new_article"))
         prompt_parts = [
-            "# TÂCHE: Refresh SEO Article",
+            "# TÂCHE: Création d'un nouvel article SEO" if new_article
+            else "# TÂCHE: Refresh SEO Article",
             "",
         ]
+        if new_article:
+            # Le reste du prompt est celui d'un refresh (stratégie FULL_REFRESH,
+            # site.md) : il parle d'« original » et d'assets à préserver. Dire
+            # explicitement qu'il n'y en a pas évite au rédacteur de chercher un
+            # texte source, ou pire, d'en inventer un.
+            prompt_parts.extend([
+                "> **Nouvel article** : cette URL n'existe pas encore sur le site. "
+                "Il n'y a **aucun contenu original** (original.html est vide) et "
+                "aucun asset à préserver : les compteurs ci-dessous valent 0. "
+                "Toute la matière vient du plan éditorial validé (content_plan.md), "
+                "du brief de sources (sources_brief.md) et des instructions "
+                "éditoriales. Les consignes « mettre à jour », « conserver », "
+                "« réécrire » ne s'appliquent pas.",
+                "",
+            ])
 
         # Langue de sortie EXPLICITE (multi-marché). Rend le workflow transposable :
         # le contenu est produit dans la langue du marché (site_config.language),

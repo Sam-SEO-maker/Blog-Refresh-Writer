@@ -31,6 +31,11 @@ class MinimalRow:
     # concurrents récupérés par DataForSEO meurent à la frontière du CLI : le
     # la lecture SERP (session principale) ne peut plus mesurer le gap concurrentiel.
     serp: dict = field(default_factory=dict)
+    # Article à créer (aucun post WP derrière l'URL) : pas de fetch, baseline
+    # d'assets vide, stratégie FULL_REFRESH forcée. Lu par
+    # _prepare_context_for_claude_code (audit_data.new_article) et par le
+    # ghostwriter (en-tête de prompt « création », pas « refresh »).
+    new_article: bool = False
 
 
 @click.command()
@@ -49,8 +54,15 @@ class MinimalRow:
               help='Force a specific strategy')
 @click.option('--main-keyword', '--keyword', 'keyword',
               help='Main keyword (forces SERP analysis). --keyword = legacy alias.')
+@click.option('--new', 'new_article', is_flag=True, default=False,
+              help='New article: the URL has no WordPress post yet. Skips the '
+                   'content fetch (empty original, zero assets baseline), forces '
+                   'FULL_REFRESH and requires --main-keyword (no GSC data exists '
+                   'for a page that is not live). Used by /new-blogpost.')
+@click.option('--title', 'title_opt', default="",
+              help='Article title (with --new only: there is no page to read it from).')
 @click.option('--debug', is_flag=True, help='Debug mode with full traceback')
-def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
+def refresh(url, blog, spreadsheet_id, strategy, keyword, new_article, title_opt, debug):
     """
     Refresh a single URL.
 
@@ -71,6 +83,19 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
     click.echo(f"{'='*70}")
     click.echo(f"URL:      {url}")
     click.echo(f"Blog:     {blog}")
+    if new_article:
+        # Sans mot-clé, l'audit retomberait sur GSC (vide : la page n'existe
+        # pas) puis sur le slug — et le guide YTG comme la SERP partiraient
+        # sur une requête que personne ne tape. Mieux vaut refuser tout de suite.
+        if not keyword:
+            click.echo("  ✗ --new requires --main-keyword (no GSC data for a page "
+                       "that is not live; the slug is not a query).", err=True)
+            raise click.Abort()
+        if strategy and strategy != "FULL_REFRESH":
+            click.echo(f"  ⚠ --new ignores --strategy {strategy}: a new article "
+                       "is always written in full (FULL_REFRESH).")
+        strategy = "FULL_REFRESH"
+        click.echo("Mode:     NEW ARTICLE (no fetch, empty assets baseline)")
     if strategy:
         click.echo(f"Strategy:  {strategy} (forced)")
     if keyword:
@@ -85,13 +110,27 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
     )
 
     # Fetch content via WP API (ou HTTP scraping fallback)
-    click.echo("[2/6] Fetching content...")
-    fetch_result = orchestrator._fetch_html(url, site_slug=blog)
-    if not fetch_result.get("clean_body"):
+    if new_article:
+        click.echo("[2/6] Fetching content... skipped (new article, nothing to fetch)")
+        fetch_result = {
+            "full_html": "",
+            "clean_body": "",
+            "extraction_metadata": {"method_used": "new_article", "word_count": 0},
+            "assets_baseline": {
+                "counts": {"images": 0, "tables": 0, "videos": 0, "internal_links": 0},
+                "image_tags": [],
+                "internal_link_tags": [],
+            },
+        }
+    else:
+        click.echo("[2/6] Fetching content...")
+        fetch_result = orchestrator._fetch_html(url, site_slug=blog)
+    if not new_article and not fetch_result.get("clean_body"):
         click.echo("  ✗ Could not fetch the content", err=True)
         raise click.Abort()
     method = fetch_result["extraction_metadata"].get("method_used", "unknown")
-    click.echo(f"  ✓ Content fetched via {method} ({len(fetch_result['clean_body'])} chars)")
+    if not new_article:
+        click.echo(f"  ✓ Content fetched via {method} ({len(fetch_result['clean_body'])} chars)")
 
     # Process URL (audit + decision)
     click.echo("[3/6] Audit + strategy decision...")
@@ -136,6 +175,8 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
         soup = BeautifulSoup(fetch_result["full_html"], 'html.parser')
         h1_tag = soup.find('h1')
         title = h1_tag.get_text(strip=True) if h1_tag else ""
+        if new_article:
+            title = title_opt or ""
 
         # Prepare context directory
         click.echo("[5/6] Preparing generation context...")
@@ -149,6 +190,7 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, debug):
             people_also_ask=result.people_also_ask or "",
             secondary_keywords=result.secondary_keywords or "",
             serp=result.serp or {},
+            new_article=new_article,
         )
 
         # Propager le guide YTG calculé au STEP 2.5 de process_url : sans ça, les

@@ -7,6 +7,7 @@ Usage:
     cw batch audit-serp [--site enseigna.fr]
     cw batch decision [--site enseigna.fr]
     cw batch refresh --action FULL_REFRESH [--site enseigna.fr] [--tab "🍼 Medium Potential"]
+    cw batch new-list --site enseigna.fr --tab "A ajouter"   (articles to CREATE, /new-blogpost)
     cw batch workflow-auto [--site enseigna.fr] [--no-auto-refresh]
 """
 
@@ -293,3 +294,116 @@ def extract_tables(site_id, input_dir, output_dir, single_file):
     click.echo(f"\nResult: {total_tables} tables extracted "
                f"({files_with_tables} articles with tables, "
                f"{files_without_tables} without)")
+
+
+# ---------------------------------------------------------------------------
+# new-list : backlog d'articles à CRÉER (pas à refresher)
+# ---------------------------------------------------------------------------
+# Colonnes lues par leur EN-TÊTE (ligne 1), pas par index : l'onglet de
+# création (`A ajouter` sur enseigna.fr) porte des colonnes que `sheets.tabs`
+# ne déclare pas (titre, H1, catégorie, date de publication) et un onglet
+# d'un autre site peut les ordonner autrement. Un en-tête absent = colonne
+# vide, jamais une erreur : seule `url` est indispensable.
+NEW_LIST_HEADERS = {
+    "url": ("url", "blogpost_url"),
+    "main_keyword": ("main_keyword", "keyword", "top_keyword"),
+    "title": ("blogpost_title", "title"),
+    "h1": ("blogpost_h1", "h1"),
+    "category": ("blog_category", "category"),
+    "company": ("company_name", "company"),
+    "volume": ("volume",),
+    "publish_date": ("publish_date", "published", "date_publication"),
+}
+
+
+def pending_new_rows(rows: list[list[str]]) -> list[dict]:
+    """Lignes d'articles à créer : URL renseignée, `publish_date` vide.
+
+    `rows` = onglet brut (ligne 0 = en-têtes). Une ligne dont `publish_date`
+    est remplie est considérée publiée et sortie du backlog ; une ligne sans
+    URL est ignorée (rien à créer sans slug cible). L'ordre de l'onglet est
+    conservé (les onglets de création sont triés par volume décroissant).
+    """
+    if not rows:
+        return []
+    header = [(h or "").strip().lower() for h in rows[0]]
+    idx = {}
+    for key, aliases in NEW_LIST_HEADERS.items():
+        for alias in aliases:
+            if alias in header:
+                idx[key] = header.index(alias)
+                break
+
+    def cell(row, key):
+        i = idx.get(key)
+        return (row[i] if i is not None and i < len(row) else "").strip()
+
+    out = []
+    for n, row in enumerate(rows[1:], start=2):
+        url = cell(row, "url")
+        if not url or cell(row, "publish_date"):
+            continue
+        out.append({
+            "row": n,
+            "url": url,
+            "main_keyword": cell(row, "main_keyword"),
+            "title": cell(row, "title"),
+            "h1": cell(row, "h1"),
+            "category": cell(row, "category"),
+            "company": cell(row, "company"),
+            "volume": cell(row, "volume"),
+        })
+    return out
+
+
+@batch.command(name="new-list")
+@blog_option(required=True)
+@click.option("--tab", required=True,
+              help='Tab holding the articles to create (e.g. "A ajouter"). Columns are '
+                   'read by header name: url, main_keyword, blogpost_title, blogpost_h1, '
+                   'blog_category, publish_date.')
+@click.option("--spreadsheet-id", default=None,
+              help="Google Sheet ID (default: the one declared in the site config)")
+@click.option("--limit", type=int, default=0, show_default=True,
+              help="Maximum number of rows to list (0 = all).")
+@click.option("--json", "as_json", is_flag=True, default=False,
+              help="Machine-readable output (one JSON array).")
+def new_list(blog, tab, spreadsheet_id, limit, as_json):
+    """
+    Lists the articles still to CREATE in a Sheet tab (backlog of /new-blogpost).
+
+    A row is pending when its `url` is filled and its `publish_date` is empty.
+    Read-only: nothing is written to the Sheet, no API credit is spent. Each
+    URL is then prepared with `cw refresh <url> --site <site> --main-keyword
+    "<kw>" --title "<title>" --new`.
+    """
+    import json as _json
+    from scripts.sheets.tab_status import _spreadsheet_id
+    from scripts.sheets.sheets_client import SheetsClient
+
+    sid = spreadsheet_id or _spreadsheet_id(blog)
+    rows = SheetsClient(sid)._read_sheet(tab)
+    if not rows:
+        click.echo(f"❌ Tab '{tab}' is empty or unreadable (spreadsheet {sid}).", err=True)
+        raise click.exceptions.Exit(1)
+    pending = pending_new_rows(rows)
+    if limit and limit > 0:
+        pending = pending[:limit]
+
+    if as_json:
+        click.echo(_json.dumps(pending, ensure_ascii=False, indent=2))
+        return
+
+    click.echo(f"\n📝 NEW ARTICLES TO CREATE — {blog} / '{tab}': "
+               f"{len(pending)} pending (of {len(rows) - 1} rows)\n")
+    for r in pending:
+        click.echo(f"  [{r['row']}] {r['url']}")
+        click.echo(f"       kw: {r['main_keyword'] or '(none)'}"
+                   + (f"  | vol: {r['volume']}" if r['volume'] else "")
+                   + (f"  | {r['category']}" if r['category'] else ""))
+        if r["title"]:
+            click.echo(f"       title: {r['title']}")
+        if r["h1"]:
+            click.echo(f"       h1:    {r['h1']}")
+    if not pending:
+        click.echo("  (nothing pending: every row has a publish_date or no url)")

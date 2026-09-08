@@ -1124,6 +1124,10 @@ class RefreshOrchestrator:
             # `serp` reste alors vide, ce qui est explicite à la lecture —
             # préférable à une clé absente qu'il interpréterait comme une panne.
             "serp": getattr(row, "serp", None) or {},
+            # Article à créer (cw refresh --new) : aucun original, baseline
+            # d'assets à zéro. Le ghostwriter bascule l'en-tête du prompt en
+            # « création » ; finalize garde sa validation (0 ≥ 0 passe).
+            "new_article": bool(getattr(row, "new_article", False)),
             "url_slug": url_slug,
             "output_dir": f"sites/{row.site_slug}/outputs",
             # Semantic field: category for SemanticChecker._load_semantic_field()
@@ -1172,7 +1176,10 @@ class RefreshOrchestrator:
 
         # Build task instructions
         instructions = [
-            "Lis le fichier original.html complet",
+            ("Article à CRÉER : original.html est vide, il n'y a rien à préserver "
+             "ni à recopier — tout le contenu vient du plan, des sources et du prompt"
+             if getattr(row, "new_article", False)
+             else "Lis le fichier original.html complet"),
             "Lis les données d'audit dans audit_data.json",
             "Lis les guidelines dans guidelines.txt",
             "Génère le HTML optimisé en respectant la RÈGLE D'OR",
