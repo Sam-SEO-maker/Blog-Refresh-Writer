@@ -68,6 +68,18 @@
     ],
     "status_col": "F"
   },
+  "notion": {
+    "orders": {
+      "database_id": "1ebd6418-695a-80ff-8cc9-db41a02d7f27",
+      "data_source_id": "151fa1c8-edbe-4a41-afab-e5d115597098",
+      "view_url": "https://app.notion.com/p/superprof/1ebd6418695a80ff8cc9db41a02d7f27?v=1ebd6418695a80cd9e6b000cac072a17",
+      "col_url": "Local resource URL",
+      "col_keyword": "Main KW",
+      "col_type": "Type of article",
+      "type_value": "Refresh",
+      "country_page_id": "4d06ca37-4111-4b09-81d9-b6d55697bef8"
+    }
+  },
   "scraping_config": {
     "article_body": "article.post-content, article.entry-content, .post-content, .entry-content",
     "exclude_selectors": [

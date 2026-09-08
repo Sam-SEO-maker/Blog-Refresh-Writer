@@ -241,3 +241,73 @@ def sync_sites(do_apply, dump_schema):
         _sys.argv = old
     if code:
         sys.exit(code)
+
+
+@notion.command(name='push-keywords')
+@blog_option()
+@click.option('--tab', required=True,
+              help='Sheet tab holding the authoritative "Main Keyword" column.')
+@click.option('--apply', 'do_apply', is_flag=True,
+              help='Write to Notion (otherwise dry-run diff only).')
+@click.option('--include-reworded', is_flag=True,
+              help='Also overwrite keywords that merely differ in wording '
+                   '(may undo a deliberate editorial choice).')
+def push_keywords(blog, tab, do_apply, include_reworded):
+    """Push the Sheet's Main Keyword into Notion's "Main KW", matched by URL.
+
+    The manual copy-paste pairs rows by position; this pairs them by URL, so a
+    one-row shift becomes impossible. Only "Main KW" is written - Writer,
+    Deadline, Price, Status and Keywords stay the PO's own.
+    """
+    from scripts.audit.gsc_tab_perf import _read_tab_rows
+    from scripts.notion.orders_sync import (
+        KIND_ABSENT, KIND_MISSING, KIND_REWORDED, KIND_SHIFTED,
+        apply_plan, build_plan, read_order_rows,
+    )
+
+    try:
+        sheet_rows = _read_tab_rows(blog, tab)
+        for row in sheet_rows:
+            row["tab"] = tab
+        notion_rows = read_order_rows(blog)
+    except (ValueError, RuntimeError) as exc:
+        click.echo(f"ERROR: {exc}", err=True)
+        sys.exit(1)
+
+    plan = build_plan(sheet_rows, notion_rows)
+    shifted = [p for p in plan if p["kind"] == KIND_SHIFTED]
+    reworded = [p for p in plan if p["kind"] == KIND_REWORDED]
+    missing = [p for p in plan if p["kind"] == KIND_MISSING]
+    # Une URL Notion absente de CET onglet vient d'un autre onglet du classeur :
+    # c'est le cas normal, pas une anomalie. On la compte sans la détailler.
+    absent = [p for p in plan if p["kind"] == KIND_ABSENT]
+
+    click.echo(f"Sheet '{tab}': {len(sheet_rows)} rows | Notion: {len(notion_rows)} rows")
+    click.echo(f"Shifted (proven copy-paste offset): {len(shifted)}")
+    click.echo(f"Reworded (needs a human call):      {len(reworded)}")
+    click.echo(f"Empty in Notion:                    {len(missing)}")
+    click.echo(f"Not in this tab (left alone):       {len(absent)}")
+
+    for label, items in (("SHIFTED", shifted), ("EMPTY", missing), ("REWORDED", reworded)):
+        if not items:
+            continue
+        click.echo(f"\n--- {label} ---")
+        for item in items:
+            slug = item["url"].rstrip('/').split('/')[-1]
+            click.echo(f"  {slug[:46]:<48} {item['keyword'][:34]!r:<38} -> {item['sheet_keyword'][:34]!r}")
+
+    kinds = {KIND_SHIFTED, KIND_MISSING}
+    if include_reworded:
+        kinds.add(KIND_REWORDED)
+
+    to_write = [p for p in plan if p["kind"] in kinds]
+    if not do_apply:
+        click.echo(f"\nDry-run: {len(to_write)} row(s) would be written. Re-run with --apply.")
+        if reworded and not include_reworded:
+            click.echo("Reworded rows left untouched (add --include-reworded to force).")
+        return
+
+    written, failed = apply_plan(blog, plan, kinds)
+    click.echo(f"\nWritten: {written} | Failed: {failed}")
+    if failed:
+        sys.exit(1)
