@@ -341,3 +341,103 @@ def gsc_state(site, months, top_pos, min_impressions, dry_run):
     except Exception as e:
         click.echo(f"\n❌ ERROR: {e}", err=True)
         raise click.Abort()
+
+
+@audit.command("impact")
+@site_option(required=True, dest='site')
+@click.option('--month', default=None,
+              help='Month of the republications to measure, YYYY-MM (e.g. 2026-08). '
+                   'Alternative to --start/--end')
+@click.option('--start', default=None,
+              help='Republication window start YYYY-MM-DD (with --end)')
+@click.option('--end', default=None,
+              help='Republication window end YYYY-MM-DD (with --start)')
+@click.option('--maturity', type=int, default=30,
+              help='Days observed after each republication, and as many before '
+                   '(default: 30). Articles with less hindsight than 7 days are skipped')
+@click.option('--top', type=int, default=15, help='Rows per article table (default: 15)')
+@click.option('--no-wp-check', is_flag=True,
+              help='Skip the WordPress consistency check. That check flags articles '
+                   'modified again after their refresh (their "after" window mixes '
+                   'two interventions); it costs one API call per article')
+@click.option('--partial', is_flag=True,
+              help='Produce the report even when the most recent articles lack the '
+                   '7-day minimum hindsight. Off by default: run too early, a month '
+                   'report silently drops its last weeks (August 2026 launched on '
+                   'Sept 1st covered 44 of 78 articles)')
+@click.option('--top-queries', type=int, default=10,
+              help='Queries listed per family (held / gained / lost) on each '
+                   'article card of the annex (default: 10)')
+@click.option('--no-queries', is_flag=True,
+              help='Skip the per-query GSC collection. That collection is what '
+                   'shows the semantic shift of a refresh (which queries an '
+                   'article gained or lost); it costs one extra paginated call '
+                   'per window, not per URL')
+@click.option('--pdf', is_flag=True,
+              help='Also write an A4 PDF next to the HTML (needs WeasyPrint). '
+                   'The PDF holds the director-facing pages only')
+@click.option('--pdf-annex', is_flag=True,
+              help='Include the per-URL annex in the PDF (~30 pages on a 76-article '
+                   'lot). Off by default: the sent document is the short one')
+@click.option('--dry-run', is_flag=True, help='Do not write the JSON/HTML report')
+def impact(site, month, start, end, maturity, top, top_queries, no_queries,
+           pdf, pdf_annex, no_wp_check, partial, dry_run):
+    """Monthly impact report: every republished article compared to itself."""
+    from scripts.audit.impact_cohort import run_impact
+
+    def fmt_pct(v):
+        return "n/a" if v is None else (f"+{v}%" if v > 0 else f"{v}%")
+
+    click.echo(f"\n📈 IMPACT REFRESH - {site} / {month or f'{start} → {end}'}")
+    try:
+        r = run_impact(site, month=month, start=start, end=end,
+                       maturity=maturity, top=top, top_queries=top_queries,
+                       with_queries=not no_queries, pdf=pdf, pdf_annex=pdf_annex,
+                       check_wp=not no_wp_check, partial=partial,
+                       dry_run=dry_run)
+        c, o, ctrl = r["counts"], r["overall"], r["control"]
+        cov = r.get("coverage") or {}
+        click.echo(f"  Republished: {c['republished']} | measurable {c['measurable']} "
+                   f"| skipped {c['skipped']} | coverage {cov.get('pct')}%")
+        if cov.get("pct", 100) < 100:
+            click.echo(f"  ⚠️  Partial report: the most recent articles lack hindsight. "
+                       f"Full lot measurable from {cov.get('ready_on')}")
+        if cov.get("maturity_max", 0) - cov.get("maturity_min", 0) >= 14:
+            click.echo(f"  ⚠️  Uneven hindsight ({cov['maturity_min']}-"
+                       f"{cov['maturity_max']} d): read by wave, not by total")
+        click.echo(f"  Impressions: {o['impressions_before']:,} → "
+                   f"{o['impressions_after']:,} ({fmt_pct(o['impressions_pct'])})")
+        click.echo(f"  Clicks:      {o['clicks_before']:,} → {o['clicks_after']:,} "
+                   f"({fmt_pct(o['clicks_pct'])})")
+        click.echo(f"  CTR:         {o['ctr_before']}% → {o['ctr_after']}%")
+        click.echo(f"  Control:     impr {fmt_pct(ctrl['impressions_pct'])}, "
+                   f"clicks {fmt_pct(ctrl['clicks_pct'])} (rest of the site, same dates)")
+        click.echo(f"  Winners:     {r['winners']}/{c['measurable']} | "
+                   f"median × {r['median_factor']}")
+        click.echo(f"  Dates from:  {r['pushed_source']}")
+        if r.get("touched_after_refresh"):
+            click.echo(f"  ⚠️  {len(r['touched_after_refresh'])} articles modified again "
+                       "after their refresh (mixed interventions)")
+
+        if r.get("ramp"):
+            click.echo("\n  Maturation of the main wave (impressions/day):")
+            for w in r["ramp"]:
+                click.echo(f"    {w['label']:<16} {w['per_day']:>8}/j  x{w['factor']}")
+
+        click.echo("\n  By hindsight bucket:")
+        for k, v in r["by_maturity"].items():
+            click.echo(f"    {k:<14} {v['articles']:>3} art. | impr "
+                       f"{fmt_pct(v['impressions_pct']):>9} | clics {fmt_pct(v['clicks_pct'])}")
+
+        if r.get("html_path"):
+            click.echo(f"\n  Report: {r['html_path']}")
+            click.echo(f'  open "{r["html_path"]}"')
+        if pdf:
+            if r.get("pdf_path"):
+                click.echo(f"  PDF:    {r['pdf_path']}")
+            else:
+                click.echo("  ⚠️  PDF skipped: WeasyPrint not installed "
+                           "(pip install weasyprint)")
+    except Exception as e:
+        click.echo(f"\n❌ ERROR: {e}", err=True)
+        raise click.Abort()
