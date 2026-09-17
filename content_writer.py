@@ -53,6 +53,7 @@ from cli.commands import ngl_status as ngl_status_cmd
 from cli.commands import site as site_cmd
 from cli.commands import status_cmd
 from cli.commands import push as push_cmd
+from cli.commands import seo_tags_cmd
 
 # Enregistrer les commandes
 cli.add_command(refresh.refresh)
@@ -68,6 +69,7 @@ cli.add_command(statuts_cmd.statuts)
 cli.add_command(status_cmd.status)
 cli.add_command(ngl_status_cmd.ngl_status)
 cli.add_command(site_cmd.site)
+cli.add_command(seo_tags_cmd.seo_tags)
 
 
 if __name__ == "__main__":
