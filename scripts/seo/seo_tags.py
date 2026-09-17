@@ -559,7 +559,46 @@ def read_rows(client, tab: dict, tab_name: str, statuses: set[str],
     return out
 
 
-def write_sheet(client, tab: dict, tab_name: str, results: list[RowResult]) -> int:
+def provenance_note(r: "RowResult", today: Optional[str] = None) -> str:
+    """La ligne de traçabilité : quel mot-clé a produit quelle balise, et quand.
+
+    Le plugin du backoffice mémorise les mots-clés saisis à la main dans ses
+    propres champs ; passer par son API ne les y écrit pas, et WordPress ne
+    persiste pas une meta non déclarée (testé : la requête est acceptée, la
+    valeur disparaît). Une relectrice qui ouvre l'article une semaine plus tard
+    ne voit donc ni le mot-clé utilisé, ni qu'un agent est passé — juste des
+    balises apparues sans explication, ce qui jette le doute sur le travail.
+
+    Les révisions WordPress datent et attribuent bien chaque modification, mais
+    ne disent pas *avec quel mot-clé* elle a été faite. La trace est donc
+    écrite dans la Sheet, à côté des balises qu'elle explique, et mentionne les
+    deux mots-clés distinctement puisqu'ils n'alimentent pas la même balise.
+    """
+    from datetime import date
+
+    day = today or date.today().isoformat()
+    parts = [f"Généré {day} via l'outil SEO du backoffice"]
+    if r.main_keyword:
+        parts.append(f"title/meta ← « {r.main_keyword} »")
+    h1 = r.steps.get(STEP_H1)
+    if h1 and h1.chosen:
+        if h1.fallback_from:
+            # Le secondary a été écarté : le dire, sinon la Sheet affiche un
+            # mot-clé qui n'a pas servi.
+            parts.append(f"H1 ← « {h1.keyword} » (au lieu de « {h1.fallback_from} », écarté)")
+        elif h1.keyword:
+            parts.append(f"H1 ← « {h1.keyword} »")
+    missing = [_LABEL_STEP[s] for s in STEPS if not r.value(s)]
+    if missing:
+        parts.append("non généré : " + ", ".join(missing))
+    return " · ".join(parts)
+
+
+_LABEL_STEP = {STEP_TITLE: "title", STEP_H1: "H1", STEP_META: "meta description"}
+
+
+def write_sheet(client, tab: dict, tab_name: str, results: list[RowResult],
+                with_provenance: bool = True) -> int:
     """Écrit les balises retenues dans les colonnes déclarées. Renvoie le nb de cellules."""
     cols = {STEP_TITLE: tab.get("col_title"),
             STEP_H1: tab.get("col_h1"),
@@ -572,6 +611,7 @@ def write_sheet(client, tab: dict, tab_name: str, results: list[RowResult]) -> i
             f"dans sheets.tabs."
         )
 
+    col_note = tab.get("col_provenance")
     updates = []
     for r in results:
         for step, col in cols.items():
@@ -580,15 +620,47 @@ def write_sheet(client, tab: dict, tab_name: str, results: list[RowResult]) -> i
                 updates.append({"sheet": tab_name,
                                 "cell": f"{_col_letter(col)}{r.row}",
                                 "value": val})
+        # La trace n'a de sens qu'à côté d'au moins une balise écrite.
+        if with_provenance and col_note is not None and any(r.value(s) for s in STEPS):
+            updates.append({"sheet": tab_name,
+                            "cell": f"{_col_letter(col_note)}{r.row}",
+                            "value": provenance_note(r)})
     if not updates:
         return 0
     client._batch_update_cells(updates)
     return len(updates)
 
 
+def _fetch_meta(client, post_id: int) -> dict:
+    """Les meta SEOPress en ligne pour ce post.
+
+    Un appel dédié parce que le client WP normalise ses réponses et n'expose
+    pas `meta` : sans cette lecture, impossible de savoir si une balise est
+    déjà posée en prod, donc impossible de ne pas l'écraser.
+    """
+    import requests
+
+    try:
+        resp = requests.get(
+            f"{client.api_base_url}/posts/{post_id}",
+            params={"context": "edit", "_fields": "meta"},
+            auth=client._auth,
+            timeout=client.timeout,
+            headers={"User-Agent": "ContentWriter/1.0"},
+        )
+        if resp.status_code == 200:
+            return resp.json().get("meta") or {}
+    except Exception as e:
+        logger.warning("lecture des meta du post %s impossible : %s", post_id, e)
+    # En cas d'échec, on se comporte comme si tout était déjà rempli : ne rien
+    # écrire vaut mieux qu'écraser une balise qu'on n'a pas pu lire.
+    return {SEOPRESS_TITLE: "?", SEOPRESS_DESC: "?"}
+
+
 def push_to_seopress(site: str, results: list[RowResult],
                      base_path: Optional[Path] = None,
-                     with_h1: bool = False) -> list[dict]:
+                     with_h1: bool = False,
+                     overwrite: bool = False) -> list[dict]:
     """Pousse les balises sur WordPress, article par article.
 
     Title et meta description partent dans les meta SEOPress. Le H1 ne suit
@@ -599,6 +671,14 @@ def push_to_seopress(site: str, results: list[RowResult],
     Le corps est sauvegardé avant toute réécriture, dans le même
     `wp_backups/{id}_before.json` que la publication : c'est la seule trace
     qui permette de revenir en arrière sur un article non refreshé.
+
+    **Une meta déjà posée en prod n'est pas écrasée** sans `overwrite`. Les
+    articles « Rédigé » / « Prêt pour relecture » sont en ligne, et le pipeline
+    y a souvent déjà écrit : sur 500 articles du parc, 84 % ont une meta
+    description (écrite au push, avec le contexte YTG et les sources) et 14 %
+    ont aussi un meta title. Les remplacer par une génération faite depuis le
+    seul mot-clé serait une régression éditoriale silencieuse — alors que
+    *compléter* le title manquant est le vrai gain.
     """
     from scripts.utils.push_to_wp import build_client, resolve_wp_post_id
 
@@ -622,6 +702,15 @@ def push_to_seopress(site: str, results: list[RowResult],
         row = {"url": r.url, "id": post["id"]}
         content = None
 
+        # Ne pas écraser ce qui est déjà en ligne : on ne pousse que les meta
+        # vides côté WordPress, sauf `overwrite` explicite.
+        if not overwrite and meta:
+            live = post.get("meta") or _fetch_meta(client, post["id"])
+            kept = {k: v for k, v in meta.items() if not (live.get(k) or "").strip()}
+            if len(kept) != len(meta):
+                row["preserved"] = sorted(set(meta) - set(kept))
+            meta = kept
+
         if with_h1 and r.value(STEP_H1):
             content, why = replace_body_h1(post.get("raw") or "", r.value(STEP_H1))
             row["h1"] = why
@@ -637,9 +726,18 @@ def push_to_seopress(site: str, results: list[RowResult],
                         "title": post.get("title"), "raw": post.get("raw"),
                     }, ensure_ascii=False, indent=2), encoding="utf-8")
 
+        if not meta and content is None:
+            # Tout était déjà en place : ce n'est pas un échec.
+            row["ok"] = True
+            row["error"] = None
+            row["skipped"] = "déjà renseigné en prod"
+            out.append(row)
+            continue
+
         res = client.update_post(post_id=post["id"], meta=meta or None,
                                  content=content)
         row["ok"] = res["ok"]
         row["error"] = res["error"]
+        row["written"] = sorted(meta) if meta else []
         out.append(row)
     return out

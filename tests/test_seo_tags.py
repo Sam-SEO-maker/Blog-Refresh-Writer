@@ -30,6 +30,7 @@ from scripts.seo.seo_tags import (
     generate_row,
     acronym_casing,
     apply_acronym_casing,
+    provenance_note,
     read_rows,
     replace_body_h1,
 )
@@ -331,6 +332,154 @@ class TestRemplacementH1:
         new, _ = replace_body_h1(self.CLASSIC, "Fonction & dérivée <avancée>")
         assert "&amp;" in new and "&lt;avancée&gt;" in new
         assert "<avancée>" not in new
+
+
+class TestPreservationDuLive:
+    """On complète ce qui est vide, on n'écrase pas ce qui est en ligne.
+
+    Les statuts « Rédigé » / « Prêt pour relecture » désignent des articles
+    déjà publiés : 84 % du parc a une meta description écrite par le pipeline
+    (avec le contexte YTG et les sources), que regénérer depuis le seul
+    mot-clé dégraderait.
+    """
+
+    SEOPRESS_TITLE = "_seopress_titles_title"
+    SEOPRESS_DESC = "_seopress_titles_desc"
+
+    class _FakeWP:
+        def __init__(self, live_meta):
+            self.api_base_url = "https://x.fr/wp-json/wp/v2"
+            self._auth = ("u", "p")
+            self.timeout = 30
+            self.live_meta = live_meta
+            self.updates = []
+
+        def get_post_by_url(self, url):
+            return {"id": 1, "slug": "a", "title": "T", "raw": "<h1>Vieux</h1>",
+                    "meta": self.live_meta}
+
+        def get_post_by_id(self, pid):
+            return self.get_post_by_url(None)
+
+        def update_post(self, post_id, title=None, content=None, meta=None,
+                        status=None, max_attempts=3):
+            self.updates.append({"meta": meta, "content": content})
+            return {"ok": True, "status_code": 200, "id": post_id,
+                    "error": None, "attempts": 1}
+
+    def _run(self, live_meta, overwrite, monkeypatch, tmp_path):
+        import scripts.seo.seo_tags as mod
+
+        wp = self._FakeWP(live_meta)
+        monkeypatch.setattr(mod, "SitePaths", lambda **kw: type(
+            "P", (), {"output_dir": lambda self, s: tmp_path})())
+        monkeypatch.setitem(sys.modules, "scripts.utils.push_to_wp", type(
+            "M", (), {"build_client": staticmethod(lambda *a, **k: wp),
+                      "resolve_wp_post_id": staticmethod(lambda *a, **k: 1)})())
+
+        r = RowResult(url="https://x.fr/a.html", row=2, main_keyword="kw")
+        r.steps = {
+            STEP_TITLE: Suggestion(STEP_TITLE, "kw", chosen="Titre neuf"),
+            STEP_H1: Suggestion(STEP_H1, "kw", chosen="H1 neuf"),
+            STEP_META: Suggestion(STEP_META, "kw", chosen="Meta neuve"),
+        }
+        res = mod.push_to_seopress("site", [r], base_path=tmp_path,
+                                   overwrite=overwrite)
+        return wp, res[0]
+
+    def test_meta_deja_posee_est_conservee(self, monkeypatch, tmp_path):
+        wp, row = self._run({self.SEOPRESS_DESC: "Description du pipeline"},
+                            overwrite=False, monkeypatch=monkeypatch,
+                            tmp_path=tmp_path)
+        sent = wp.updates[0]["meta"]
+        assert self.SEOPRESS_DESC not in sent, "la description en prod ne doit pas bouger"
+        assert sent[self.SEOPRESS_TITLE] == "Titre neuf", "le title vide se complète"
+        assert self.SEOPRESS_DESC in row["preserved"]
+
+    def test_overwrite_remplace_explicitement(self, monkeypatch, tmp_path):
+        wp, _ = self._run({self.SEOPRESS_DESC: "Description du pipeline"},
+                          overwrite=True, monkeypatch=monkeypatch,
+                          tmp_path=tmp_path)
+        assert wp.updates[0]["meta"][self.SEOPRESS_DESC] == "Meta neuve"
+
+    def test_lecture_des_meta_impossible_nécrit_rien(self, monkeypatch, tmp_path):
+        """Si on ne peut pas lire l'état en ligne, ne pas écrire à l'aveugle."""
+        import scripts.seo.seo_tags as mod
+
+        monkeypatch.setattr(mod, "_fetch_meta", lambda c, p: {
+            mod.SEOPRESS_TITLE: "?", mod.SEOPRESS_DESC: "?"})
+        wp, row = self._run({}, overwrite=False, monkeypatch=monkeypatch,
+                            tmp_path=tmp_path)
+        # Rien à écrire : aucun appel d'écriture n'est émis, et ce n'est pas
+        # compté comme un échec.
+        assert wp.updates == []
+        assert row["ok"] is True
+        assert row["skipped"] == "déjà renseigné en prod"
+
+
+class TestProvenance:
+    """La trace du travail, puisque WordPress n'en garde aucune.
+
+    Le plugin mémorise les mots-clés saisis à la main dans ses propres champs ;
+    l'API ne les y écrit pas, et une meta non déclarée n'est pas persistée par
+    WordPress. Sans cette note, une relectrice qui ouvre l'article une semaine
+    plus tard voit des balises apparues sans explication.
+    """
+
+    def _row(self, h1_kw="les ali", fallback=None, meta=True):
+        r = RowResult(url="https://x.fr/a.html", row=157,
+                      main_keyword="quels sont les ali",
+                      secondary_keyword="les ali")
+        r.steps = {
+            STEP_TITLE: Suggestion(STEP_TITLE, r.main_keyword, chosen="Quels sont les ALI"),
+            STEP_H1: Suggestion(STEP_H1, h1_kw, chosen="Les ALI : définition",
+                                fallback_from=fallback),
+        }
+        if meta:
+            r.steps[STEP_META] = Suggestion(STEP_META, r.main_keyword,
+                                            chosen="Comprendre les ALI.")
+        return r
+
+    def test_les_deux_mots_cles_sont_distingues(self):
+        """Ils n'alimentent pas la même balise : la note doit le dire."""
+        note = provenance_note(self._row(), today="2026-09-17")
+        assert "2026-09-17" in note
+        assert "title/meta ← « quels sont les ali »" in note
+        assert "H1 ← « les ali »" in note
+
+    def test_le_kw_ecarte_est_signale(self):
+        """Sinon la Sheet afficherait un mot-clé qui n'a pas servi."""
+        note = provenance_note(self._row(h1_kw="enlèvement définition",
+                                         fallback="enlèvement def"),
+                               today="2026-09-17")
+        assert "H1 ← « enlèvement définition »" in note
+        assert "au lieu de « enlèvement def »" in note
+
+    def test_les_balises_manquantes_sont_nommees(self):
+        note = provenance_note(self._row(meta=False), today="2026-09-17")
+        assert "non généré : meta description" in note
+
+    def test_ecriture_de_la_note_dans_la_colonne_declaree(self):
+        from scripts.seo.seo_tags import write_sheet
+
+        tab = {"col_url": 0, "col_title": 5, "col_h1": 6, "col_metadesc": 7,
+               "col_provenance": 14}
+        client = _FakeSheets([])
+        n = write_sheet(client, tab, "T", [self._row()])
+
+        cells = {u["cell"]: u["value"] for u in client.updates}
+        assert n == 4, "3 balises + la note"
+        assert "O157" in cells and "quels sont les ali" in cells["O157"]
+
+    def test_aucune_note_sans_colonne_declaree(self):
+        """Un onglet sans col_provenance ne doit pas recevoir de note ailleurs."""
+        from scripts.seo.seo_tags import write_sheet
+
+        tab = {"col_url": 0, "col_title": 5, "col_h1": 6, "col_metadesc": 7}
+        client = _FakeSheets([])
+        n = write_sheet(client, tab, "T", [self._row()])
+        assert n == 3
+        assert all(not u["cell"].startswith("O") for u in client.updates)
 
 
 class _FakeSheets:

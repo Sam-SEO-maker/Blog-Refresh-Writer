@@ -70,8 +70,14 @@ def _parse_rows(spec: str) -> tuple[int, int]:
 @click.option("--rows", "rows_spec", default=None,
               help="Restreindre à une plage de lignes, numéros affichés par Sheets "
                    "(en-têtes comprises), ex. 140-180. Filtre avant --limit.")
-@click.option("--status", "statuses", default="a faire,à faire", show_default=True,
-              help="Statuts éligibles, séparés par des virgules. Vide = ignorer le statut.")
+@click.option("--status", "statuses",
+              default="a faire,à faire,rédigé,redige,prêt pour relecture,pret pour relecture",
+              show_default=True,
+              help="Statuts éligibles, séparés par des virgules. Vide = ignorer "
+                   "le statut. « Rédigé » et « Prêt pour relecture » désignent "
+                   "tous deux un article déjà généré, donc republiable : les "
+                   "balises y sont posables, alors que « Publié » ou une "
+                   "cannibalisation restent hors périmètre.")
 @click.option("--all-rows", "all_rows", is_flag=True, default=False,
               help="Traiter aussi les lignes dont les balises sont déjà renseignées "
                    "(par défaut elles sont laissées intactes : un choix humain ne "
@@ -82,14 +88,19 @@ def _parse_rows(spec: str) -> tuple[int, int]:
               help="Pousser title + meta description dans SEOPress (meta SEO uniquement).")
 @click.option("--push-h1", "push_h1", is_flag=True, default=False,
               help="Pousser aussi le H1, qui vit dans le CORPS de l'article : "
-                   "seul le texte entre <h1> et </h1> est remplacé, le reste "
-                   "est intact, et le corps d'origine est sauvegardé dans "
-                   "wp_backups/. Refusé sur un article déjà passé par le "
-                   "pipeline (H1 en bloc Gutenberg). Implique --push-wp.")
+                   "seul le texte entre <h1> et </h1> est remplacé (balise nue "
+                   "ou bloc Gutenberg), le reste est intact, et le corps "
+                   "d'origine est sauvegardé dans wp_backups/. Implique --push-wp.")
+@click.option("--overwrite-live", "overwrite_live", is_flag=True, default=False,
+              help="Remplacer une balise DÉJÀ posée en prod. Par défaut on ne "
+                   "complète que ce qui est vide : 84 % du parc a une meta "
+                   "description écrite par le pipeline (avec le contexte YTG "
+                   "et les sources), qu'une génération faite depuis le seul "
+                   "mot-clé dégraderait.")
 @click.option("--json-out", "json_out", default=None,
               help="Écrire le détail (5 propositions par étape, rejets, erreurs) en JSON.")
 def seo_tags(site_slug, tab_name, limit, rows_spec, statuses, all_rows,
-             write_sheet_flag, push_wp, push_h1, json_out):
+             write_sheet_flag, push_wp, push_h1, overwrite_live, json_out):
     """Génère les balises SEO d'un onglet via l'outil IA du backoffice WP."""
     load_dotenv()
     base = Path.cwd()
@@ -216,17 +227,29 @@ def seo_tags(site_slug, tab_name, limit, rows_spec, statuses, all_rows,
         if not full:
             click.echo("\nWP : rien à pousser (aucun article complet).")
         else:
-            res = push_to_seopress(site_slug, full, base_path=base, with_h1=push_h1)
+            res = push_to_seopress(site_slug, full, base_path=base,
+                                   with_h1=push_h1, overwrite=overwrite_live)
             ok = sum(1 for x in res if x["ok"])
             what = "title + meta description" + (" + H1" if push_h1 else "")
             click.echo(f"\nWP : {ok}/{len(res)} articles mis à jour ({what})")
+            _LABEL_META = {"_seopress_titles_title": "title",
+                           "_seopress_titles_desc": "meta description"}
             for x in res:
                 if not x["ok"]:
                     click.echo(f"      ECHEC {x['url'][:60]} — {x.get('error')}")
-                elif push_h1 and x.get("h1") and not x["h1"].startswith("ok"):
+                    continue
+                if x.get("preserved"):
+                    kept = ", ".join(_LABEL_META.get(k, k) for k in x["preserved"])
+                    click.echo(f"      conservé en prod ({kept}) : {x['url'][:52]}")
+                if x.get("skipped"):
+                    click.echo(f"      rien à écrire ({x['skipped']}) : {x['url'][:52]}")
+                if push_h1 and x.get("h1") and not x["h1"].startswith("ok"):
                     # Les meta sont passées, le H1 non : il reste à poser à la
                     # main, et la raison dit laquelle des structures a bloqué.
                     click.echo(f"      H1 NON poussé ({x['h1']}) : {x['url'][:56]}")
+            if not overwrite_live:
+                click.echo("      (seules les balises vides sont complétées ; "
+                           "--overwrite-live pour remplacer)")
             if not push_h1:
                 click.echo("      H1 non poussé (il vit dans le corps) : --push-h1 pour l'inclure.")
 

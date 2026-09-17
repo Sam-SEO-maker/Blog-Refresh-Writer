@@ -62,7 +62,8 @@
         "col_h1": 6,
         "col_metadesc": 7,
         "col_status": 8,
-        "col_date": 9
+        "col_date": 9,
+        "col_provenance": 14
       },
       {
         "name": "👶🏽 High Potential",
