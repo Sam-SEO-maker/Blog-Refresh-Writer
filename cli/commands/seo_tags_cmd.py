@@ -38,6 +38,7 @@ from scripts.seo.seo_tags import (
     STEP_TITLE,
     STEPS,
     SeoTagGenerator,
+    acronym_casing,
     generate_row,
     push_to_seopress,
     read_rows,
@@ -78,16 +79,24 @@ def _parse_rows(spec: str) -> tuple[int, int]:
 @click.option("--write-sheet", "write_sheet_flag", is_flag=True, default=False,
               help="Écrire les balises retenues dans les colonnes de l'onglet.")
 @click.option("--push-wp", "push_wp", is_flag=True, default=False,
-              help="Pousser title + meta description dans SEOPress (jamais le H1).")
+              help="Pousser title + meta description dans SEOPress (meta SEO uniquement).")
+@click.option("--push-h1", "push_h1", is_flag=True, default=False,
+              help="Pousser aussi le H1, qui vit dans le CORPS de l'article : "
+                   "seul le texte entre <h1> et </h1> est remplacé, le reste "
+                   "est intact, et le corps d'origine est sauvegardé dans "
+                   "wp_backups/. Refusé sur un article déjà passé par le "
+                   "pipeline (H1 en bloc Gutenberg). Implique --push-wp.")
 @click.option("--json-out", "json_out", default=None,
               help="Écrire le détail (5 propositions par étape, rejets, erreurs) en JSON.")
 def seo_tags(site_slug, tab_name, limit, rows_spec, statuses, all_rows,
-             write_sheet_flag, push_wp, json_out):
+             write_sheet_flag, push_wp, push_h1, json_out):
     """Génère les balises SEO d'un onglet via l'outil IA du backoffice WP."""
     load_dotenv()
     base = Path.cwd()
 
     status_set = {s.strip().lower() for s in statuses.split(",") if s.strip()}
+    if push_h1:
+        push_wp = True  # le H1 ne se pousse pas sans les autres balises
 
     click.echo(f"\n{'=' * 70}")
     click.echo("GENERATION DES BALISES SEO (outil backoffice WP)")
@@ -136,10 +145,12 @@ def seo_tags(site_slug, tab_name, limit, rows_spec, statuses, all_rows,
 
     click.echo(f"Appels : {len(eligible) * 3} générations (3 par article)")
     click.echo(f"Écriture : Sheet={'oui' if write_sheet_flag else 'non'} · "
-               f"WP={'oui' if push_wp else 'non'}")
+               f"WP={'oui' if push_wp else 'non'}"
+               + (" (+ H1 dans le corps)" if push_h1 else ""))
 
     # 3. La cascade, article par article.
     gen = _build_generator(site_slug, base)
+    wp = _build_wp_client(site_slug, base)
 
     click.echo(f"\n{'-' * 70}")
     done = []
@@ -149,7 +160,19 @@ def seo_tags(site_slug, tab_name, limit, rows_spec, statuses, all_rows,
         click.echo(f"   KW principal : {r.main_keyword or '(absent)'}")
         click.echo(f"   KW secondaire: {r.secondary_keyword or '(absent)'}")
 
-        r.steps = generate_row(gen, r.main_keyword, r.secondary_keyword)
+        # La casse des sigles vient de l'article, pas de la Sheet : « ali » y
+        # est saisi en minuscules alors que le corps écrit « ALI » 29 fois.
+        casing = {}
+        if wp:
+            post = wp.get_post_by_url(r.url)
+            if post:
+                body = post.get("raw") or ""
+                casing = acronym_casing(body, f"{r.main_keyword} {r.secondary_keyword}")
+                if casing:
+                    click.echo("   Casse article : "
+                               + ", ".join(f"{k} → {v}" for k, v in casing.items()))
+
+        r.steps = generate_row(gen, r.main_keyword, r.secondary_keyword, casing=casing)
         for step in STEPS:
             s = r.steps.get(step)
             if not s:
@@ -193,14 +216,19 @@ def seo_tags(site_slug, tab_name, limit, rows_spec, statuses, all_rows,
         if not full:
             click.echo("\nWP : rien à pousser (aucun article complet).")
         else:
-            res = push_to_seopress(site_slug, full, base_path=base)
+            res = push_to_seopress(site_slug, full, base_path=base, with_h1=push_h1)
             ok = sum(1 for x in res if x["ok"])
-            click.echo(f"\nWP : {ok}/{len(res)} articles mis à jour (title + meta description)")
+            what = "title + meta description" + (" + H1" if push_h1 else "")
+            click.echo(f"\nWP : {ok}/{len(res)} articles mis à jour ({what})")
             for x in res:
                 if not x["ok"]:
                     click.echo(f"      ECHEC {x['url'][:60]} — {x.get('error')}")
-            click.echo("      Le H1 n'est pas poussé : c'est le premier bloc du corps, "
-                       "il passe par un refresh.")
+                elif push_h1 and x.get("h1") and not x["h1"].startswith("ok"):
+                    # Les meta sont passées, le H1 non : il reste à poser à la
+                    # main, et la raison dit laquelle des structures a bloqué.
+                    click.echo(f"      H1 NON poussé ({x['h1']}) : {x['url'][:56]}")
+            if not push_h1:
+                click.echo("      H1 non poussé (il vit dans le corps) : --push-h1 pour l'inclure.")
 
     if json_out:
         out = Path(json_out)
@@ -235,6 +263,22 @@ def seo_tags(site_slug, tab_name, limit, rows_spec, statuses, all_rows,
 
     if not write_sheet_flag and not push_wp:
         click.echo("\n(dry-run : rien n'a été écrit. --write-sheet / --push-wp pour enregistrer)")
+
+
+def _build_wp_client(site_slug: str, base: Path):
+    """Client WP REST pour lire le corps des articles (casse des sigles).
+
+    Optionnel : sans lui on génère quand même, les balises reprennent
+    simplement la casse de la Sheet.
+    """
+    try:
+        from scripts.utils.push_to_wp import build_client
+
+        return build_client(site_slug, base_path=base)
+    except Exception as e:
+        click.echo(f"\n[AVERTISSEMENT] Lecture WP indisponible ({type(e).__name__}) : "
+                   f"la casse des sigles ne sera pas corrigée.")
+        return None
 
 
 def _build_generator(site_slug: str, base: Path) -> SeoTagGenerator:

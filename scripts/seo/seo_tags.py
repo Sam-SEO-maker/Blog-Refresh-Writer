@@ -62,9 +62,71 @@ SEOPRESS_TITLE = "_seopress_titles_title"
 SEOPRESS_DESC = "_seopress_titles_desc"
 
 # Le H1 n'est pas une meta SEO : côté Superprof Ressources c'est le premier
-# bloc Gutenberg du corps. Il n'est donc jamais poussé en meta — il reste dans
-# la Sheet pour la relecture, et c'est le refresh qui le porte dans le contenu.
+# élément du corps de l'article. Il ne passe donc pas par les meta SEOPress
+# mais par une réécriture ciblée du contenu (`replace_body_h1`).
 _PUSHABLE = {STEP_TITLE: SEOPRESS_TITLE, STEP_META: SEOPRESS_DESC}
+
+# Deux formes de H1 coexistent sur le parc, selon que l'article est passé ou
+# non par le pipeline :
+#  - `<h1>…</h1>` nu en tête du corps, hérité du Classic Editor (non refreshé) ;
+#  - un bloc Gutenberg `<!-- wp:heading {"level":1} -->` (refreshé).
+# Les deux sont réécrivables, mais pas de la même façon : dans le second cas le
+# texte doit changer *à l'intérieur* du bloc, sans toucher au commentaire qui
+# le délimite, sinon l'éditeur signale un bloc corrompu.
+_BODY_H1 = re.compile(r"(\s*<h1(?:\s[^>]*)?>)(.*?)(</h1>)", re.IGNORECASE | re.DOTALL)
+_GUTENBERG_H1 = re.compile(
+    r'(<!--\s*wp:heading\s*\{[^}]*"level"\s*:\s*1[^}]*\}\s*-->\s*<h1(?:\s[^>]*)?>)'
+    r"(.*?)"
+    r"(</h1>\s*<!--\s*/wp:heading\s*-->)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _escape(text: str) -> str:
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def replace_body_h1(raw: str, new_h1: str) -> tuple[Optional[str], str]:
+    """Remplace le texte du H1 du corps. Renvoie (contenu, raison).
+
+    Le corps n'est jamais régénéré : seul le texte entre `<h1>` et `</h1>`
+    change. Les attributs de la balise (`class="wp-block-heading"`), le
+    commentaire de bloc Gutenberg et tout le reste de l'article sont laissés
+    intacts — c'est ce qui rend l'opération sûre sur un article dont le contenu
+    n'a pas été validé par la chaîne de refresh.
+
+    Refuse plutôt que de deviner quand la structure n'est pas reconnue :
+    aucun `<h1>`, plusieurs `<h1>`, ou un H1 qui n'ouvre pas l'article.
+    """
+    # 1. Article refreshé : H1 en bloc Gutenberg. On réécrit à l'intérieur du
+    #    bloc, en gardant ses commentaires délimiteurs.
+    blocks = list(_GUTENBERG_H1.finditer(raw))
+    if blocks:
+        if len(blocks) > 1:
+            return None, f"{len(blocks)} blocs H1 Gutenberg (ambigu)"
+        m = blocks[0]
+        if raw[:m.start()].strip():
+            return None, "le bloc H1 n'est pas en tête du corps"
+        return raw[:m.start(2)] + _escape(new_h1) + raw[m.end(2):], "ok (bloc Gutenberg)"
+
+    # Un `wp:heading` de niveau 1 que la regex ci-dessus n'a pas su cadrer :
+    # structure inattendue, on ne touche pas au bloc.
+    if re.search(r'<!--\s*wp:heading\s*\{[^}]*"level"\s*:\s*1', raw, re.IGNORECASE):
+        return None, "bloc H1 Gutenberg de structure inattendue"
+
+    # 2. Article non refreshé : `<h1>` nu en tête du corps.
+    matches = list(_BODY_H1.finditer(raw))
+    if not matches:
+        return None, "aucun <h1> dans le corps"
+    if len(matches) > 1:
+        return None, f"{len(matches)} balises <h1> dans le corps (ambigu)"
+
+    m = matches[0]
+    # Le H1 doit ouvrir l'article : plus loin, ce n'est pas le titre éditorial.
+    if raw[:m.start()].strip():
+        return None, "le <h1> n'est pas en tête du corps"
+
+    return raw[:m.start(2)] + _escape(new_h1) + raw[m.end(2):], "ok (<h1> nu)"
 
 
 @dataclass
@@ -105,6 +167,48 @@ class RowResult:
 # ---------------------------------------------------------------------------
 # Conformité des propositions aux règles éditoriales du repo
 # ---------------------------------------------------------------------------
+
+def acronym_casing(body_text: str, keyword: str) -> dict[str, str]:
+    """La casse que l'ARTICLE donne aux mots du mot-clé, quand elle est franche.
+
+    Le générateur recopie le mot-clé tel qu'il est saisi dans la Sheet : « quels
+    sont les ali » produit « Quels sont les ali », alors que le sigle s'écrit
+    ALI. La Sheet ne permet pas de deviner un sigle (955 mots courts sur
+    l'onglet, presque tous ordinaires) — mais le corps de l'article, lui, porte
+    la forme correcte : sur l'article ALI, 29 occurrences en capitales et
+    aucune en minuscules.
+
+    Ne retient donc un mot que si le contenu est **unanime** : au moins 3
+    occurrences, toutes dans la même casse non standard. Un mot écrit tantôt
+    « ALI » tantôt « ali » resterait ambigu, et on ne corrige pas au hasard.
+
+    Returns: {mot en minuscules: casse à appliquer}
+    """
+    plain = re.sub(r"<[^>]+>", " ", body_text)
+    out: dict[str, str] = {}
+    for word in set(re.findall(r"\b[\wÀ-ÿ']{2,}\b", keyword.lower())):
+        if len(word) > 6:
+            continue
+        forms = re.findall(rf"\b{re.escape(word)}\b", plain, re.IGNORECASE)
+        if len(forms) < 3:
+            continue
+        distinct = set(forms)
+        if len(distinct) != 1:
+            continue  # casse flottante dans l'article : trop ambigu
+        found = distinct.pop()
+        # Seule une casse non standard mérite correction (ALI, TL081…) ;
+        # « Les » vs « les » relève de la typographie du titre, pas du sigle.
+        if found != found.lower() and (found.isupper() or any(c.isdigit() for c in found)):
+            out[word] = found
+    return out
+
+
+def apply_acronym_casing(text: str, casing: dict[str, str]) -> str:
+    """Rétablit la casse des sigles dans une balise générée."""
+    for word, correct in casing.items():
+        text = re.sub(rf"\b{re.escape(word)}\b", correct, text, flags=re.IGNORECASE)
+    return text
+
 
 def _agreement_error(text: str, keyword: str, reference: str) -> Optional[str]:
     """Le texte reprend-il une forme fautive du mot-clé, corrigée ailleurs ?
@@ -313,17 +417,26 @@ class SeoTagGenerator:
 
 
 def generate_row(gen: SeoTagGenerator, main_keyword: str, secondary_keyword: str,
-                 post_id: Optional[int] = None) -> dict[str, Suggestion]:
+                 post_id: Optional[int] = None,
+                 casing: Optional[dict[str, str]] = None) -> dict[str, Suggestion]:
     """La cascade complète d'une ligne : title (main KW) → h1 (secondary KW) → meta.
 
     Chaque étape alimente la suivante avec la valeur *retenue*, pas avec la
     première proposition brute : c'est ce que fait le parcours manuel quand tu
     choisis un titre avant de générer le H1.
+
+    `casing` rétablit la casse des sigles que le générateur a reprise de la
+    Sheet (« ali » → « ALI »). Elle est appliquée à la valeur retenue *avant*
+    qu'elle n'alimente l'étape suivante, pour que le H1 et la meta héritent de
+    la forme corrigée plutôt que de la propager en minuscules.
     """
     steps: dict[str, Suggestion] = {}
+    fix = (lambda t: apply_acronym_casing(t, casing)) if casing else (lambda t: t)
 
     s_title = gen.generate(STEP_TITLE, main_keyword, post_id=post_id)
     s_title.chosen, s_title.rejected = _choose(s_title.options, main_keyword, STEP_TITLE)
+    if s_title.chosen:
+        s_title.chosen = fix(s_title.chosen)
     steps[STEP_TITLE] = s_title
     if not s_title.chosen:
         return steps
@@ -355,6 +468,8 @@ def generate_row(gen: SeoTagGenerator, main_keyword: str, secondary_keyword: str
             retry.fallback_from = secondary_keyword
             s_h1 = retry
 
+    if s_h1.chosen:
+        s_h1.chosen = fix(s_h1.chosen)
     steps[STEP_H1] = s_h1
     if not s_h1.chosen:
         return steps
@@ -364,6 +479,8 @@ def generate_row(gen: SeoTagGenerator, main_keyword: str, secondary_keyword: str
     s_meta = gen.generate(STEP_META, main_keyword, post_id=post_id,
                           title=s_title.chosen, h1=s_h1.chosen)
     s_meta.chosen, s_meta.rejected = _choose(s_meta.options, main_keyword, STEP_META)
+    if s_meta.chosen:
+        s_meta.chosen = fix(s_meta.chosen)
     steps[STEP_META] = s_meta
     return steps
 
@@ -470,19 +587,29 @@ def write_sheet(client, tab: dict, tab_name: str, results: list[RowResult]) -> i
 
 
 def push_to_seopress(site: str, results: list[RowResult],
-                     base_path: Optional[Path] = None) -> list[dict]:
-    """Pousse title + meta description dans SEOPress, article par article.
+                     base_path: Optional[Path] = None,
+                     with_h1: bool = False) -> list[dict]:
+    """Pousse les balises sur WordPress, article par article.
 
-    Le H1 n'en fait pas partie : ce n'est pas une meta SEO mais le premier bloc
-    du corps, que seul un refresh peut réécrire sans toucher au reste.
+    Title et meta description partent dans les meta SEOPress. Le H1 ne suit
+    qu'avec `with_h1` : il vit dans le corps de l'article, donc l'écrire
+    modifie le contenu et non plus seulement des meta — c'est un cran au-dessus
+    en termes de risque, et ça se demande explicitement.
+
+    Le corps est sauvegardé avant toute réécriture, dans le même
+    `wp_backups/{id}_before.json` que la publication : c'est la seule trace
+    qui permette de revenir en arrière sur un article non refreshé.
     """
     from scripts.utils.push_to_wp import build_client, resolve_wp_post_id
 
     client = build_client(site, base_path=base_path)
+    tp = SitePaths(base_path=base_path) if base_path else SitePaths()
+    backups = tp.output_dir(site) / "wp_backups"
+
     out = []
     for r in results:
         meta = {key: r.value(step) for step, key in _PUSHABLE.items() if r.value(step)}
-        if not meta:
+        if not meta and not (with_h1 and r.value(STEP_H1)):
             out.append({"url": r.url, "ok": False, "error": "rien à pousser"})
             continue
 
@@ -492,9 +619,27 @@ def push_to_seopress(site: str, results: list[RowResult],
             out.append({"url": r.url, "ok": False, "error": "post_not_found"})
             continue
 
-        # `content=None` : on ne renvoie pas le corps. Un push de contenu reste
-        # le travail de `finalize`/`push`, qui eux passent la garde de validation.
-        res = client.update_post(post_id=post["id"], meta=meta)
-        out.append({"url": r.url, "id": post["id"], "ok": res["ok"],
-                    "error": res["error"]})
+        row = {"url": r.url, "id": post["id"]}
+        content = None
+
+        if with_h1 and r.value(STEP_H1):
+            content, why = replace_body_h1(post.get("raw") or "", r.value(STEP_H1))
+            row["h1"] = why
+            if content is not None:
+                # Sauvegarde du corps AVANT de le réécrire. Même fichier et
+                # même sémantique que `push_to_wp` : écrit une seule fois, il
+                # garde la version d'origine et non l'avant-dernière.
+                backups.mkdir(parents=True, exist_ok=True)
+                bkp = backups / f"{post['id']}_before.json"
+                if not bkp.exists():
+                    bkp.write_text(json.dumps({
+                        "id": post["id"], "slug": post.get("slug"),
+                        "title": post.get("title"), "raw": post.get("raw"),
+                    }, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        res = client.update_post(post_id=post["id"], meta=meta or None,
+                                 content=content)
+        row["ok"] = res["ok"]
+        row["error"] = res["error"]
+        out.append(row)
     return out

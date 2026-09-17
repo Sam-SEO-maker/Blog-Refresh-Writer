@@ -28,7 +28,10 @@ from scripts.seo.seo_tags import (
     _choose,
     _violations,
     generate_row,
+    acronym_casing,
+    apply_acronym_casing,
     read_rows,
+    replace_body_h1,
 )
 
 
@@ -200,6 +203,134 @@ class TestFallbackH1:
         steps = generate_row(gen, "les piles", "piles rechargeables")
         assert steps[STEP_H1].fallback_from is None
         assert sum(1 for c in gen.calls if c["step"] == STEP_H1) == 1
+
+
+class TestCasseDesSigles:
+    """La casse vient de l'article, la Sheet ne permet pas de la deviner.
+
+    Cas réel : ligne 157, main KW « quels sont les ali » saisi en minuscules,
+    alors que le corps de l'article écrit « ALI » 29 fois et jamais « ali ».
+    """
+
+    def test_sigle_unanime_dans_larticle_est_retenu(self):
+        body = "<p>Un ALI amplifie. L'ALI idéal. Le montage ALI est simple.</p>"
+        assert acronym_casing(body, "quels sont les ali") == {"ali": "ALI"}
+
+    def test_casse_flottante_ignoree(self):
+        """« ALI » et « ali » mélangés : on ne corrige pas au hasard."""
+        body = "<p>Un ALI amplifie. Un ali quelconque. Le ALI final.</p>"
+        assert acronym_casing(body, "les ali") == {}
+
+    def test_trop_peu_doccurrences_ignore(self):
+        """Moins de 3 mentions : pas assez pour conclure."""
+        body = "<p>Un ALI amplifie le signal.</p>"
+        assert acronym_casing(body, "les ali") == {}
+
+    def test_mot_ordinaire_non_touche(self):
+        """« les » écrit « Les » en début de phrase n'est pas un sigle."""
+        body = "<p>Les piles. Les bornes. Les circuits. Les montages.</p>"
+        assert "les" not in acronym_casing(body, "les piles")
+
+    def test_reference_alphanumerique_retenue(self):
+        body = "<p>Le TL081 chauffe. Le TL081 sature. Comparer au TL081.</p>"
+        assert acronym_casing(body, "tl081 datasheet") == {"tl081": "TL081"}
+
+    def test_application_sur_une_balise(self):
+        out = apply_acronym_casing("Quels sont les ali ? Guide ali complet",
+                                   {"ali": "ALI"})
+        assert out == "Quels sont les ALI ? Guide ALI complet"
+
+    def test_casse_propagee_a_toute_la_cascade(self):
+        """Le title corrigé doit alimenter le H1 et la meta, pas la forme brute."""
+        gen = _FakeGenerator({
+            STEP_TITLE: ["Quels sont les ali : guide complet pour comprendre"],
+            STEP_H1: ["Les ali : définition claire et enjeux à connaître"],
+            STEP_META: ["Comprendre les ali en quelques minutes : définition "
+                        "simple et enjeux clés pour ne plus confondre."],
+        })
+        steps = generate_row(gen, "quels sont les ali", "les ali",
+                             casing={"ali": "ALI"})
+
+        for step in (STEP_TITLE, STEP_H1, STEP_META):
+            assert "ALI" in steps[step].chosen
+            assert " ali" not in steps[step].chosen
+        # Le title transmis à l'étape H1 porte déjà la correction.
+        assert "ALI" in gen.calls[1]["title"]
+
+
+class TestRemplacementH1:
+    """Le H1 vit dans le corps : deux formes selon l'historique de l'article."""
+
+    # Extrait réel du post 30899 (ALI), refreshé par le pipeline.
+    GUTENBERG = (
+        '<!-- wp:heading {"level":1} -->\n'
+        '<h1 class="wp-block-heading">Quels sont les ALI&nbsp;? Les montages</h1>\n'
+        '<!-- /wp:heading -->\n\n'
+        '<!-- wp:paragraph -->\n<p>Un seul composant, huit pattes.</p>\n'
+        '<!-- /wp:paragraph -->'
+    )
+    # Extrait réel du post 268 (bilan-matiere), jamais refreshé.
+    CLASSIC = "<h1>Le bilan de matière</h1>\n<h2>Qu'est-ce qu'un bilan ?</h2>\n<p>Texte.</p>"
+
+    def test_bloc_gutenberg_reecrit_sans_casser_le_bloc(self):
+        """Le commentaire délimiteur et les attributs doivent survivre.
+
+        Réécrire le <h1> sans son commentaire wp:heading corromprait le bloc
+        côté éditeur.
+        """
+        new, why = replace_body_h1(self.GUTENBERG, "Un nouveau titre éditorial")
+
+        assert "bloc Gutenberg" in why
+        assert "Un nouveau titre éditorial" in new
+        assert 'Quels sont les ALI&nbsp;?' not in new
+        assert new.count('<!-- wp:heading {"level":1} -->') == 1
+        assert new.count("<!-- /wp:heading -->") == 1
+        assert 'class="wp-block-heading"' in new
+        # Le reste du corps est strictement intact.
+        assert "<p>Un seul composant, huit pattes.</p>" in new
+        assert new.count("<!-- wp:") == self.GUTENBERG.count("<!-- wp:")
+
+    def test_h1_nu_reecrit(self):
+        new, why = replace_body_h1(self.CLASSIC, "Le bilan de matière : méthode")
+        assert "<h1>" in why or "nu" in why
+        assert "<h1>Le bilan de matière : méthode</h1>" in new
+        assert "<h2>Qu'est-ce qu'un bilan ?</h2>" in new
+
+    def test_refus_si_aucun_h1(self):
+        new, why = replace_body_h1("<h2>Un titre</h2><p>Texte.</p>", "Nouveau")
+        assert new is None and "aucun <h1>" in why
+
+    def test_refus_si_plusieurs_h1(self):
+        new, why = replace_body_h1("<h1>A</h1><p>x</p><h1>B</h1>", "Nouveau")
+        assert new is None and "ambigu" in why
+
+    def test_refus_si_le_h1_nouvre_pas_larticle(self):
+        """Un H1 en milieu de page n'est pas le titre éditorial."""
+        new, why = replace_body_h1("<p>Chapeau.</p><h1>Titre tardif</h1>", "Nouveau")
+        assert new is None and "en tête" in why
+
+    def test_les_raisons_de_succes_commencent_par_ok(self):
+        """La CLI distingue succès et refus sur le préfixe « ok ».
+
+        Un premier jet comparait la raison à la chaîne exacte « ok », si bien
+        qu'un H1 poussé avec succès (« ok (bloc Gutenberg) ») était annoncé
+        comme non poussé. Le contrat est ici : toute raison de succès commence
+        par « ok », toute raison de refus non.
+        """
+        for raw in (self.GUTENBERG, self.CLASSIC):
+            content, why = replace_body_h1(raw, "Un titre valide pour le test")
+            assert content is not None
+            assert why.startswith("ok"), why
+
+        for raw in ("<h2>x</h2>", "<h1>A</h1><h1>B</h1>", "<p>x</p><h1>T</h1>"):
+            content, why = replace_body_h1(raw, "Nouveau")
+            assert content is None
+            assert not why.startswith("ok"), why
+
+    def test_caracteres_speciaux_echappes(self):
+        new, _ = replace_body_h1(self.CLASSIC, "Fonction & dérivée <avancée>")
+        assert "&amp;" in new and "&lt;avancée&gt;" in new
+        assert "<avancée>" not in new
 
 
 class _FakeSheets:
