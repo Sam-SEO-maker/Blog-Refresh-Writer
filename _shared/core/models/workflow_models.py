@@ -33,6 +33,15 @@ class RefreshWorkflowResult:
     # AuditEngine.to_dict. Les questions PAA seules ne suffisent pas : sans les
     # concurrents, impossible de mesurer le gap éditorial face au top 10.
     serp: dict = field(default_factory=dict)
+    # Performance GSC de l'URL (30 jours), telle que mesurée par GSCAnalyzer et
+    # sérialisée sous `performance` par AuditEngine.to_dict. Sans ces champs, le
+    # CLI refresh mono-URL reconstruit un row aux défauts à zéro : audit_data.json
+    # affiche alors `impressions_30d: 0` sur une page qui en a des centaines, et
+    # toute décision en aval (et toute lecture humaine) part d'un trafic nul.
+    impressions_30d: int = field(default=0)
+    clicks_30d: int = field(default=0)
+    ctr_30d: float = field(default=0.0)
+    avg_position: float = field(default=0.0)
     # Guide sémantique YTG calculé au STEP 2.5 de process_url — propagé au CLI
     # refresh pour (a) injecter les termes dans le prompt de génération et
     # (b) réutiliser le guide au QC post-génération sans le recréer.

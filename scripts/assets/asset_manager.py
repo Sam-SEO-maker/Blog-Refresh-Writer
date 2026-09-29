@@ -334,6 +334,13 @@ class AssetManager:
         cta_superprof_original = [c for c in cta_blocks_original if c.get("type") == "superprof_button"]
         cta_superprof_new = [c for c in cta_blocks_new if c.get("type") == "superprof_button"]
 
+        # Vérifier la FAQ : un refresh ne doit jamais faire disparaître une FAQ
+        # préexistante. Le comptage d'assets (images/liens/CTA) ne voyait pas les
+        # sections, donc 30 articles superprof.fr-ressources ont été publiés sans
+        # FAQ sans qu'aucun garde-fou ne s'en aperçoive.
+        faq_original = self._has_faq(original_content) if original_content else False
+        faq_new = self._has_faq(new_content)
+
         # Vérifier les violations de blacklist (delta : ajouts uniquement)
         blacklist_violations, blacklist_preexisting = self._check_blacklist(
             new_content, original_content
@@ -345,6 +352,11 @@ class AssetManager:
         superprof_valid = superprof_count == 1
         # CTA Superprof valide si présent dans l'original et préservé
         cta_superprof_valid = len(cta_superprof_new) >= len(cta_superprof_original) if cta_superprof_original else True
+        # Comme pour le CTA : préservation conditionnelle. Si l'original avait une
+        # FAQ, la nouvelle version doit en avoir une. L'obligation d'en créer une
+        # là où il n'y en avait pas relève de la génération (site.md / skill), pas
+        # de la Règle d'Or, qui ne parle que de non-régression.
+        faq_valid = faq_new if faq_original else True
 
         errors = []
         warnings = []
@@ -377,6 +389,11 @@ class AssetManager:
 
         if not cta_superprof_valid:
             warnings.append("CTA Superprof stylé absent (était présent dans l'original)")
+
+        if not faq_valid:
+            errors.append(
+                "Section FAQ perdue : l'original en avait une, le nouveau contenu n'en a plus"
+            )
 
         # NOUVEAU: Validation des années obsolètes
         year_validator = YearUpdater()
@@ -427,6 +444,20 @@ class AssetManager:
             if is_blacklisted_url(href):
                 hosts.add(url_host(href))
         return hosts
+
+    # Meme regex que scripts/audit/html_analyzer.py : le titre de FAQ n'est pas
+    # toujours en debut de balise (emoji en tete, ou tournure du type "Tes
+    # questions les plus frequentes"). Un motif ancre ratait 22% des FAQ reelles.
+    _FAQ_RE = re.compile(
+        r'<h[23][^>]*>[^<]*?(FAQ|Foire\s+aux\s+questions?|questions?\s+(?:les\s+plus\s+)?fr[ée]quentes?)',
+        re.I,
+    )
+
+    def _has_faq(self, html: str) -> bool:
+        """Detecte la presence d'une section FAQ dans un contenu HTML."""
+        if not html:
+            return False
+        return bool(self._FAQ_RE.search(html))
 
     def _check_blacklist(
         self, content: str, original_content: Optional[str] = None

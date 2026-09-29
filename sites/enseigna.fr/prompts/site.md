@@ -252,6 +252,45 @@ Pour chaque article avis comparatif, ajouter **AVANT le titre principal** :
 
 ---
 
+## Mots-clés secondaires (OBLIGATOIRE)
+
+Un article Enseigna ne cible pas que le mot-clé principal (« avis {concurrent} »,
+« {concurrent} avis »). **2 à 3 mots-clés secondaires** doivent être identifiés
+et placés consciemment, pour capter les variantes de requête que le seul
+mot-clé principal ne couvre pas (prix, alternative, avis négatifs, cible
+spécifique — « avis {concurrent} prix », « {concurrent} ou Superprof »,
+« {concurrent} avis négatifs »…).
+
+**Source : ne pas relancer de recherche de mots-clés.** `cw refresh` /
+`cw batch` interrogent déjà DataForSEO sur le top 10 de la SERP et exposent le
+résultat dans `audit_data.json` → champ `secondary_keywords` (jusqu'à 10
+mots-clés liés, extraits des pages concurrentes qui rankent), repris tel quel
+dans `generation_prompt.txt` (section « Mots-clés secondaires (SERP) à
+couvrir ») et dans le skeleton `content_plan.md`. **Ce sont ces mots-clés-là
+qu'il faut choisir et placer** — parmi eux, retenir les 2-3 les plus proches
+de l'intention d'achat (prix, comparaison, avis), pas les plus généraux.
+Si `secondary_keywords` est vide dans le contexte reçu (cas rare hors SERP),
+le signaler dans le rapport plutôt que d'inventer des mots-clés ou de
+re-requêter une source externe.
+
+**Placement attendu** (dans cet ordre de priorité) :
+1. **Un H2** au moins reprend un secondaire proche de l'intention prix/comparaison
+   (ex. un H2 sur les tarifs porte naturellement « prix » ou « tarif »).
+2. **La FAQ** : au moins une question de la FAQ intègre un secondaire différent
+   de celui du H2 ci-dessus (ex. « {concurrent} est-il fiable ? » capte un
+   secondaire du type « avis »/« fiable »).
+3. **Le corps du texte**, en emploi naturel (jamais de liste de mots-clés
+   plaquée) — un secondaire mentionné une seule fois dans une phrase qui a du
+   sens suffit, ne pas viser une densité.
+
+**Ne pas confondre avec le guide YTG** : le guide sémantique YTG est construit
+sur le seul mot-clé principal (l'outil ne prend qu'un `keyword`) — les
+mots-clés secondaires ne passent pas par lui, ils sont une décision éditoriale
+en amont de la rédaction (H1/H2/FAQ), pas un terme à optimiser dans le score
+SOSEO/DSEO.
+
+---
+
 ## Réécriture réelle vs calque de l'original (OBLIGATOIRE)
 
 Un refresh Enseigna (FULL_REFRESH le plus souvent, parfois PARTIAL_REFRESH ou TITLE_OPTIMIZATION) n'est **pas** une paraphrase de l'article existant. L'HTML original fourni sert de **source de faits et d'assets à préserver**, pas de gabarit rédactionnel à recopier phrase par phrase.
@@ -308,6 +347,43 @@ tarifs bougent). Le lien vers la plateforme **sujet** de l'article reste, lui,
 légitime.
 
 ❌ **JAMAIS de lien vers Wikipédia** : lier la source primaire (étude, institution, texte officiel) que Wikipédia agrège, jamais l'article encyclopédique. Wikipédia n'est pas une source d'autorité.
+
+### Citer beaucoup, ancrer peu
+
+Le lecteur d'un avis arbitre un achat. Il ne quittera pas la page pour lire une
+étude, et chaque lien externe est une sortie offerte au moment où il hésite.
+D'où la dissociation : **citer est libre, ancrer est rationné.**
+
+- **Une source = un seul `href` dans tout l'article.** Une source citée dans le
+  corps **n'est pas reprise** dans le bloc Références, et inversement. Le bloc
+  Références liste ce qui n'a pas été ancré dans le texte ; il ne redouble pas
+  les liens du corps.
+- **Plafond : 3 liens externes éditoriaux** (hors lien vers la plateforme sujet,
+  hors superprof.fr, hors liens préexistants que la Règle d'Or préserve). Au-delà,
+  la source se cite sans ancre.
+- **Sources en français uniquement pour les liens ancrés.** Un lien vers un
+  texte anglophone envoie le lecteur sur une page qu'il ne lira pas : c'est un
+  lien mort en pratique. Un chiffre issu d'une étude anglophone **se cite par
+  attribution, sans lien** : « une synthèse d'études publiée dans *Psychology of
+  Music* situe le gain autour de… ». Chercher d'abord la reprise française
+  (agence publique, synthèse ministérielle, publication traduite).
+  ❌ `<a href="https://journals.plos.org/...">une étude</a>`
+  ❌ `<a href="https://pmc.ncbi.nlm.nih.gov/...">des travaux récents</a>`
+  ✅ « une synthèse de *Psychology of Music* (2022) mesure… » (sans lien)
+  ❌ « une méta-analyse… » : le préfixe « méta- » devant analyse/étude est
+  interdit, il sonne artificiel (voir la skill `format-wordpress`)
+- **Registre : la source doit parler au lecteur, pas au jury.** Sur un avis de
+  plateforme, ce qui aide à décider est un tarif, une condition de résiliation,
+  un droit, un retour d'usage. Un rapport de la Cour des comptes sur les
+  politiques publiques ou une étude du ministère de la Culture sur cinquante ans
+  de pratiques culturelles sont irréprochables et **hors sujet** : ils habillent
+  l'article d'autorité sans rien apporter à l'arbitrage. Une source d'autorité
+  ne se retient que si elle répond à une question que le lecteur se pose
+  vraiment.
+  ❌ Cour des comptes sur le financement du soutien scolaire, dans un avis produit
+  ❌ culture.gouv.fr sur l'évolution des pratiques amateurs, dans un avis de cours de musique
+  ✅ service-public.fr sur le crédit d'impôt service à la personne (il chiffre le coût réel)
+  ✅ la page officielle de résiliation en ligne (elle s'applique à son abonnement)
 
 ---
 

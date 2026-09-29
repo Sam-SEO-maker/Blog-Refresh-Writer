@@ -311,6 +311,17 @@ def _maybe_publish(base: Path, site_slug: str, url: str, url_slug: str, saved: P
         if res.get("warning"):
             click.echo(f"  ⚠ {res['warning']} - open the post in the editor "
                        "and check the blocks.")
+        # Statut Sheet : l'article est en ligne, la ligne de travail doit cesser
+        # d'être « A faire », sinon `batch refresh --rows` la repropose.
+        from scripts.sheets.tab_status import mark_published
+        click.echo(f"  {mark_published(site_slug, url)}")
+        # Livraison = import Notion : le ZIP des tableaux rejoint la ligne de
+        # commande. C'est ici, et pas à la création de la ligne, que le ZIP
+        # existe et que l'URL est connue.
+        from scripts.notion.zip_attachment import attach_tables_zip_message
+        notion_msg = attach_tables_zip_message(site_slug, url, base_path=base)
+        if notion_msg:
+            click.echo(f"  {notion_msg}")
     else:
         click.echo(f"  ❌ Publish failed: {res.get('error')}")
 

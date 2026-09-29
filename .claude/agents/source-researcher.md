@@ -69,6 +69,27 @@ primaire à la place.
    source, schéma du brief.
 2. Applique la cascade décrite par la skill. Priorité aux sources
    institutionnelles, académiques et aux données primaires récentes.
+
+   **Langue de la source = langue du site.** Une source dans une autre langue
+   que celle de l'article ne peut pas être **liée** : le lecteur qui clique
+   tombe sur un texte qu'il ne lira pas, et le lien est perdu pour lui. Une
+   étude anglophone peut rester dans le brief pour **fonder un chiffre**, mais
+   elle part alors en `citation_sans_lien` et non en `url` : le rédacteur citera
+   l'ordre de grandeur sans ancre. Cherche systématiquement l'équivalent dans la
+   langue du site avant de retenir l'anglophone (une reprise institutionnelle
+   nationale, une synthèse d'agence publique, la publication d'origine si elle
+   est traduite). S'il n'existe pas, le chiffre se cite sans lien.
+
+   **Proximité au lecteur** : la source doit répondre à la question que se pose
+   *celui qui lit cet article*, pas à la version académique de cette question.
+   Sur un avis de plateforme, le lecteur arbitre un achat : il veut des prix,
+   des conditions, des retours d'usage, un cadre légal qui s'applique à lui. Une
+   étude compilant des travaux sur la cognition musicale ou un rapport de la Cour des comptes
+   sur les politiques publiques ne l'aide pas à décider, même impeccablement
+   autorisés. « La plus autorisée » se lit donc **à claim utile constant** :
+   entre deux sources qui soutiennent le même claim, la plus autorisée gagne ;
+   une source très autorisée sur un claim dont le lecteur n'a rien à faire ne
+   rentre pas dans le brief du tout.
 3. Vérifie chaque source : elle doit être **atteignable** et **dire réellement**
    ce que tu lui fais dire. Une URL qui ne répond pas ne va pas dans le brief.
 4. Écris le brief dans `<context_dir>/sources_brief.md`.
@@ -79,7 +100,12 @@ primaire à la place.
 
 - **source** : nom de l'institution/publication,
 - **claim** : l'affirmation précise qu'elle soutient (celle qui sera citée),
-- **url** : lien exact et vérifié,
+- **url** : lien exact et vérifié, **si la source est dans la langue du site** —
+  sinon laisser vide et remplir `citation_sans_lien`,
+- **citation_sans_lien** : `oui` pour une source d'une autre langue, dont le
+  chiffre se cite mais dont l'URL ne s'ancre jamais,
+- **langue** : langue de la page (fr, en…), pour que le maillon suivant n'ait
+  pas à la deviner,
 - **année** : année de publication ou de mise à jour des données.
 
 Vise **3 à 5 sources institutionnelles**, et de quoi soutenir **au moins

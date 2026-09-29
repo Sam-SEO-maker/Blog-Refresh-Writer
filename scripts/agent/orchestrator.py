@@ -855,6 +855,14 @@ class RefreshOrchestrator:
                 people_also_ask=audit_dict.get("people_also_ask", ""),
                 secondary_keywords=audit_dict.get("secondary_keywords", ""),
                 serp=audit_dict.get("serp") or {},
+                # Performance GSC : elle vit sous `performance` dans audit_dict,
+                # jamais à la racine. Sans cette propagation, le CLI mono-URL
+                # repart des défauts à zéro de MinimalRow et écrit un trafic nul
+                # dans audit_data.json, y compris pour une page à 500+ impressions.
+                impressions_30d=(audit_dict.get("performance") or {}).get("impressions_30d", 0) or 0,
+                clicks_30d=(audit_dict.get("performance") or {}).get("clicks_30d", 0) or 0,
+                ctr_30d=float((audit_dict.get("performance") or {}).get("ctr_30d", 0.0) or 0.0),
+                avg_position=float((audit_dict.get("performance") or {}).get("avg_position", 0.0) or 0.0),
                 # STEP 2.5 : guide YTG calculé ci-dessus, propagé au CLI refresh.
                 ytg_guide_id=audit_dict.get("ytg_guide_id", ""),
                 ytg_semantic_field=audit_dict.get("semantic_field_override", []),
@@ -1117,6 +1125,7 @@ class RefreshOrchestrator:
             "impressions_30d": row.impressions_30d,
             "clicks_30d": row.clicks_30d,
             "ctr_30d": float(row.ctr_30d) if row.ctr_30d else 0.0,
+            "avg_position": float(getattr(row, "avg_position", 0.0) or 0.0),
             "people_also_ask": row.people_also_ask[:500] if row.people_also_ask else "",
             "secondary_keywords": row.secondary_keywords[:500] if row.secondary_keywords else "",
             # Bloc SERP complet (top 10, format dominant, position, features).
@@ -1352,6 +1361,7 @@ class RefreshOrchestrator:
             impressions_30d: int = 0
             clicks_30d: int = 0
             ctr_30d: float = 0.0
+            avg_position: float = 0.0
             index_diagnostic: str = ""
             _source: object = field(default=None, repr=False)
 
@@ -1570,15 +1580,54 @@ class RefreshOrchestrator:
             {"sheet": tab, "cell": f"{col_letter}{row_index}", "value": status},
         ])
 
+    @staticmethod
+    def parse_row_range(rows_spec: str) -> tuple:
+        """Traduit `--rows` en bornes de lignes Sheet (1-based, incluses).
+
+        Accepte "140-180", "140:180" et "140" (ligne seule). Les bornes sont les
+        numeros de ligne AFFICHES par Google Sheets, en-tetes comprises : c'est
+        le seul repere que l'utilisateur a sous les yeux, et c'est aussi ce que
+        porte `row_index`. Les convertir en index de liste ici ferait diverger
+        la plage demandee de la plage traitee.
+
+        Leve ValueError sur une plage inexploitable, jamais un silence : une
+        borne mal lue selectionnerait d'autres URLs sans que le rapport de lot
+        puisse le montrer.
+        """
+        raw = (rows_spec or "").strip()
+        if not raw:
+            raise ValueError("--rows est vide.")
+        sep = "-" if "-" in raw else (":" if ":" in raw else None)
+        parts = [raw, raw] if sep is None else [p.strip() for p in raw.split(sep, 1)]
+        try:
+            start, end = int(parts[0]), int(parts[1])
+        except ValueError:
+            raise ValueError(
+                f"--rows '{rows_spec}' illisible. Formats acceptes : 140-180, 140:180, 140."
+            )
+        if start < 1 or end < 1:
+            raise ValueError(f"--rows '{rows_spec}' : les lignes Sheet commencent a 1.")
+        if start > end:
+            raise ValueError(
+                f"--rows '{rows_spec}' : borne de debut ({start}) apres la fin ({end})."
+            )
+        return start, end
+
     def _rows_for_batch(self, action: str, site_canonical: Optional[str],
                         tab: Optional[str], post_type: Optional[str],
-                        limit: Optional[int], logger) -> list:
+                        limit: Optional[int], logger,
+                        rows_spec: Optional[str] = None) -> list:
         """Sélectionne les lignes du batch (routage onglet/site + filtres).
 
         Extrait de `batch_refresh` pour que le chemin séquentiel et le chemin
         parallèle sélectionnent EXACTEMENT le même périmètre : une divergence
         ici ferait traiter des URLs différentes selon le mode, ce qui est
         indétectable à la lecture d'un rapport.
+
+        `rows_spec` (`--rows`) restreint aux lignes Sheet de la plage AVANT
+        `--limit` : l'inverse plafonnerait d'abord sur le début de l'onglet,
+        puis ne garderait de la plage que ce qui a survécu — soit souvent rien,
+        sans que la sortie distingue ce cas d'une plage réellement vide.
         """
         if tab:
             if not site_canonical:
@@ -1597,6 +1646,24 @@ class RefreshOrchestrator:
 
         if post_type:
             rows = [r for r in rows if r.post_type == post_type]
+
+        if rows_spec:
+            start, end = self.parse_row_range(rows_spec)
+            # `row_index` n'est peuplé que par le chemin --tab. Sur le flux
+            # enseigna il vaut 0 partout : filtrer y renverrait 0 ligne en
+            # silence, ce qui se lit comme « plage vide » alors que la plage
+            # n'est simplement pas applicable. On refuse explicitement.
+            if any(getattr(r, "row_index", 0) <= 0 for r in rows):
+                raise ValueError(
+                    "--rows requiert --tab : le flux par défaut du site ne porte "
+                    "pas de numéro de ligne Sheet (row_index)."
+                )
+            before = len(rows)
+            rows = [r for r in rows if start <= r.row_index <= end]
+            logger.info(
+                f"--rows {start}-{end} : {len(rows)} ligne(s) « à faire » retenue(s) "
+                f"sur {before} dans l'onglet."
+            )
         if limit and limit > 0:
             rows = rows[:limit]
         return self._validate_keywords_for_rows(rows)
@@ -1604,7 +1671,8 @@ class RefreshOrchestrator:
     def batch_prepare_parallel(self, action: str, site_slug: Optional[str] = None,
                                post_type: Optional[str] = None, limit: Optional[int] = None,
                                tab: Optional[str] = None,
-                               parallel: int = 3) -> dict:
+                               parallel: int = 3,
+                               rows_spec: Optional[str] = None) -> dict:
         """Prépare en PARALLÈLE le contexte de tous les articles du lot.
 
         Ne génère rien : la rédaction passe par les subagents Claude Code
@@ -1628,7 +1696,8 @@ class RefreshOrchestrator:
 
         site_canonical = canonical_site_slug(site_slug) if site_slug else None
         try:
-            rows = self._rows_for_batch(action, site_canonical, tab, post_type, limit, logger)
+            rows = self._rows_for_batch(action, site_canonical, tab, post_type,
+                                        limit, logger, rows_spec)
         except ValueError as e:
             logger.error(str(e))
             return {"processed": 0, "prepared": 0, "skipped": 0, "failed": 0,
@@ -1758,7 +1827,9 @@ class RefreshOrchestrator:
             "results": results,
         }
 
-    def batch_refresh(self, action: str, site_slug: Optional[str] = None, post_type: Optional[str] = None, limit: Optional[int] = None, tab: Optional[str] = None) -> dict:
+    def batch_refresh(self, action: str, site_slug: Optional[str] = None,
+                      post_type: Optional[str] = None, limit: Optional[int] = None,
+                      tab: Optional[str] = None, rows_spec: Optional[str] = None) -> dict:
         """
         Batch refresh pour lignes where action_blogpost = action.
 
@@ -1791,47 +1862,20 @@ class RefreshOrchestrator:
         if not self.sheets_client:
             return {"processed": 0, "success": 0, "failed": 0, "assets_restored": 0, "errors": []}
 
-        # Router vers les onglets réels du site. `--tab` (chemin générique
-        # config-driven) prime ; sinon seul enseigna.fr a un flux batch par
-        # défaut (Avis/Versus). L'ancien fallback lisait l'onglet retiré
-        # Refreshs_Audit et renvoyait silencieusement 0 ligne — remplacé par une
-        # erreur explicite qui oriente vers --tab.
+        # Sélection déléguée à `_rows_for_batch`, partagée avec le chemin
+        # parallèle : ce bloc en dupliquait le routage, les filtres et le
+        # plafond, si bien qu'une option ajoutée d'un côté (--rows) n'aurait
+        # pas existé de l'autre — les deux modes auraient traité des URLs
+        # différentes pour la même commande.
         from _shared.core.constants import canonical_site_slug
         site_canonical = canonical_site_slug(site_slug) if site_slug else None
-        if tab:
-            # Onglet explicite : chemin générique config-driven, valable pour
-            # tout site déclarant `sheets.tabs` (prime sur le routage par site).
-            if not site_canonical:
-                msg = "batch_refresh: --tab requires --site (tab layout is read from the site config)."
-                logger.error(msg)
-                return {"processed": 0, "success": 0, "failed": 0,
-                        "assets_restored": 0, "errors": [msg]}
-            try:
-                rows = self._tab_rows_for_refresh(site_canonical, tab)
-            except ValueError as e:
-                logger.error(str(e))
-                return {"processed": 0, "success": 0, "failed": 0,
-                        "assets_restored": 0, "errors": [str(e)]}
-        elif site_canonical == "enseigna.fr":
-            rows = self._enseigna_rows_for_refresh(action)
-        else:
-            msg = (f"batch_refresh: no sheet-driven batch flow wired for site "
-                   f"'{site_canonical}' (only enseigna.fr Avis/Versus). "
-                   f"Pass --tab \"<declared tab>\" to use the generic tab-driven flow.")
-            logger.error(msg)
+        try:
+            rows = self._rows_for_batch(action, site_canonical, tab, post_type,
+                                        limit, logger, rows_spec)
+        except ValueError as e:
+            logger.error(str(e))
             return {"processed": 0, "success": 0, "failed": 0,
-                    "assets_restored": 0, "errors": [msg]}
-
-        # Filter by post_type if specified
-        if post_type:
-            rows = [r for r in rows if r.post_type == post_type]
-
-        # Limit number of rows to process
-        if limit and limit > 0:
-            rows = rows[:limit]
-
-        # Mot-clé confronté à GSC sur les seules lignes retenues (cf. méthode).
-        rows = self._validate_keywords_for_rows(rows)
+                    "assets_restored": 0, "errors": [str(e)]}
 
         results = {
             "processed": 0,

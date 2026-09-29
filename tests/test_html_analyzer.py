@@ -99,6 +99,34 @@ class TestHTMLAnalyzer:
         result = self.analyzer.analyze(sample_html, "https://enseigna.fr/test.html")
         assert result.has_faq_section is True
 
+    def test_has_faq_section_titre_non_ancre(self):
+        """La FAQ est detectee meme si le titre ne commence pas par 'FAQ'.
+
+        Regression : l'ancien regex etait ancre en debut de balise et ratait
+        22% des FAQ reellement presentes sur superprof.fr-ressources (emoji en
+        tete, ou tournure du type 'Tes questions les plus frequentes').
+        """
+        variantes = [
+            "Les questions fréquentes ❓",
+            "Les questions fréquentes",
+            "Tes questions les plus fréquentes ❓",
+            "❓ FAQ sur les ondes électromagnétiques",
+            "Foire aux questions ❓",
+            "Questions fréquentes sur le circuit RLC 🤓",
+            "Contrôle moteur : les questions fréquentes ❓",
+        ]
+        for titre in variantes:
+            html = f"<h1>Titre</h1><h2>{titre}</h2><h3>🤔 Une question ?</h3><p>Une réponse.</p>"
+            result = self.analyzer.analyze(html, "https://superprof.fr/t.html")
+            assert result.has_faq_section is True, f"FAQ non detectee : {titre}"
+
+    def test_has_faq_section_absente(self):
+        """Un article sans FAQ n'est pas detecte comme en ayant une."""
+        html = ("<h1>Titre</h1><h2>Quels sont les 3 types d'ondes ?</h2>"
+                "<p>Texte.</p><h2>Sources 📚</h2><p>Ref.</p>")
+        result = self.analyzer.analyze(html, "https://superprof.fr/t.html")
+        assert result.has_faq_section is False
+
     def test_extract_headings_structure(self, sample_html):
         """Test extraction structure des headings."""
         result = self.analyzer.analyze(sample_html, "https://enseigna.fr/test.html")

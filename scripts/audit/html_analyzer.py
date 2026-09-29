@@ -80,7 +80,13 @@ class HTMLAnalyzer:
         cta_blocks = self._extract_cta_blocks(html, headings.h2_list)
 
         # Métriques de qualité
-        has_faq = bool(re.search(r'<h[23][^>]*>\s*(FAQ|Questions?\s+fréquentes?|Foire\s+aux\s+questions?)', html, re.I))
+        # Le titre de FAQ n'est PAS toujours en debut de balise : il peut etre
+        # precede d'un emoji ("❓ FAQ sur les ondes") ou d'un groupe nominal
+        # ("Tes questions les plus frequentes ❓", "Les questions frequentes").
+        # Un regex ancre en debut de titre ratait 22% des FAQ reellement presentes.
+        has_faq = bool(re.search(
+            r'<h[23][^>]*>[^<]*?(FAQ|Foire\s+aux\s+questions?|questions?\s+(?:les\s+plus\s+)?fr[ée]quentes?)',
+            html, re.I))
         has_table = '<table' in html.lower()
         has_list = bool(re.search(r'<[ou]l[^>]*>', html, re.I))
         paragraph_count = len(re.findall(r'<p[^>]*>', html, re.I))

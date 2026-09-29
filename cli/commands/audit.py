@@ -352,6 +352,23 @@ def gsc_state(site, months, top_pos, min_impressions, dry_run):
               help='Republication window start YYYY-MM-DD (with --end)')
 @click.option('--end', default=None,
               help='Republication window end YYYY-MM-DD (with --start)')
+@click.option('--tab', default=None,
+              help='Restrict the lot to one Sheet tab and date every refresh '
+                   'from its "Date de refresh" column (the tab must declare '
+                   '`col_date` in sheets.tabs). That column is filled by whoever '
+                   'did the refresh, so it dates editorial work rather than a '
+                   'WordPress write: without it, August 2026 measured 166 '
+                   'articles where the tab declared 86, pulling in June refreshes '
+                   'whose post had merely been edited since')
+@click.option('--source', type=click.Choice(['auto', 'notion']), default='auto',
+              help='Where republication dates come from. "auto" uses the local '
+                   'push trace (wp_backups + journal, then WordPress modified '
+                   'for manual republications). "notion" reads the site\'s '
+                   'publications database instead - its refresh-date column '
+                   'gives the scope and the dates, and the sitemap lastmod '
+                   'fills in refreshes nobody recorded there. Use it on a site '
+                   'that publishes by hand, where wp_backups is empty and no '
+                   'rank of the local cascade exists (enseigna.fr)')
 @click.option('--maturity', type=int, default=30,
               help='Days observed after each republication, and as many before '
                    '(default: 30). Articles with less hindsight than 7 days are skipped')
@@ -365,9 +382,11 @@ def gsc_state(site, months, top_pos, min_impressions, dry_run):
                    '7-day minimum hindsight. Off by default: run too early, a month '
                    'report silently drops its last weeks (August 2026 launched on '
                    'Sept 1st covered 44 of 78 articles)')
-@click.option('--top-queries', type=int, default=10,
-              help='Queries listed per family (held / gained / lost) on each '
-                   'article card of the annex (default: 10)')
+@click.option('--top-queries', type=int, default=5,
+              help='Queries listed on each article card: the N that weigh most, '
+                   'before or after the refresh, each tagged gained / held / '
+                   'lost (default: 5). Display only: the collection always '
+                   'fetches every query, so raising it costs no API call')
 @click.option('--no-queries', is_flag=True,
               help='Skip the per-query GSC collection. That collection is what '
                    'shows the semantic shift of a refresh (which queries an '
@@ -375,22 +394,49 @@ def gsc_state(site, months, top_pos, min_impressions, dry_run):
                    'per window, not per URL')
 @click.option('--pdf', is_flag=True,
               help='Also write an A4 PDF next to the HTML (needs WeasyPrint). '
-                   'The PDF holds the director-facing pages only')
+                   'Holds the verdict, then one card per article (the 20 '
+                   'strongest rises, the 20 strongest falls, the rest of the '
+                   'lot) with its top queries and their reading (~30 pages)')
 @click.option('--pdf-annex', is_flag=True,
-              help='Include the per-URL annex in the PDF (~30 pages on a 76-article '
-                   'lot). Off by default: the sent document is the short one')
+              help='Append the exhaustive table of every article to the PDF. '
+                   'Off by default: the sent document is the short one')
 @click.option('--dry-run', is_flag=True, help='Do not write the JSON/HTML report')
-def impact(site, month, start, end, maturity, top, top_queries, no_queries,
-           pdf, pdf_annex, no_wp_check, partial, dry_run):
+@click.option('--render-only', is_flag=True,
+              help='Re-render the HTML (and the PDF with --pdf) from the JSON '
+                   'already on disk for this site and month, without any GSC '
+                   'or WordPress call. For layout changes only: the numbers '
+                   'are those of the last collection')
+def impact(site, month, start, end, tab, source, maturity, top, top_queries,
+           no_queries, pdf, pdf_annex, no_wp_check, partial, dry_run, render_only):
     """Monthly impact report: every republished article compared to itself."""
-    from scripts.audit.impact_cohort import run_impact
+    from scripts.audit.impact_cohort import run_impact, render_from_json
+
+    if render_only:
+        try:
+            out = render_from_json(site, month=month, start=start, pdf=pdf,
+                                   annex=pdf_annex)
+        except FileNotFoundError as e:
+            click.echo(f"\n❌ ERROR: {e}", err=True)
+            raise click.Abort()
+        click.echo(f"\n📈 IMPACT REFRESH - {site} / {month or start} (re-rendered, no GSC call)")
+        click.echo(f"  Report: {out['html_path']}")
+        if pdf:
+            if out.get("pdf_path"):
+                click.echo(f"  PDF:    {out['pdf_path']}")
+            else:
+                click.echo("  ⚠️  PDF skipped: WeasyPrint not installed "
+                           "(pip install weasyprint)")
+        return
 
     def fmt_pct(v):
         return "n/a" if v is None else (f"+{v}%" if v > 0 else f"{v}%")
 
-    click.echo(f"\n📈 IMPACT REFRESH - {site} / {month or f'{start} → {end}'}")
+    scope = f" / {tab}" if tab else (" / Notion" if source == "notion" else "")
+    click.echo(f"\n📈 IMPACT REFRESH - {site}{scope} / "
+               f"{month or f'{start} → {end}'}")
     try:
-        r = run_impact(site, month=month, start=start, end=end,
+        r = run_impact(site, month=month, start=start, end=end, tab=tab,
+                       source=source,
                        maturity=maturity, top=top, top_queries=top_queries,
                        with_queries=not no_queries, pdf=pdf, pdf_annex=pdf_annex,
                        check_wp=not no_wp_check, partial=partial,
@@ -424,10 +470,12 @@ def impact(site, month, start, end, maturity, top, top_queries, no_queries,
             for w in r["ramp"]:
                 click.echo(f"    {w['label']:<16} {w['per_day']:>8}/j  x{w['factor']}")
 
-        click.echo("\n  By hindsight bucket:")
-        for k, v in r["by_maturity"].items():
-            click.echo(f"    {k:<14} {v['articles']:>3} art. | impr "
-                       f"{fmt_pct(v['impressions_pct']):>9} | clics {fmt_pct(v['clicks_pct'])}")
+        hindsight = r.get("hindsight_days") or []
+        if hindsight:
+            mid = hindsight[len(hindsight) // 2]
+            click.echo(f"\n  Hindsight after refresh: {hindsight[0]}-{hindsight[-1]} d "
+                       f"(median {mid} d) — the 'before' side is now anchored a year "
+                       f"back, so only this side still varies")
 
         if r.get("html_path"):
             click.echo(f"\n  Report: {r['html_path']}")

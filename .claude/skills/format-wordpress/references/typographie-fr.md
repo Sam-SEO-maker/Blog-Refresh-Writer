@@ -20,10 +20,19 @@ English):
 | `€` | `nombre⎵€` | `30⎵€` |
 | `«` `»` | `«⎵texte⎵»` | NBSP inside the quotation marks |
 
-Where `⎵` = non-breaking space (U+00A0). In the output HTML, use the literal
-U+00A0 character or `&nbsp;`; do not rely on WordPress auto-correcting on
-paste. Old articles often have missing NBSPs: detect and fix them during the
-refresh.
+Where `⎵` = non-breaking space (U+00A0). In the output HTML, write the
+**literal U+00A0 character, never the `&nbsp;` entity** — both render
+identically, but the entity clutters the source that editors read and edit by
+hand in WordPress, and it has to be escaped again (`&nbsp;`) inside the
+JSON attributes of AdvGB blocks, where it is unreadable. Do not rely on
+WordPress auto-correcting on paste. Old articles often have missing NBSPs:
+detect and fix them during the refresh.
+
+There is **no SEO argument either way**: Google decodes HTML entities before
+indexing, so `&nbsp;` and U+00A0 are the same space to a crawler. The rule is
+about source legibility, so never drop the non-breaking space itself to
+"clean up" the markup — losing it lets a `?`, a `%` or a closing `»` wrap
+alone onto the next line on mobile.
 
 ## 2. Quotation marks
 

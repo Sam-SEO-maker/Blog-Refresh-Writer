@@ -25,6 +25,7 @@ class MinimalRow:
     impressions_30d: int = 0
     clicks_30d: int = 0
     ctr_30d: float = 0.0
+    avg_position: float = 0.0
     people_also_ask: str = ""
     secondary_keywords: str = ""
     # Bloc SERP complet (top 10, format dominant, position). Sans ce champ, les
@@ -190,6 +191,12 @@ def refresh(url, blog, spreadsheet_id, strategy, keyword, new_article, title_opt
             people_also_ask=result.people_also_ask or "",
             secondary_keywords=result.secondary_keywords or "",
             serp=result.serp or {},
+            # Performance GSC mesurée pendant l'audit. Sans ce report, le row
+            # garde ses défauts à zéro et audit_data.json annonce un trafic nul.
+            impressions_30d=getattr(result, "impressions_30d", 0) or 0,
+            clicks_30d=getattr(result, "clicks_30d", 0) or 0,
+            ctr_30d=getattr(result, "ctr_30d", 0.0) or 0.0,
+            avg_position=getattr(result, "avg_position", 0.0) or 0.0,
             new_article=new_article,
         )
 

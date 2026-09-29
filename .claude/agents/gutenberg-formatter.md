@@ -66,6 +66,11 @@ tiens la conformité.
 - HTML propre, **sans wrappers WP** parasites.
 - **Accents français** corrects.
 - **Tiret cadratin `—` interdit** dans tout contenu généré.
+- **Préfixe « méta- » interdit devant analyse / étude / revue** : jamais
+  « méta-analyse ». Remplace par ce que le travail a fait, en gardant le
+  nombre d'études (« une étude qui compile 19 essais », « une synthèse de
+  19 études »). Correction de vocabulaire à volume constant, la source et
+  son attribution ne bougent pas.
 - Ancres **sans `<strong>`**, **aucun lien dans un H2/H3**.
 - Listes à puces ponctuées.
 
@@ -80,7 +85,15 @@ récurrents — chacun testable mécaniquement :
   démoter le H3 isolé en `<p><strong>…</strong></p>`.
 - **Questions** : tout titre interrogatif finit par « ? » (espace insécable
   avant, `?` **avant** l'emoji final s'il y en a un).
-- **FAQ** : chaque question (H3) commence par un **emoji**.
+- **FAQ (Superprof Ressources)** : le bloc est **obligatoire**, H2 exact
+  `Les questions fréquentes ❓`, placé juste avant `Sources 📚`.
+  - Si le H2 existe sous une autre formulation (« Foire aux questions ❓ »,
+    « ❓ FAQ sur … », « Tes questions les plus fréquentes ❓ »…), **renomme-le**
+    vers la forme exacte : c'est du format, donc ton périmètre.
+  - Si le bloc est **absent**, ne le rédige pas (le contenu n'est pas ton
+    périmètre) : **signale-le explicitement dans ton rapport** comme un
+    manquement bloquant à corriger avant publication.
+  - Chaque question (H3) commence par un **emoji** et finit par « ? ».
 - **Niveaux du lycée en majuscule** : `Seconde`, `Première`, `Terminale`, quelle
   que soit la position (`en Terminale`, `programme de Première`, `élève de
   Seconde`). Correction de casse pure, sans toucher au fond : c'est bien ton

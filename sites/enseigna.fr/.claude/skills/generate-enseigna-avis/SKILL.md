@@ -149,6 +149,12 @@ pour donner une impression de diversité sans noyer l'article.
 
 ## Règles transverses
 
+- **Mots-clés secondaires (2-3, OBLIGATOIRE)** : en plus du mot-clé principal,
+  choisir 2-3 mots-clés secondaires parmi ceux déjà fournis dans le contexte
+  (`generation_prompt.txt`, section « Mots-clés secondaires (SERP) à couvrir »
+  — collectés via DataForSEO, aucune recherche à refaire) et les placer dans
+  un H2, dans la FAQ, et une fois dans le corps. Détail et exemples :
+  section « Mots-clés secondaires » de `site.md`.
 - **Refresh = jamais supprimer d'asset ni de lien** (Règle d'Or), y compris les
   liens vers concurrents (superprof.fr) — [[feedback-refresh-no-link-removal]].
 - **H2 optimisés**, pas recopiés de l'article source (sauf H2 = H1 d'un enfant de
@@ -156,6 +162,15 @@ pour donner une impression de diversité sans noyer l'article.
 - **Accents corrects** partout (HTML et JSON ACF).
 - **Pas de tiret cadratin `—`** — [[feedback-no-em-dash]].
 - **Pas de « Consulté le [date] »** dans les sources — [[feedback-no-consulte-le]].
+- **Sources : citer beaucoup, ancrer peu** (`site.md`, section dédiée). Trois
+  règles qui se vérifient avant de livrer : **max 3 liens externes éditoriaux**
+  (hors plateforme sujet, hors superprof.fr, hors liens préexistants) ; **une
+  source = un seul `href`** (le bloc Références ne redouble jamais un lien déjà
+  posé dans le corps) ; **aucun lien vers une page qui n'est pas en français**
+  — un chiffre anglophone se cite par attribution, sans ancre. Et le test de
+  pertinence : la source aide-t-elle *à décider d'un achat* ? Une étude
+  académique ou un rapport de la Cour des comptes, aussi solides soient-ils,
+  n'ont pas leur place dans un avis produit.
 - **Pas de `<strong>` dans les ancres de liens**, pas de lien dans les H2/H3.
 - **Listes à puces** : chaque `<li>` finit par une virgule, le dernier par un point.
 

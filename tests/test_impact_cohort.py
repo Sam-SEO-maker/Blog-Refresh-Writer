@@ -20,14 +20,21 @@ from pathlib import Path
 import pytest
 
 from scripts.audit.impact_cohort import (
+    DIAGS,
     MIN_COVERAGE_PCT,
     MIN_MATURITY,
+    YOY_OFFSET_DAYS,
     _article_windows,
     _de,
-    _maturity_bucket,
+    _diagnose,
     _month_bounds,
+    _net_cell,
+    _pos,
+    _pos_cell,
     _pushed_dates_from_journal,
+    _pl,
     _query_movement,
+    _query_reading,
     _slug_from_url,
 )
 
@@ -44,7 +51,9 @@ def test_windows_have_equal_length():
     """Avant et après doivent couvrir le même nombre de jours.
 
     C'est l'invariant de la mesure : des durées inégales rendraient les
-    volumes de clics incomparables.
+    volumes de clics incomparables. Vrai aussi bien en année-sur-année
+    qu'avant ce changement, puisque les deux fenêtres restent calées sur la
+    même durée N, seule leur ancre (J-365 contre `pushed`) diffère.
     """
     w = _article_windows("2026-08-06", 30, "2026-09-30")
     before = (datetime.strptime(w["before"]["end"], "%Y-%m-%d")
@@ -54,18 +63,31 @@ def test_windows_have_equal_length():
     assert before == after == 29  # 30 jours inclusifs
 
 
-def test_publication_day_excluded_from_both_windows():
-    """Le jour du push porte les deux versions : il n'appartient à aucun côté."""
+def test_before_window_anchored_a_year_earlier():
+    """« Avant » suit désormais la même date un an plus tôt, pas les jours
+
+    qui précèdent la republication. Pour une republication le 6 août 2026,
+    « avant » démarre le lendemain du 6 août 2025 : même décalage d'un jour
+    que « après » démarre le lendemain de la republication elle-même.
+    """
     w = _article_windows("2026-08-06", 30, "2026-09-30")
-    assert w["before"]["end"] == "2026-08-05"
+    assert w["before"]["start"] == "2025-08-07"
+    assert w["before"]["end"] == "2025-09-05"
     assert w["after"]["start"] == "2026-08-07"
+    assert w["after"]["end"] == "2026-09-05"
 
 
 def test_window_shrinks_to_available_hindsight():
-    """Sans 30 jours disponibles, on mesure sur le recul réel, des deux côtés."""
+    """Sans 30 jours disponibles côté « après », N se réduit des deux côtés.
+
+    Le recul « avant » (J-365) est presque toujours disponible dans
+    l'historique GSC : c'est le recul « après », qui dépend de la date de
+    republication dans le mois, qui continue de plafonner N.
+    """
     w = _article_windows("2026-08-25", 30, "2026-09-07")
     assert w["maturity"] == 13
-    assert w["before"]["start"] == "2026-08-12"
+    assert w["before"]["start"] == "2025-08-26"
+    assert w["before"]["end"] == "2025-09-07"
     assert w["after"]["end"] == "2026-09-07"
 
 
@@ -76,15 +98,6 @@ def test_article_below_min_maturity_is_not_measured():
 
 def test_article_published_after_data_end_is_not_measured():
     assert _article_windows("2026-09-15", 30, "2026-09-07") is None
-
-
-@pytest.mark.parametrize("days,expected", [
-    (7, "7-15 jours"), (15, "7-15 jours"),
-    (16, "16-25 jours"), (25, "16-25 jours"),
-    (26, "26-30 jours"), (30, "26-30 jours"),
-])
-def test_maturity_buckets(days, expected):
-    assert _maturity_bucket(days) == expected
 
 
 def test_month_bounds_covers_full_month():
@@ -158,12 +171,20 @@ def test_skill_exists_and_declares_the_command():
 def test_template_does_not_overclaim_causality():
     """La skill proscrit « attribuable au travail éditorial ».
 
-    Le contrôle écarte la saisonnalité, pas une mise à jour d'algorithme :
-    la formulation défendable est « il suit les articles retravaillés ».
+    La mesure compare un article à lui-même un an plus tôt : elle n'écarte ni
+    une mise à jour d'algorithme, ni une évolution de la demande. Revendiquer
+    la causalité dans la prose du rapport est donc indéfendable, quelle que
+    soit la formulation retenue par ailleurs.
+
+    Le test ne fige plus une phrase précise : celle qui portait cette garantie
+    (« il suit les articles qui ont été retravaillés ») justifiait l'écart au
+    groupe de contrôle, retiré du rendu avec la notion d'écart net. La
+    garantie, elle, reste — et c'est elle qu'on teste.
     """
     prose = _template_prose()
-    assert "attribuable au travail" not in prose
-    assert "il suit les articles qui ont été retravaillés" in prose
+    for banned in ("attribuable au travail", "grâce au refresh",
+                   "prouve que", "démontre que"):
+        assert banned not in prose, f"causalité surjouée : « {banned} »"
 
 
 def test_template_states_the_maturity_reservation():
@@ -179,11 +200,23 @@ def test_template_states_the_maturity_reservation():
     assert "sous-évaluées" in prose
 
 
-def test_template_reports_expected_volumes_not_only_percentages():
-    """Le contrefactuel se cite en volumes : « auraient fait N impressions »."""
+def test_template_reports_raw_volumes_not_only_percentages():
+    """Les chiffres se citent en volumes, pas seulement en pourcentages.
+
+    « +153 % de clics » sur 84 → 213 clics est vrai et modeste : le
+    pourcentage seul surpromet, et c'est par là qu'un rapport se fait
+    attaquer. Le verdict doit donc porter les volumes bruts des deux années.
+
+    Le contrefactuel du groupe de contrôle (« auraient fait N impressions »)
+    a été retiré du rendu : on refresh précisément les articles dont le trafic
+    est atone, donc un écart avec le reste du site est attendu par
+    construction et n'apprenait rien. Ce sont les volumes réels qui restent.
+    """
     prose = _template_prose()
-    assert "auraient fait" in prose
-    assert "expected_impressions" in prose
+    assert "impressions_before" in prose
+    assert "impressions_after" in prose
+    assert "clicks_before" in prose
+    assert "clicks_after" in prose
 
 
 def test_reliability_split_ignores_noise():
@@ -218,6 +251,8 @@ def test_skill_documents_every_rendered_section():
         "Les plus fortes progressions": "progressions",
         "Les articles en recul": "recul",
         "Articles retouchés après leur refresh": "retouchés",
+        "Réussite selon le recul de mesure": "gradient de recul",
+        "Situer ce résultat": "situer ce résultat",
     }
     for h, keyword in expected_keywords.items():
         if any(h in x for x in headings):
@@ -342,3 +377,237 @@ def test_lost_queries_are_ranked_on_their_former_volume():
     }
     m = _query_movement(before, {}, 10)
     assert [x["query"] for x in m["lost"]] == ["grosse", "petite"]
+
+
+# ---------------------------------------------------------------------------
+# Diagnostic par article
+# ---------------------------------------------------------------------------
+
+def _article(net, maturity, gained, lost, held, before=100, after=100):
+    return {
+        "maturity": maturity,
+        "net_impressions_pct": net,
+        "before": {"impressions": before},
+        "after": {"impressions": after},
+        "queries": {"counts": {"gained": gained, "lost": lost, "held": held}},
+    }
+
+
+def test_a_declining_article_never_gets_a_positive_label():
+    """Le garde-fou qui a motivé l'étiquette « audience resserrée ».
+
+    `gagnées > maintenues` est vrai trivialement quand l'article tient peu de
+    requêtes. Sur le lot réel, `forces-et-effets` (+1 gagnée, 0 maintenue,
+    -28 % net) ressortait « couverture élargie » alors qu'il recule : une
+    étiquette positive sur un article en baisse envoie le mauvais signal.
+    """
+    d = _diagnose(_article(net=-28.2, maturity=19, gained=1, lost=2, held=0))
+    assert d not in (DIAGS["coverage"], DIAGS["ranking"])
+    assert d == DIAGS["narrowed"]
+
+
+def test_a_mature_decline_is_diagnosed_on_its_queries():
+    """Passé le seuil de recul, une chute s'impute bien au contenu."""
+    assert _diagnose(
+        _article(net=-46.0, maturity=30, gained=5, lost=62, held=6)
+    ) == DIAGS["query_loss"]
+
+
+def test_coverage_beats_ranking_when_the_article_widens():
+    """Le cas d'école : volume en forte hausse, position en recul.
+
+    `polariser-lumiere-physique` (+310 % net, position 9,9 → 10,6, 83 requêtes
+    gagnées) doit se lire comme un élargissement, pas comme un échec de
+    classement. Aucune métrique par page ne pouvait le dire.
+    """
+    assert _diagnose(
+        _article(net=310.5, maturity=30, gained=83, lost=23, held=20)
+    ) == DIAGS["coverage"]
+
+
+def test_diagnosis_is_none_without_query_data():
+    """`--no-queries` supprime la collecte : ne rien affirmer plutôt que deviner."""
+    assert _diagnose({"maturity": 30, "net_impressions_pct": 50.0,
+                      "before": {"impressions": 10},
+                      "after": {"impressions": 20}}) is None
+
+
+# ---------------------------------------------------------------------------
+# Affichage
+# ---------------------------------------------------------------------------
+
+def test_position_is_displayed_without_decimals():
+    """Une position GSC est une moyenne pondérée : on n'est pas « 8,4e »."""
+    assert _pos(8.4) == "8"
+    assert _pos(7.5) == "8"
+    assert _pos(None) == "–"
+
+
+def test_position_delta_survives_rounding():
+    """Arrondir AVANT le delta effacerait le mouvement.
+
+    8,4 → 7,5 est un gain réel de 0,9 place. En arrondissant d'abord, les deux
+    valent 8 et la cellule afficherait « +0 » : l'arrondi masquerait ce que la
+    colonne existe pour montrer.
+    """
+    cell = _pos_cell(8.4, 7.5)
+    assert "+1" in cell
+    assert "+0" not in cell
+
+
+def test_a_page_starting_from_zero_reports_volume_not_na():
+    """Une page invisible avant refresh n'a pas de pourcentage de progression.
+
+    Afficher « n/a » effaçait de vraies réussites : sur août 2026, quatre
+    articles créaient 968 impressions et ressortaient tous comme non mesurables.
+    """
+    cell = _net_cell({
+        "net_impressions_pct": None,
+        "before": {"impressions": 0},
+        "after": {"impressions": 728},
+    })
+    assert "nouveau" in cell
+    assert "728" in cell
+    assert "n/a" not in cell
+
+
+# ---------------------------------------------------------------------------
+# Périmètre : la colonne de date de l'onglet
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("raw,expected", [
+    ("04/08/2026", "2026-08-04"),
+    ("2026-08-04", "2026-08-04"),
+    ("4/8/2026", "2026-08-04"),
+    ("", None),
+    ("n/a", None),
+    ("32/08/2026", None),   # jour impossible : ignorer plutôt que deviner
+])
+def test_sheet_date_parsing(raw, expected):
+    """La colonne est saisie à la main : deux formats coexistent.
+
+    Une valeur non reconnue est ignorée et non devinée — une date fausse
+    déplacerait l'article de vague et fausserait sa fenêtre de mesure.
+    """
+    from scripts.audit.impact_cohort import _parse_fr_date
+    assert _parse_fr_date(raw) == expected
+
+
+def test_a_last_rank_fallback_must_not_widen_the_scope():
+    """La leçon du faux d'août 2026, verrouillée dans le code.
+
+    Le rapport annonçait 166 articles là où l'onglet en déclarait 86 : le repli
+    sur `modified` (rang 3) ne comblait pas un trou dans un lot connu, il
+    *définissait* le lot. Un article refreshé en juin, simplement réédité
+    depuis, ressortait comme la plus forte progression du mois.
+
+    En mode `--tab`, la source doit donc être exclusive : aucune date WordPress
+    ne doit pouvoir entrer. Même exigence pour `--source notion`, qui est le
+    pendant du mode `--tab` sur un site à publication manuelle : le sitemap y
+    comble un trou dans un lot connu (les URLs que la base déclare en ligne)
+    et ne définit jamais le lot.
+    """
+    src = MODULE.read_text(encoding="utf-8")
+    assert "_pushed_dates_from_sheet_column" in src
+    # Le mode --tab court-circuite les autres sources plutôt que de s'y ajouter.
+    assert "elif tab:" in src
+    assert '"sheet_column" if tab' in src
+    # Le complément sitemap est borné aux URLs que la base Notion suit.
+    assert "_notion_online_slugs" in src
+    assert "if slug in known and slug not in pushed_by_slug" in src
+
+
+def test_control_excludes_refreshes_outside_the_scope():
+    """En mode --tab, le lot mesuré est un sous-ensemble des refreshs du mois.
+
+    Les autres ont bougé eux aussi. Les laisser dans le groupe de contrôle
+    ferait passer leur progression pour de la saisonnalité, gonflerait le
+    rythme « naturel » du site et sous-estimerait l'écart net du lot.
+    """
+    src = MODULE.read_text(encoding="utf-8")
+    assert "excluded_urls" in src
+    assert "u not in excluded_urls" in src
+
+
+# ---------------------------------------------------------------------------
+# Fiche par URL : top requêtes fusionnées et lecture rédigée
+# ---------------------------------------------------------------------------
+
+def _q(imp, pos=None, clicks=0):
+    return {"impressions": imp, "clicks": clicks, "position": pos}
+
+
+def test_query_movement_keeps_a_merged_top_ranked_on_either_side():
+    """La fiche affiche les requêtes qui pèsent le plus AVANT OU APRÈS.
+
+    Classer sur le seul « après » ferait disparaître la requête perdue à 414
+    impressions (le vrai sujet d'un recul) et la requête maintenue qui
+    s'effondre (368 → 5), derrière des requêtes gagnées à 1 impression.
+    """
+    before = {"laser": _q(414, 89.0), "principe": _q(368, 20.0)}
+    after = {"principe": _q(5, 30.0), "physique": _q(40, 5.0)}
+    after.update({f"g{i}": _q(1, 50.0) for i in range(6)})
+    m = _query_movement(before, after, 3)
+    assert [x["query"] for x in m["top"]] == ["laser", "principe", "physique"]
+    assert [x["kind"] for x in m["top"]] == ["perdue", "maintenue", "gagnée"]
+    # les familles restent disponibles à côté, tronquées à n
+    assert len(m["gained"]) == 3 and m["counts"]["gained"] == 7
+
+
+def test_plural_applies_to_every_word():
+    assert _pl(5, "requête perdue") == "5 requêtes perdues"
+    assert _pl(1, "requête perdue") == "1 requête perdue"
+    assert _pl(1, "impression") == "1 impression"
+
+
+def _card(ib, ia, held=(), gained=(), lost=(), counts=None):
+    def rows(items, before, after):
+        out = []
+        for q, b, a, pb, pa in items:
+            out.append({"query": q, "impressions_before": b, "impressions_after": a,
+                        "clicks_before": 0, "clicks_after": 0,
+                        "position_before": pb, "position_after": pa,
+                        **({"position_delta": round(pb - pa, 1)}
+                           if pb is not None and pa is not None else {})})
+        return out
+    h, g, l = rows(held, 1, 1), rows(gained, 0, 1), rows(lost, 1, 0)
+    c = counts or {"held": len(h), "gained": len(g), "lost": len(l),
+                   "before": len(h) + len(l), "after": len(h) + len(g)}
+    return {"before": {"impressions": ib}, "after": {"impressions": ia},
+            "queries": {"held": h, "gained": g, "lost": l, "counts": c}}
+
+
+def test_reading_names_the_real_queries_and_states_no_cause():
+    a = _card(907, 45,
+                 held=[("comment fonctionne un laser", 23, 2, 80.0, 36.0)],
+                 lost=[("laser", 414, 0, 89.0, None), ("le laser", 9, 0, 72.0, None)],
+                 gained=[("physique", 0, 1, None, 2.0)])
+    txt = _query_reading(a)
+    assert "« laser »" in txt and "414 impressions" in txt
+    assert "2 requêtes" in txt and "requête perdues" not in txt
+    for banned in ("attribuable", "grâce au", "prouve", "démontre"):
+        assert banned not in txt
+    # 2 → 23 impressions : la position n'est pas citée sur si peu de volume
+    assert "gagne 44 places" not in txt
+
+
+def test_reading_says_when_gsc_attributes_little_of_the_volume():
+    """309 impressions sur la page, 6 sur ses requêtes visibles : dire que le
+    volume « vient » de ces requêtes serait faux."""
+    a = _card(144, 309,
+                 gained=[("pythagore", 0, 2, None, 8.0), ("classe", 0, 1, None, 8.0),
+                         ("a", 0, 1, None, 9.0), ("b", 0, 1, None, 9.0), ("c", 0, 1, None, 9.0)],
+                 lost=[("pythagore exercice", 10, 0, 74.0, None)])
+    txt = _query_reading(a)
+    assert "n'attribue" in txt and "309" in txt
+    assert "part visible" in txt
+
+
+def test_reading_cites_a_position_move_only_on_volume():
+    a = _card(100, 250,
+                 held=[("miss marple", 1, 250, 1.0, 3.0),
+                       ("qui est miss marple", 3, 25, 26.0, 5.0),
+                       ("bruit", 2, 2, 80.0, 22.0)])
+    txt = _query_reading(a)
+    assert "« qui est miss marple » gagne 21 places" in txt
+    assert "58 places" not in txt

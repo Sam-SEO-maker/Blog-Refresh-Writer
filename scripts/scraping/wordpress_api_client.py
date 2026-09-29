@@ -279,6 +279,7 @@ class WordPressAPIClient:
                 "slug": str,
                 "title": str,
                 "link": str,
+                "modified": str,        # ISO date of the last WP update (republication)
                 "raw": str,             # Gutenberg source with <!-- wp:* --> blocks
                 "rendered": str,        # Rendered HTML
                 "featured_image": {     # None if no featured image set
@@ -312,6 +313,10 @@ class WordPressAPIClient:
             "slug": post.get("slug", ""),
             "title": post.get("title", {}).get("rendered", ""),
             "link": post.get("link", ""),
+            # Date de la dernière mise à jour enregistrée par WordPress : la
+            # seule trace de republication qui ne dépende ni d'une saisie
+            # manuelle ni d'un fichier local qu'on peut purger.
+            "modified": post.get("modified_gmt") or post.get("modified", ""),
             "raw": raw,
             "rendered": post.get("content", {}).get("rendered", ""),
             "featured_image": featured_image,

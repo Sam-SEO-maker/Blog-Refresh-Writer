@@ -330,3 +330,53 @@ class TestAssetReport:
 
         assert isinstance(report, str)
         assert "INVALIDE" in report
+
+    # --- Regle d'Or : la FAQ ne doit pas disparaitre au refresh -------------
+    # Regression : le comptage d'assets ne voyait que images/liens/CTA, donc la
+    # suppression d'une FAQ preexistante ne declenchait aucune alerte. 30 articles
+    # superprof.fr-ressources ont ete publies sans FAQ sans qu'on s'en apercoive.
+
+    _CTA = '<p><a href="https://www.superprof.fr/cours/maths/">Trouve un prof</a></p>'
+    _BASE = '<h1>Titre</h1><h2>Section</h2><p>Un paragraphe de contenu.</p>' + _CTA
+    _FAQ = ('<h2>Les questions fréquentes ❓</h2>'
+            '<h3>🤔 Une question ?</h3><p>Une réponse.</p>')
+
+    def test_faq_perdue_est_une_erreur(self):
+        """Supprimer une FAQ preexistante invalide le refresh."""
+        original = self._BASE + self._FAQ
+        original_assets = self.manager.extract_assets(original)
+        validation = self.manager.validate(
+            original_assets, self._BASE, original_content=original
+        )
+        assert validation.is_valid is False
+        assert any("FAQ" in e for e in validation.errors)
+
+    def test_faq_preservee_est_valide(self):
+        """Conserver la FAQ ne declenche aucune erreur FAQ."""
+        original = self._BASE + self._FAQ
+        original_assets = self.manager.extract_assets(original)
+        validation = self.manager.validate(
+            original_assets, original, original_content=original
+        )
+        assert not any("FAQ" in e for e in validation.errors)
+
+    def test_faq_renommee_reste_valide(self):
+        """Renommer une ancienne FAQ vers la forme canonique n'est pas une perte."""
+        original = self._BASE + '<h2>❓ FAQ sur le sujet</h2><h3>🤔 Q ?</h3><p>R.</p>'
+        original_assets = self.manager.extract_assets(original)
+        validation = self.manager.validate(
+            original_assets, self._BASE + self._FAQ, original_content=original
+        )
+        assert not any("FAQ" in e for e in validation.errors)
+
+    def test_original_sans_faq_ne_bloque_pas(self):
+        """La Regle d'Or ne parle que de non-regression : sans FAQ d'origine, pas d'erreur.
+
+        L'obligation d'AVOIR une FAQ releve de la generation (site.md + skill),
+        pas du comptage d'assets.
+        """
+        original_assets = self.manager.extract_assets(self._BASE)
+        validation = self.manager.validate(
+            original_assets, self._BASE, original_content=self._BASE
+        )
+        assert not any("FAQ" in e for e in validation.errors)

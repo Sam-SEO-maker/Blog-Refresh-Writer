@@ -28,5 +28,8 @@ attached to each section. Improve content, structure and E-E-A-T.
   `edito-refresh` skill.
 - **Form** (asset preservation / Golden Rule, clean HTML, lists, tables,
   colored callouts forbidden, narrative writing vs directory style) → `format-wordpress` skill.
-- **Overall structure** (intro, block order, optional recap table) →
-  the site's skill. Do not impose a structure or hardcoded colors here.
+- **Overall structure** (intro, mandatory blocks, block order, FAQ, optional
+  recap table) → the site's skill, which is authoritative. Do not impose a
+  structure or hardcoded colors here. A full rewrite must still ship **every**
+  block the site's skill marks as mandatory: rewriting from scratch is never a
+  licence to drop one (superprof.fr-ressources: 7 mandatory blocks, FAQ included).

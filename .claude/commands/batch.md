@@ -1,6 +1,6 @@
 ---
 description: Batch refresh from Google Sheets (all URLs of a given action for a blog), optionally preparing N articles in parallel.
-argument-hint: --site <site-slug> --tab "<tab name>" [--action <FULL_REFRESH|PARTIAL_REFRESH|REFRESH_TITLES>] [--limit N] [--parallel N]
+argument-hint: --site <site-slug> --tab "<tab name>" [--action <FULL_REFRESH|PARTIAL_REFRESH|REFRESH_TITLES>] [--limit N] [--rows A-B] [--parallel N]
 allowed-tools: Bash(python3 content_writer.py batch refresh:*), Bash(python3 content_writer.py plan init:*), Bash(python3 content_writer.py plan check:*), Bash(python3 content_writer.py finalize:*), Bash(python3 content_writer.py ytg qc:*), Task, Read, Write, WebSearch, WebFetch, Skill
 ---
 
@@ -37,6 +37,35 @@ python3 content_writer.py batch refresh \
 Defaults: `--action FULL_REFRESH`, `--limit 50`, and `--spreadsheet-id` read
 from the site config. `--limit 0` lifts the cap — the whole tab gets prepared,
 which on a large tab means hours of WP/GSC/SERP/YTG calls paid upfront.
+
+### Targeting a row range (`--rows`)
+
+`--limit` always counts from the top of the tab, so it cannot reach a slice in
+the middle of a long backlog. `--rows` does:
+
+```bash
+python3 content_writer.py batch refresh \
+  --site superprof.fr-ressources --tab "Medium Potential" --rows 140-180
+```
+
+The bounds are the row numbers **Google Sheets displays** (1-based, header rows
+included) — the same numbers you read off the left margin — not list indices.
+Accepted forms: `140-180`, `140:180`, `140` (a single row).
+
+Two properties worth knowing before using it:
+
+- **It filters before `--limit`**, so `--limit` still counts *within* the range.
+  The other order would cap on the top of the tab first and then keep whatever
+  survived the range — usually nothing, and indistinguishable from a genuinely
+  empty range.
+- **It selects, it does not override the status whitelist.** Rows in the range
+  that are not `A faire` stay out: a range is a way to reach a slice of the
+  backlog, never a way to re-refresh an article already handled.
+
+`--rows` requires `--tab`: only the tab-driven flow carries Sheet row numbers
+(the enseigna.fr default flow does not), and the command says so rather than
+silently returning 0 URL. A malformed or inverted range fails immediately,
+before any network call.
 
 The layout is read from that tab's config entry (`col_url`, `col_keyword`,
 `col_status`, `header_row`) — never assumed. Tabs do **not** share a geometry:

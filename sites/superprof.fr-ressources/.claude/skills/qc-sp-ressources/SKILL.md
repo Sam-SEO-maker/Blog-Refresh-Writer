@@ -3,8 +3,8 @@ name: qc-sp-ressources
 description: >-
   Checklist QC post-génération pour les articles Superprof Ressources (format
   Gutenberg maison). Vérifie les défauts récurrents avant push WP : count-up
-  numérique, H3 non isolé, "?" sur les questions, emoji en tête de FAQ, timeline
-  pour les chronologies, CSV pour les tableaux, ton "tu", pas de tiret cadratin.
+  numérique, H3 non isolé, "?" sur les questions, présence + emoji de la FAQ, timeline
+  pour les chronologies, CSV pour les tableaux, citation au bloc maison, ton "tu", pas de tiret cadratin.
   Lecture seule (relecture d'un .gutenberg.html), aucun effet de bord.
 disable-model-invocation: false
 ---
@@ -29,7 +29,7 @@ applicable sur le fichier `{slug}_refreshed.gutenberg.html`.
   (le `.gutenberg.html`, pas le HTML nu de debug qui est supprimé après génération).
 - Blog : `superprof.fr-ressources` uniquement.
 
-## Checklist (6 défauts récurrents + rappels transverses)
+## Checklist (8 défauts récurrents + rappels transverses)
 
 ### 1. Count-up = un VRAI nombre
 `countUpNumber` (attribut JSON du bloc `wp:advgb/count-up`) et le
@@ -58,8 +58,24 @@ Le `?` se place **avant** l'emoji final s'il y en a un (« … vieux continent ?
 - **Test** : pour chaque `<h2>`/`<h3>` commençant par un mot interrogatif,
   vérifier la présence d'un `?` (avant tout emoji de fin).
 
-### 4. Emoji en tête de chaque question de FAQ
-Dans la section FAQ / « Questions fréquentes », **chaque question (H3) commence
+### 4. Présence de la FAQ (bloquant)
+**Tout article Superprof Ressources DOIT avoir une FAQ**, sans condition de
+longueur. Absence de FAQ = **NEEDS_FIX**, l'article ne part pas en publication.
+
+- **H2 exact attendu** : `Les questions fréquentes ❓`.
+- **Test de présence** : chercher un `<h2>` contenant « questions fréquentes »
+  (insensible à la casse et aux accents). Attention : ne PAS se contenter d'un
+  regex ancré en début de titre, les anciens articles portent 32 intitulés
+  différents (« Foire aux questions ❓ », « ❓ FAQ sur … », « Tes questions les
+  plus fréquentes ❓ »…). Un titre qui ne correspond pas au H2 exact ci-dessus
+  mais qui EST une FAQ = signaler pour renommage, pas pour ajout.
+- **Contenu attendu** : 3 à 5 questions en H3, ancrées sur les PAA de
+  `audit_data.json` (bloc `serp`).
+- **Placement** : avant-dernier bloc, juste avant `Sources 📚`.
+- Réf. : [[project-faq-oubliee-cause-racine]].
+
+### 4bis. Emoji en tête de chaque question de FAQ
+Dans la section FAQ, **chaque question (H3) commence
 par un emoji de tête**, comme les autres H2/H3 du corps.
 
 - **Palette rotative** (varier d'une question à l'autre) : 🤔 💡 🔍 📌 🧐 📖 ❓ 💬.
@@ -114,6 +130,22 @@ shortcode se retrouve **hors de tout bloc** : `wpautop` l'enveloppe alors d'un
   est **valide** dès lors qu'il est encapsulé dans `<!-- wp:image -->` : ne pas
   le signaler, il est hors de portée de `wpautop`.
 - Réf. : `format-wordpress` § Dual Gutenberg output.
+
+### 8. Citation = bloc maison, attribution dans `<cite>`
+La citation passe **toujours** par `wp:superprof/quote-block`. Le bloc **core**
+`wp:quote` est **À CORRIGER** : il n'a pas de champ d'attribution, ce qui pousse
+à coller l'auteur dans le texte cité (« … souveraineté. (Basdevant) ») au lieu du
+`<cite>`, et il ne porte pas le style maison.
+
+- **Test 1** : `grep -c 'wp:quote\|wp-block-quote"' f` → doit valoir `0`
+  (attention : `wp-block-superprof-quote-block` ne doit pas matcher).
+- **Test 2** : dans chaque `wp:superprof/quote-block`, le texte de `quote` ne
+  contient **aucune attribution** — ni parenthèse de nom final, ni « — Auteur »,
+  ni « , selon X ». L'auteur vit dans l'attribut `citation` et dans `<cite>`.
+- **Fix** : convertir en `wp:superprof/quote-block`, sortir l'attribution du
+  texte cité vers `citation` + `<cite>`.
+- Réf. format : `references/reference-gutenberg.md` (§ Citation) via la skill
+  `sp-ressources-gutenberg`.
 
 ## Rappels transverses (déjà connus, à re-vérifier)
 

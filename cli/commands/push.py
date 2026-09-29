@@ -197,6 +197,16 @@ def push(url, site_slug, html_file, article_type, status, post_id, dry_run, forc
         if res.get("warning"):
             click.echo(f"⚠ {res['warning']} - open the post in the editor "
                        "and check the blocks.")
+        # Même statut que `finalize` : les deux commandes publient le même
+        # article et doivent laisser la Sheet dans le même état.
+        from scripts.sheets.tab_status import mark_published
+        click.echo(mark_published(site_slug, url))
+        # Même raison que le statut Sheet : `push` et `finalize` publient le
+        # même article et doivent laisser Notion dans le même état.
+        from scripts.notion.zip_attachment import attach_tables_zip_message
+        notion_msg = attach_tables_zip_message(site_slug, url, base_path=base)
+        if notion_msg:
+            click.echo(notion_msg)
     else:
         click.echo(f"❌ Publish failed: {res.get('error')}", err=True)
         raise click.exceptions.Exit(1)

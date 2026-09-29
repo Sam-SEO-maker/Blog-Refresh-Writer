@@ -76,7 +76,12 @@ def extract_tables_to_csv(
         # par le rédacteur se retrouvait doublonné par celui de `finalize`.
         # 9 doublons ainsi créés sur un lot de 10 articles, avec le risque que
         # l'intégrateur reprenne le mauvais fichier.
-        descriptor = _slug_from_headers(header_row) if rows else ""
+        # Descriptif = SUJET du tableau, lu sur le titre qui le précède.
+        # Les en-têtes de colonnes ne servent que de repli : c'est l'ancienne
+        # convention, abandonnée parce qu'elle produisait des noms illisibles.
+        descriptor = _slug_from_heading(table)
+        if not descriptor:
+            descriptor = _slug_from_headers(header_row) if rows else ""
         if not descriptor:
             descriptor = f"table_{idx}"
         # Le descriptif est raccourci : préfixé du slug d'article (souvent 40+
@@ -141,6 +146,40 @@ def _slug_from_headers(header_row: list[str]) -> str:
     # Lowercase, replace non-alphanumeric with underscores, collapse runs
     slug = re.sub(r"[^a-z0-9]+", "_", ascii_str.lower()).strip("_")
     return slug[:80]
+
+
+# Mots vides retirés du descriptif : ils allongent le nom sans le préciser.
+# Même liste que `generate_table_csv.STOP`, pour que les deux extracteurs
+# produisent le MÊME nom à partir du même titre.
+_STOP_WORDS = re.compile(
+    r"\b(les?|la|des?|du|un|une|au|aux|et|d|l|en|pour|sur|ce|cette)\b", re.I)
+_EMOJI = re.compile("[\U0001F000-\U0001FAFF←-➿⬀-⯿☀-⛿️⃣‍]")
+
+
+def _slug_from_heading(table) -> str:
+    """Descriptif tiré du titre (h2/h3) qui précède le tableau.
+
+    Convention projet (mémoire `csv-tableaux-nommage-par-slug`) : le descriptif
+    résume LE SUJET du tableau, pas ses en-têtes de colonnes — cette seconde
+    forme est explicitement « l'ancienne convention abandonnée ». Deux articles
+    différents produisaient sinon des noms proches et peu lisibles
+    (`..._tableau_niveau_dunite_ce_qui_est_partage_ce_que_cela.csv`).
+
+    Retourne "" si aucun titre ne précède le tableau : l'appelant retombe alors
+    sur les en-têtes, qui valent mieux qu'un `table_1` anonyme.
+    """
+    for prev in table.find_all_previous(["h3", "h2"]):
+        heading = prev.get_text(strip=True)
+        if not heading:
+            continue
+        s = _EMOJI.sub("", heading)
+        s = unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode("ascii")
+        s = _STOP_WORDS.sub(" ", s)
+        s = re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
+        # Cinq mots suffisent à identifier un sujet ; au-delà le nom devient
+        # illisible une fois préfixé du slug d'article.
+        return "-".join(w for w in s.split("-") if w)[:60]
+    return ""
 
 
 def _parse_table(table) -> list[list[str]]:

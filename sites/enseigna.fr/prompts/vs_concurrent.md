@@ -329,6 +329,10 @@ Cours à 25€/h → 12,50€ après crédit d'impôt ❌
 - [ ] H1 contient mot-clé principal
 - [ ] Densité mot-clé 0,8-1,2%
 - [ ] Introduction contient MC dans les 50 premiers mots
+- [ ] 2-3 mots-clés secondaires placés (1 section comparative + 1 question FAQ) —
+      choisis parmi `secondary_keywords` du contexte (SERP DataForSEO déjà
+      collectée par `cw refresh`/`cw batch`, ne pas rechercher ailleurs).
+      Détail : section « Mots-clés secondaires » de `site.md`.
 - [ ] 3-5 liens internes vers autres articles enseigna.fr
 - [ ] 3-5 liens externes vers sources autoritaires
 

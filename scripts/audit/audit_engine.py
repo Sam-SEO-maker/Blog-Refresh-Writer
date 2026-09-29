@@ -51,7 +51,9 @@ class AuditEngine:
         self.html_analyzer = HTMLAnalyzer(self.domain)
         self.gsc_analyzer = GSCAnalyzer(self.gsc_property)
         self.serp_analyzer = SERPAnalyzer()
-        self.cannibalization_detector = CannibalizationDetector(self.domain)
+        self.cannibalization_detector = CannibalizationDetector(
+            self.domain, gsc_property=self.gsc_property
+        )
         self.intent_detector = IntentDetector()
 
         # Cache du sitemap

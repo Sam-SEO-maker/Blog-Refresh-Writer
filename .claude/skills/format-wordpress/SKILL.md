@@ -85,6 +85,24 @@ Never use `—`. For parentheticals: commas, parentheses, or an en dash `–` if
 visual separator is indispensable. All blogs. Ref.
 [[feedback-no-em-dash]].
 
+## « Méta » forbidden before analyse / étude
+
+Never write **« méta-analyse »**, « méta-étude », « méta-revue » or any
+`méta-` prefix stuck on a word for a study. It reads as machine-written
+French to any human reader, and the word buys nothing the plain phrasing
+does not say better. All sites, body text and metadata alike.
+
+- ❌ « une méta-analyse de 19 études conclut que… »
+- ✅ « une étude qui compile 19 essais conclut que… »
+- ✅ « une synthèse de 19 études », « une revue de 23 travaux »,
+  « une analyse qui regroupe 19 essais cliniques »
+
+Say what the work actually did (compile, regrouper, passer en revue,
+synthétiser) and keep the study count, which is the part that carries the
+authority. This is a wording ban, not a sourcing ban: the underlying source
+stays perfectly citable, and the E-E-A-T requirement to name the journal and
+the year is unchanged. Ref. [[feedback-no-meta-prefix]].
+
 ## Links
 
 - **Anchors without `<strong>`**: `<a href="…">texte</a>`, never

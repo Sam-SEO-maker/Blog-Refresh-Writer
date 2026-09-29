@@ -2,8 +2,8 @@
 name: sp-ressources-gutenberg
 description: >-
   Rédige/refreshe un article Superprof Ressources au format Gutenberg maison
-  complet (jamais du "HTML clean"). Impose les 5 blocs obligatoires (2 infobox,
-  count-up, citation, sources), le ton "tu" + emojis, le H1 en premier bloc, et
+  complet (jamais du "HTML clean"). Impose les 7 blocs obligatoires (2 infobox,
+  count-up, citation, tableau, sources, FAQ), le ton "tu" + emojis, le H1 en premier bloc, et
   le placement/dispersion des blocs. Transformation lourde, déléguée au subagent.
   Invoquer via /sp-ressources-gutenberg.
 disable-model-invocation: true
@@ -44,7 +44,7 @@ Le fichier nu `{slug}_refreshed.html` de debug est supprimé après génération
   title. Réf. [[feedback-superprof-h1-body]].
 - **Intro** : 2 paragraphes de hook, **aucun bloc spécial**, aucune infobox.
 
-## Les 6 blocs obligatoires (dans le corps, après le 1er H2)
+## Les 7 blocs obligatoires (dans le corps, après le 1er H2)
 
 1. **Info Box bleue** (`wp:advgb/infobox`, `#e8f2ff`/`#157dfe`).
 2. **Info Box jaune** « bon réflexe » (`wp:advgb/infobox`, `#fffbf0`/`#ffcf3b`).
@@ -59,6 +59,17 @@ Le fichier nu `{slug}_refreshed.html` de debug est supprimé après génération
    le bloc vire à la bibliographie, dilue le signal d'autorité et gonfle le score
    sémantique YTG, qui compte les titres et les URL des sources comme du corps de
    texte. Garder les plus fortes, écarter les redondantes.
+
+7. **FAQ** (`wp:heading` + `wp:heading {"level":3}`) — **OBLIGATOIRE sur TOUS les
+   articles**, sans condition de longueur. H2 exact : `Les questions fréquentes ❓`.
+   **3 à 5 questions** en H3, chacune préfixée d'un emoji (palette 🤔💡🔍📌🧐📖❓💬)
+   et terminée par « ? » en tout dernier caractère. Les questions sont **ancrées sur
+   les PAA** du bloc `serp` de `audit_data.json`, jamais inventées ; écarter les PAA
+   parasites (homonymie, requête commerciale) et celles déjà traitées par un H2 de
+   l'article. Réponse de 50 à 100 mots, réponse directe en première phrase.
+   **Placement dans l'article : dernier H2 de contenu, puis la FAQ, puis le bloc
+   Sources.** La FAQ est donc l'avant-dernier bloc, Sources reste le dernier.
+   Réf. [[feedback-faq-question-emoji]].
 
 **Format AdvGB exact** (sinon Gutenberg affiche le HTML brut) : commentaires
 `<!-- wp:advgb/* -->`, **HTML sur une seule ligne**, `{uuid}` identique entre le
@@ -111,6 +122,13 @@ ces blocs. Réf. [[feedback-advgb-block-format]].
 
 - ❌ Callouts colorés `wp:html` (#4caf50/#fff9e6/#e8f4f8) — [[feedback-no-callouts-cta]].
 - ❌ Tiret cadratin `—` — [[feedback-no-em-dash]].
+- ❌ Bloc citation **core** `wp:quote` / `class="wp-block-quote"` : la citation
+  passe **toujours** par `wp:superprof/quote-block`. Le bloc core n'a pas de champ
+  d'attribution, ce qui pousse à coller l'auteur dans le texte cité
+  (« … souveraineté. (Basdevant) ») au lieu du `<cite>` ; il ne porte pas non plus
+  le style maison. L'attribution va dans l'attribut `citation` et dans `<cite>`,
+  jamais entre parenthèses dans `quote`. Format exact :
+  `references/reference-gutenberg.md` (§ Citation).
 - ❌ Formulations négatives (« pas de panique », « dans ce cours ») → toujours
   positif — [[feedback-language-tone-sp-ressources]].
 - ❌ « Consulté le [date] » dans les sources — [[feedback-no-consulte-le]].

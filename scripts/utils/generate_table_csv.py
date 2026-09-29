@@ -25,8 +25,9 @@ from pathlib import Path
 
 from bs4 import BeautifulSoup
 
-from scripts.utils.table_csv_extractor import _parse_table
+from scripts.utils.table_csv_extractor import _parse_table, extract_tables_to_csv
 from scripts.utils.output_manager import dated_batch_folder_name
+from scripts.utils.output_lookup import strip_output_suffixes
 
 from _shared.core.site_paths import SitePaths
 OUT = SitePaths().output_dir("superprof.fr-ressources")
@@ -53,42 +54,54 @@ def gutenberg_for(url: str) -> Path:
     return HTML / f"{hyphen_slug(url)}.gutenberg.html"
 
 
+# La chaîne de refresh écrit `{slug}_refreshed.gutenberg.html` (le suffixe vient
+# de `cw refresh`), pas `{slug}.gutenberg.html`. Chercher le nom nu ne trouvait
+# donc AUCUN fichier produit par le pipeline : `main()` affichait « ABSENT » sur
+# des articles pourtant présents, et il fallait reconstruire les zip à la main.
+# Les deux formes sont désormais acceptées, de la plus spécifique à la plus large.
+_GUTENBERG_PATTERNS = ("{slug}_refreshed.gutenberg.html", "{slug}.gutenberg.html")
+
+
+def find_gutenberg(slug: str, batch_folder: str) -> Path | None:
+    """Le `.gutenberg.html` de `slug` : sous-dossier daté d'abord, sinon scan."""
+    for pattern in _GUTENBERG_PATTERNS:
+        dated = HTML / batch_folder / pattern.format(slug=slug)
+        if dated.exists():
+            return dated
+    for pattern in _GUTENBERG_PATTERNS:
+        matches = sorted(HTML.rglob(pattern.format(slug=slug)))
+        if matches:
+            return matches[0]
+    return None
+
+
 def gen_for(art: str, html: str, batch_folder: str | None = None) -> list[Path]:
-    soup = BeautifulSoup(html, "html.parser")
-    tables = soup.find_all("table")
-    if not tables:
-        return []
-    batch_folder = batch_folder or dated_batch_folder_name()
-    csv_dir = CSVDIR / batch_folder
-    zip_dir = ZIPDIR / batch_folder
-    # remove stale CSV/zip for this article first
-    for p in csv_dir.glob(f"{art}_tableau_*.csv"):
+    """Écrit les CSV de `art` dans `csv/` (plat) et le zip dans `csv_zips/`.
+
+    Délègue le nommage et l'indexation à `extract_tables_to_csv`, le même
+    extracteur que celui appelé par la chaîne à la génération : deux
+    implémentations donnaient deux noms pour le même tableau, et seul celui de
+    la chaîne était inscrit dans `_index.csv`. Le lot 201-249 s'est retrouvé
+    avec six doublons byte-identiques sous des noms concurrents.
+
+    `batch_folder` est ignoré (gardé pour compatibilité d'appel) : les CSV vont
+    dans le dossier plat que `_index.csv` référence, pas dans un sous-dossier
+    daté qui échappait à l'index.
+    """
+    # Purge des CSV/zip devenus obsolètes pour cet article, sinon un tableau
+    # renommé (titre modifié au refresh) laisserait son ancien fichier derrière.
+    for p in CSVDIR.glob(f"{art}_tableau_*.csv"):
         p.unlink()
-    (zip_dir / f"{art}_tableaux.zip").unlink(missing_ok=True)
-    csv_dir.mkdir(parents=True, exist_ok=True)
-    zip_dir.mkdir(parents=True, exist_ok=True)
-    seen: dict[str, int] = {}
-    made = []
-    for table in tables:
-        rows = _parse_table(table)
-        if not rows:
-            continue
-        head = ""
-        for prev in table.find_all_previous(["h3", "h2"]):
-            head = prev.get_text(strip=True)
-            break
-        desc = subj_slug(head)
-        if desc in seen:
-            seen[desc] += 1
-            desc = f"{desc}-{seen[desc]}"
-        else:
-            seen[desc] = 1
-        path = csv_dir / f"{art}_tableau_{desc}.csv"
-        with path.open("w", newline="", encoding="utf-8-sig") as fh:
-            csv.writer(fh, quoting=csv.QUOTE_ALL).writerows(rows)
-        made.append(path)
+    (ZIPDIR / f"{art}_tableaux.zip").unlink(missing_ok=True)
+
+    made = extract_tables_to_csv(
+        html_content=html,
+        csv_dir=CSVDIR,
+        file_slug=art,
+    )
     if made:
-        with zipfile.ZipFile(zip_dir / f"{art}_tableaux.zip", "w", zipfile.ZIP_DEFLATED) as z:
+        ZIPDIR.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(ZIPDIR / f"{art}_tableaux.zip", "w", zipfile.ZIP_DEFLATED) as z:
             for p in made:
                 z.write(p, p.name)
     return made
@@ -103,14 +116,14 @@ def main() -> int:
         targets = []
         for u in urls:
             slug = hyphen_slug(u)
-            dated_path = HTML / batch_folder / f"{slug}.gutenberg.html"
-            if dated_path.exists():
-                targets.append((slug, dated_path))
-            else:
-                matches = list(HTML.rglob(f"{slug}.gutenberg.html"))
-                targets.append((slug, matches[0] if matches else dated_path))
+            found = find_gutenberg(slug, batch_folder)
+            # Pas trouvé : on garde le chemin nu attendu, pour que le message
+            # d'erreur dise quel fichier manque plutôt que de sauter la ligne.
+            targets.append((slug, found or HTML / batch_folder / f"{slug}.gutenberg.html"))
     else:
-        targets = [(p.name[: -len(".gutenberg.html")], p)
+        # `strip_output_suffixes` retire `_refreshed` en plus de `.gutenberg.html` :
+        # sans lui, le CSV s'appelait `{slug}_refreshed_tableau_...`.
+        targets = [(strip_output_suffixes(p.name), p)
                    for p in sorted(HTML.rglob("*.gutenberg.html"))]
     total = 0
     for art, path in targets:

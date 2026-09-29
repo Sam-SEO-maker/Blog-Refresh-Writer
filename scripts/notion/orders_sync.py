@@ -15,11 +15,18 @@ Trois colonnes seulement sont écrites (`Local resource URL`, `Main KW`,
 `Type of article`) : tout le reste de la base — Writer, Deadline, Price, Status,
 Keywords — est la main de la PO et n'est jamais touché.
 
+`database_id` doit être celui de la base **source**, pas celui qu'affiche l'URL
+Notion : la section « Ressources section » de la page de commandes est une *base
+liée*, et l'API refuse explicitement les bases liées (« Database retrievals do
+not support linked databases »). L'ID source se lit sur la data source elle-même
+(`data_source_id` ci-dessous) ; l'ID lié est conservé sous `linked_database_id`
+pour que personne ne le remette par erreur en croyant corriger la config.
+
 Config : bloc `notion.orders` du site.json ::
 
     "notion": {
       "orders": {
-        "database_id": "1ebd6418-695a-80ff-8cc9-db41a02d7f27",
+        "database_id": "6dc43079-14bb-430b-bd32-4db038eb1086",
         "col_url": "Local resource URL",
         "col_keyword": "Main KW",
         "col_type": "Type of article",
@@ -31,6 +38,7 @@ Config : bloc `notion.orders` du site.json ::
 
 import json
 import re
+import time
 from typing import Optional
 
 # Une ligne Notion dont le mot-clé est celui d'une AUTRE ligne de la Sheet est la
@@ -206,3 +214,162 @@ def apply_plan(site: str, plan: list[dict], kinds: set[str]) -> tuple[int, int]:
         else:
             failed += 1
     return written, failed
+
+
+# ---------------------------------------------------------------------------
+# Création de commandes (Sheet → Notion)
+# ---------------------------------------------------------------------------
+#
+# Le pont ci-dessus corrige des lignes Notion qui existent déjà. Commander un
+# lot, c'est l'étape d'avant : la Sheet porte les URLs retenues et leur mot-clé,
+# la PO attend une ligne par article dans « Resources - Main Database ».
+#
+# Trois colonnes seulement sont écrites, exactement celles que portent les
+# lignes récentes de la base : l'URL, le mot-clé, et le type « Refresh ». La
+# relation Country vient de la config (`country_page_id`) : sans elle la ligne
+# n'apparaît dans aucune vue pays, donc invisible pour la PO. Tout le reste
+# (Writer, Deadline, Price, Status, Month) reste sa main.
+#
+# `Title (Main KW)` est laissé vide à dessein : les lignes de refresh créées
+# jusqu'ici n'en portent pas, et c'est l'URL qui identifie l'article.
+
+KIND_CREATE = "create"
+KIND_EXISTS = "exists"
+
+
+def build_create_plan(
+    sheet_rows: list[dict],
+    notion_rows: list[dict],
+) -> list[dict]:
+    """Classe les lignes Sheet en « à créer » / « déjà commandée ».
+
+    L'appariement se fait sur l'URL normalisée, comme `build_plan` : une URL
+    déjà présente dans la base ne redonne jamais lieu à une commande, même si
+    son mot-clé diverge (c'est le travail de `push_keywords`, pas celui-ci).
+
+    Une ligne déjà présente porte son `keyword` Notion et son `page_id`, pour
+    que l'appelant puisse dire *pourquoi* elle est écartée et proposer une
+    correction de mot-clé plutôt qu'un doublon.
+
+    Le plan sort **dans l'ordre des lignes de la Sheet**, et non dans celui où
+    l'onglet a été lu. C'est la garantie qui manque au copier-coller manuel :
+    coller dix URLs d'un bloc les fait arriver dans un ordre arbitraire côté
+    Notion, alors que la Sheet porte un ordre de travail (la plage `--rows`
+    qu'on a décidé de commander). `apply_create_plan` crée ensuite une ligne
+    à la fois dans cet ordre, si bien que le tri par date de création de la
+    base reproduit le lot tel qu'il a été demandé.
+    """
+    known = {normalize_url(r["url"]): r for r in notion_rows if r.get("url")}
+
+    # Le tri est explicite plutôt que dépendant de l'ordre de lecture : une URL
+    # commandée hors de son rang se retrouve noyée dans la base, et c'est
+    # exactement ce qu'on cherche à supprimer.
+    ordered = sorted(sheet_rows, key=lambda r: r.get("row") or 0)
+
+    plan = []
+    seen: set[str] = set()
+    for s_row in ordered:
+        url = (s_row.get("url") or "").strip()
+        if not url:
+            continue
+        key = normalize_url(url)
+
+        # Une URL en double dans la Sheet ne doit produire qu'une commande.
+        if key in seen:
+            continue
+        seen.add(key)
+
+        n_row = known.get(key)
+        if n_row is not None:
+            plan.append({
+                **s_row,
+                "kind": KIND_EXISTS,
+                "notion_keyword": n_row.get("keyword", ""),
+                "page_id": n_row.get("page_id", ""),
+            })
+        else:
+            plan.append({**s_row, "kind": KIND_CREATE})
+    return plan
+
+
+def build_order_properties(orders: dict, url: str, keyword: str) -> dict:
+    """Construit le payload Notion d'une commande de refresh.
+
+    Isolé de l'appel réseau pour rester testable : c'est ici que se joue la
+    conformité au schéma de la base (« Type of article » est un multi_select,
+    pas un select — une valeur scalaire y est rejetée par l'API).
+    """
+    col_url = orders.get("col_url", "Local resource URL")
+    col_kw = orders.get("col_keyword", "Main KW")
+    col_type = orders.get("col_type", "Type of article")
+    type_value = orders.get("type_value", "Refresh")
+
+    props: dict = {
+        col_url: {"url": url},
+        col_type: {"multi_select": [{"name": type_value}]},
+    }
+    if keyword:
+        props[col_kw] = {"rich_text": [{"text": {"content": keyword}}]}
+
+    # Sans la relation pays, la ligne n'entre dans aucune vue marché : elle est
+    # créée mais personne ne la voit. On ne l'omet que si la config n'en donne pas.
+    country_page_id = orders.get("country_page_id")
+    col_country = orders.get("col_country", "Country")
+    if country_page_id:
+        props[col_country] = {"relation": [{"id": country_page_id}]}
+
+    return props
+
+
+# Notion date les pages à la seconde : deux créations dans la même seconde ne
+# sont plus départageables. Une seconde pleine est le plus petit espacement qui
+# garantit un `createdTime` strictement croissant.
+ORDER_SPACING_SECONDS = 1.1
+
+
+def apply_create_plan(
+    site: str,
+    plan: list[dict],
+    order_spacing_seconds: float = ORDER_SPACING_SECONDS,
+) -> tuple[int, int, list[dict]]:
+    """Crée dans Notion les lignes du plan marquées `create`.
+
+    Les créations partent **séquentiellement, dans l'ordre du plan**, espacées
+    d'au moins une seconde. Les deux conditions sont nécessaires et ont été
+    vérifiées contre la vraie base : trois lignes créées d'un bloc y portent la
+    même `createdTime` à la seconde près (Notion ne stocke pas les
+    sous-secondes) et ressortent dans un ordre arbitraire — 2, 3, 1 lors du
+    test. La vue de commande ne déclare aucun tri, donc rien en aval ne
+    rattrape un ordre perdu à l'écriture. C'est précisément le défaut du
+    copier-coller manuel que cette commande remplace : dix URLs collées d'un
+    bloc arrivent mélangées.
+
+    Le coût est d'une seconde par ligne, sur des lots de quelques dizaines :
+    négligeable face à un lot qu'il faut ensuite réordonner à la main.
+
+    Retourne (créées, échecs, échecs détaillés). Un échec n'interrompt pas le
+    lot : une commande ratée se rejoue, et laisser passer les suivantes évite
+    de redemander à l'appelant un lot déjà à moitié écrit.
+    """
+    orders = get_orders_config(site)
+    database_id = orders["database_id"]
+
+    from scripts.notion import NotionClient
+
+    client = NotionClient()
+    created = 0
+    failures: list[dict] = []
+    to_create = [item for item in plan if item["kind"] == KIND_CREATE]
+    for n, item in enumerate(to_create):
+        # Espacement : voir la docstring. Jamais avant la première ligne, pour
+        # qu'une commande unitaire reste instantanée.
+        if n:
+            time.sleep(order_spacing_seconds)
+        props = build_order_properties(
+            orders, item["url"], (item.get("keyword") or "").strip()
+        )
+        if client.create_page(database_id, props):
+            created += 1
+        else:
+            failures.append(item)
+    return created, len(failures), failures

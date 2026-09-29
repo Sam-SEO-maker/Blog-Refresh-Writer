@@ -137,3 +137,35 @@ def update_status(site_slug: str, url: str, value: str,
                 ).execute()
                 return StatusUpdate(tab=name, row=i, written=True, date=dated)
     return None
+
+
+# Statut posé après une publication WordPress réussie. « Rédigé » et non
+# « Publié » : le push met le contenu en ligne, mais la validation éditoriale
+# reste à faire — c'est elle qui fait passer la ligne à « Publié », à la main.
+PUBLISHED_STATUS = "Rédigé"
+
+
+def mark_published(site_slug: str, url: str, tab: Optional[str] = None) -> Optional[str]:
+    """Pose le statut post-publication dans la Sheet. Ne lève JAMAIS.
+
+    Appelé par `finalize` et `push` juste après un push WP réussi : sans ça, le
+    statut restait « A faire » et `batch refresh --rows` reproposait
+    indéfiniment les mêmes lignes (un lot entier a été re-préparé pour rien,
+    consommant guides YTG et audits SERP).
+
+    L'article est déjà EN LIGNE quand on arrive ici : une Sheet injoignable,
+    des credentials absents ou une URL hors onglet ne doivent pas transformer
+    une publication réussie en échec. D'où le retour d'un message au lieu d'une
+    exception, que l'appelant affiche tel quel.
+    """
+    try:
+        res = update_status(site_slug, url, PUBLISHED_STATUS, tab=tab)
+    except Exception as e:  # credentials, réseau, quota, onglet mal déclaré…
+        return f"Sheet status not written ({type(e).__name__}: {e})"
+
+    if res is None:
+        return "Sheet status not written (URL in no declared tab)"
+    if not res.written:
+        return f"Sheet status not written ({res.reason})"
+    dated = f", date = {res.date}" if res.date else ""
+    return f'Sheet: {res.tab} (row {res.row}) → "{PUBLISHED_STATUS}"{dated}'

@@ -46,14 +46,23 @@ YELLOW = {"bg": "#fffbf0", "border": "#ffcf3b"}  # Info Box Jaune
 BLUE = {"bg": "#e8f2ff", "border": "#157dfe"}    # Info Box Bleue
 
 
-def _infobox_color(suffix: str) -> dict:
-    """Couleur deduite du suffixe de classe (001/jaune -> jaune, 002/bleu -> bleue)."""
+def _infobox_color(suffix: str, seen: list | None = None) -> dict:
+    """Couleur de l'infobox, deduite du suffixe de classe quand il la porte.
+
+    `001`/`jaune` et `002`/`bleu` sont explicites et font foi. Un suffixe muet
+    (UUID, `003`, slug...) ne dit rien : on ALTERNE au lieu de retomber toujours
+    sur bleu, sinon un article dont le generateur n'a pas numerote ses blocs
+    sort avec trois infobox bleues alors que la skill impose 1 jaune + 1 bleue.
+    `seen` porte les couleurs deja posees dans le fichier courant.
+    """
     s = suffix.lower()
     if "jaune" in s or s.endswith("001"):
         return YELLOW
     if "bleu" in s or s.endswith("002"):
         return BLUE
-    return BLUE  # defaut
+    seen = seen if seen is not None else []
+    # la jaune « bon reflexe » vient en premier, puis on alterne
+    return BLUE if len(seen) % 2 else YELLOW
 
 
 def _attrs(d: dict) -> str:
@@ -96,8 +105,11 @@ def fix_infobox(text: str) -> tuple[str, int]:
         re.DOTALL,
     )
 
+    seen: list[dict] = []
+
     def repl(m: re.Match) -> str:
-        col = _infobox_color(m.group("suf"))
+        col = _infobox_color(m.group("suf"), seen)
+        seen.append(col)
         title = m.group("title").strip()
         txt = m.group("txt").strip()
         new_id = f"advgb-infobox-{uuid.uuid4()}"

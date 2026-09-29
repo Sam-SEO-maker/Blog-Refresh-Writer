@@ -14,6 +14,7 @@ Deux usages :
 from __future__ import annotations
 
 import json
+from datetime import datetime
 import re
 import sys
 from pathlib import Path
@@ -151,10 +152,47 @@ def publish_article(
     if res.get("attempts", 1) > 1:
         out["attempts"] = res["attempts"]
     if res["ok"]:
+        _log_publication(backups, pid, post.get("slug") or _slug_of(url), url)
         warning = _verify_blocks(client, pid)
         if warning:
             out["warning"] = warning
     return out
+
+
+def _slug_of(url: str) -> str:
+    last = url.rstrip("/").rsplit("/", 1)[-1]
+    return re.sub(r"\.html?$", "", last)
+
+
+def _log_publication(backups: Path, post_id: int, slug: str, url: str) -> None:
+    """Journalise CHAQUE republication, là où le backup ne note que la première.
+
+    Le backup `{id}_before.json` sauvegarde la version d'avant : il n'est écrit
+    qu'une fois (`if not bkp.exists()`), ce qui est correct pour son objet mais
+    en fait une mauvaise source de dates — un article repassé une seconde fois
+    reste daté de sa passe initiale.
+
+    Ce journal répond à l'autre question : *quand* l'article est-il parti en
+    ligne, à chaque fois. C'est ce que le rapport d'impact date, et c'est ce qui
+    manquait — sur superprof.fr-ressources, 58 articles republiés à la main
+    après un échec de `cw push` n'avaient laissé aucune trace, soit 43 % du
+    travail du mois absent du rapport sans que rien ne le signale.
+
+    Le journal reste en append-only : une ligne JSON par publication. Écrire
+    est best-effort, une erreur d'écriture ne doit jamais faire échouer une
+    publication qui a réussi.
+    """
+    try:
+        entry = {
+            "ts": datetime.now().isoformat(timespec="seconds"),
+            "post_id": post_id,
+            "slug": slug,
+            "url": url,
+        }
+        with (backups / "_publications.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
 
 
 def _verify_blocks(client: WordPressAPIClient, post_id: int) -> Optional[str]:

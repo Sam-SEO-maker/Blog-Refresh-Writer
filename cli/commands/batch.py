@@ -39,11 +39,15 @@ DEFAULT_BATCH_LIMIT = 50
                    'Without it, the site default flow is used (enseigna.fr Avis/Versus).')
 @click.option('--limit', type=int, default=DEFAULT_BATCH_LIMIT, show_default=True,
               help='Maximum number of URLs to process. Use --limit 0 for no cap.')
+@click.option('--rows', 'rows_spec', default=None,
+              help='Restrict to a Sheet row range, as displayed by Google Sheets '
+                   '(1-based, headers included): "140-180", "140:180" or "140". '
+                   'Applied BEFORE --limit, and only with --tab.')
 @click.option('--parallel', type=int, default=None,
               help='Prepare N articles concurrently (1-8, suggested 3). '
                    'Omit for the sequential behaviour. The YTG quota (15 req/min) '
                    'is enforced by a shared cross-process counter.')
-def refresh(spreadsheet_id, action, blog, tab, limit, parallel):
+def refresh(spreadsheet_id, action, blog, tab, limit, rows_spec, parallel):
     """
     Batch refresh.
 
@@ -56,10 +60,28 @@ def refresh(spreadsheet_id, action, blog, tab, limit, parallel):
     Capped at 50 URLs by default: each one costs a WP fetch + a GSC audit +
     a SERP call + a YTG guide, all paid upfront. --limit 0 lifts the cap.
 
+    --rows narrows the batch to a range of Sheet rows, using the row numbers
+    Google Sheets displays (headers included), e.g. --rows 140-180. It filters
+    before --limit, so --limit still counts within the range. Only the rows
+    that are also "A faire" are kept: the range selects, it does not override
+    the status whitelist.
+
     With --parallel N, the deterministic preparation (WP fetch, GSC, SERP, YTG
     guide, prompt composition) runs for N articles at once and writes a work
     plan; the writing itself stays with the Claude Code subagents (Max plan).
     """
+    # Validé ici, avant tout appel réseau : une plage mal écrite ou posée sans
+    # --tab doit coûter une erreur immédiate, pas un lot préparé de travers.
+    if rows_spec:
+        if not tab:
+            raise click.UsageError(
+                "--rows requires --tab: only the tab-driven flow carries Sheet row numbers."
+            )
+        try:
+            RefreshOrchestrator.parse_row_range(rows_spec)
+        except ValueError as e:
+            raise click.UsageError(str(e))
+
     if not spreadsheet_id:
         if not blog:
             raise click.UsageError("--spreadsheet-id is required when --site is not given.")
@@ -76,6 +98,8 @@ def refresh(spreadsheet_id, action, blog, tab, limit, parallel):
     if tab:
         click.echo(f"Tab:    {tab}")
     click.echo(f"Limit:  {limit if limit else 'no cap'}")
+    if rows_spec:
+        click.echo(f"Rows:   {rows_spec} (Sheet row numbers)")
     if parallel:
         click.echo(f"Parallel: {parallel} article(s) in flight")
     click.echo()
@@ -102,7 +126,8 @@ def refresh(spreadsheet_id, action, blog, tab, limit, parallel):
         click.echo("Preparing articles in parallel...")
         try:
             results = orchestrator.batch_prepare_parallel(
-                action=action, site_slug=blog, limit=limit, tab=tab, parallel=parallel
+                action=action, site_slug=blog, limit=limit, tab=tab,
+                parallel=parallel, rows_spec=rows_spec
             )
         except Exception as e:
             click.echo(f"\n❌ ERROR: {str(e)}", err=True)
@@ -130,7 +155,8 @@ def refresh(spreadsheet_id, action, blog, tab, limit, parallel):
     # Run batch refresh
     click.echo("Running batch refresh...")
     try:
-        results = orchestrator.batch_refresh(action=action, site_slug=blog, limit=limit, tab=tab)
+        results = orchestrator.batch_refresh(action=action, site_slug=blog, limit=limit,
+                                             tab=tab, rows_spec=rows_spec)
 
         click.echo(f"\n📊 RESULTS:")
         click.echo(f"  Processed:       {results['processed']}")

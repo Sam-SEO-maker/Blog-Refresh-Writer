@@ -4,6 +4,7 @@ Cannibalization Detector Module
 Détection de la cannibalisation SEO entre les pages du même site.
 """
 
+import logging
 from typing import Optional
 
 from _shared.core.models import (
@@ -20,6 +21,8 @@ from _shared.core.constants import (
     OVERLAP_HIGH,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class CannibalizationDetector:
     """
@@ -33,14 +36,20 @@ class CannibalizationDetector:
     POSITION_DIFF_STRONG = 10  # Positions d'écart pour considérer une URL "plus forte"
     TRAFFIC_RATIO_STRONG = 3  # Ratio de trafic pour considérer une URL dominante
 
-    def __init__(self, domain: str):
+    def __init__(self, domain: str, gsc_property: str = None):
         """
         Initialise le détecteur.
 
         Args:
             domain: Domaine du site à analyser
+            gsc_property: Propriété Search Console exacte (ex.
+                "https://www.superprof.fr/ressources/"). Indispensable dès que le
+                site est une propriété par préfixe d'URL : la reconstruire à partir
+                du seul domaine vise "https://superprof.fr/", propriété absente du
+                compte, et l'API répond 403. À défaut, on retombe sur le domaine.
         """
         self.domain = domain
+        self.gsc_property = gsc_property or f"https://{domain}/"
 
     def detect(
         self,
@@ -149,7 +158,7 @@ class CannibalizationDetector:
             gsc_service = gapi_build('searchconsole', 'v1', credentials=credentials)
 
             data = gsc_service.searchanalytics().query(
-                siteUrl=f"https://{self.domain}/",
+                siteUrl=self.gsc_property,
                 body={
                     "startDate": self._get_date_30_days_ago(),
                     "endDate": self._get_today(),
@@ -189,7 +198,14 @@ class CannibalizationDetector:
                 ))
 
         except Exception as e:
-            print(f"Erreur recherche cannibalisation pour '{keyword}': {e}")
+            # Un échec ici renvoie une liste vide, indistinguable d'une absence
+            # réelle de cannibalisation : on le signale donc explicitement, et on
+            # nomme la propriété interrogée, seule façon de voir un 403 de
+            # permission (mauvaise propriété) plutôt que de le lire comme "RAS".
+            logger.error(
+                "Recherche de cannibalisation impossible pour '%s' sur la propriete GSC %s : %s",
+                keyword, self.gsc_property, e,
+            )
 
         return competing
 

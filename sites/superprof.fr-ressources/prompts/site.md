@@ -359,11 +359,12 @@ L'introduction = uniquement les 2 paragraphes (hook + paragraphe 2 anti-template
 <!-- /wp:group -->
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- FAQ SECTION (Optimisée GEO) -->
+<!-- FAQ SECTION (Optimisée GEO) - OBLIGATOIRE sur TOUS les articles -->
+<!-- H2 exact : "Les questions fréquentes ❓" - 3 a 5 questions ancrees sur les PAA -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
 
 <!-- wp:heading -->
-<h2 class="wp-block-heading">Foire Aux Questions ❓</h2>
+<h2 class="wp-block-heading">Les questions fréquentes ❓</h2>
 <!-- /wp:heading -->
 
 <!-- wp:heading {"level":3} -->
@@ -871,13 +872,15 @@ Le couple <code>Cu²⁺/Cu</code> associe l'ion cuivre II et le cuivre métalliq
 - ✅ **Balise `<h1>` OBLIGATOIRE** en **premier bloc Gutenberg top-level** du corps, sous la forme : `<!-- wp:heading {"level":1} -->` + `<h1 class="wp-block-heading">[H1 éditorial]</h1>` + `<!-- /wp:heading -->`. Le H1 éditorial peut différer du `title` SEO (champ post_title WP) — c'est même recommandé (angle différent du title, optimisation CTR vs profondeur éditoriale).
 - ✅ Clear H2 → H3 → H4 hierarchy
 - ✅ Emojis after H2, before H3
-- ✅ **5 mandatory blocks** (2 Info boxes, 1 Quote, 1 Count-up, 1 Sources)
+- ✅ **6 mandatory blocks** (2 Info boxes, 1 Quote, 1 Count-up, 1 Sources, 1 FAQ)
 - ✅ **ONLY blocks from approved list**
 - ✅ MLA-formatted citations with links
 - ✅ 2-3 internal links + 3-5 external sources
 - ✅ **URLs sources spécifiques** (article/étude/rapport précis) — JAMAIS de homepages ni pages de catégorie
 - ✅ One compelling CTA
-- ✅ FAQ section (1500+ word articles)
+- ✅ **FAQ section OBLIGATOIRE** — sur **tous** les articles, sans condition de longueur.
+  H2 exact : `Les questions fréquentes ❓`. 3 à 5 questions (H3), ancrées sur les PAA
+  de la SERP. Placement : en fin d'article, **juste avant le bloc Sources**.
 - ✅ GEO elements (definitions, data, expertise)
 - ✅ Mobile-friendly semantic HTML5
 

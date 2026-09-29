@@ -311,3 +311,149 @@ def push_keywords(blog, tab, do_apply, include_reworded):
     click.echo(f"\nWritten: {written} | Failed: {failed}")
     if failed:
         sys.exit(1)
+
+
+@notion.command(name='push-orders')
+@blog_option()
+@click.option('--tab', required=True,
+              help='Sheet tab holding the URLs to order (declared in sheets.tabs).')
+@click.option('--rows', 'rows_spec', default=None,
+              help='Restrict to a Sheet row range, as displayed by Google Sheets '
+                   '(1-based, headers included): "140-180", "140:180" or "140". '
+                   'Applied BEFORE --limit.')
+@click.option('--limit', type=int, default=0, show_default=True,
+              help='Maximum number of orders to create (0 = no cap).')
+@click.option('--status', 'status_filter', default='A faire', show_default=True,
+              help='Only order rows carrying this Sheet status (empty string = any).')
+@click.option('--apply', 'do_apply', is_flag=True,
+              help='Write to Notion (otherwise dry-run plan only).')
+@click.option('--fix-keywords', is_flag=True,
+              help='Also correct "Main KW" on rows already ordered whose keyword '
+                   'diverges from the Sheet (proven copy-paste offsets and empty '
+                   'cells only, same rule as push-keywords).')
+def push_orders(blog, tab, rows_spec, limit, status_filter, do_apply, fix_keywords):
+    """Create refresh orders in Notion from a Sheet tab, matched by URL.
+
+    Reads the tab, keeps the rows you asked for, and creates one Notion row per
+    URL that is not already ordered: "Local resource URL", "Main KW" and
+    "Type of article" = Refresh, plus the Country relation so the row shows up
+    in the market view. Writer, Deadline, Price, Status and Month stay the PO's.
+
+    Dry-run by default: nothing is written without --apply.
+    """
+    from scripts.agent.orchestrator import RefreshOrchestrator
+    from scripts.audit.gsc_tab_perf import _read_tab_rows
+    from scripts.notion.orders_sync import (
+        KIND_CREATE, KIND_EXISTS, KIND_MISSING, KIND_SHIFTED,
+        apply_create_plan, apply_plan, build_create_plan, build_plan,
+        read_order_rows,
+    )
+
+    try:
+        sheet_rows = _read_tab_rows(blog, tab)
+        for row in sheet_rows:
+            row["tab"] = tab
+    except (ValueError, RuntimeError) as exc:
+        click.echo(f"ERROR: {exc}", err=True)
+        sys.exit(1)
+
+    total_read = len(sheet_rows)
+
+    # --rows filtre AVANT --limit : la plage est ce que l'utilisateur voit dans
+    # Sheets, le cap ne doit pas la déplacer.
+    if rows_spec:
+        try:
+            start, end = RefreshOrchestrator.parse_row_range(rows_spec)
+        except ValueError as exc:
+            click.echo(f"ERROR: {exc}", err=True)
+            sys.exit(1)
+        sheet_rows = [r for r in sheet_rows if start <= r["row"] <= end]
+
+    if status_filter:
+        wanted = status_filter.strip().casefold()
+        sheet_rows = [r for r in sheet_rows
+                      if (r.get("status") or "").strip().casefold() == wanted]
+
+    if limit and limit > 0:
+        sheet_rows = sheet_rows[:limit]
+
+    if not sheet_rows:
+        click.echo(
+            f"No row selected in '{tab}' ({total_read} read"
+            + (f", rows {rows_spec}" if rows_spec else "")
+            + (f", status '{status_filter}'" if status_filter else "")
+            + ")."
+        )
+        return
+
+    try:
+        notion_rows = read_order_rows(blog)
+    except (ValueError, RuntimeError) as exc:
+        click.echo(f"ERROR: {exc}", err=True)
+        click.echo(
+            "\nIf the database exists but the API cannot see it, it is not shared "
+            "with the integration: open it in Notion, ... > Connections, and add "
+            "the integration behind NOTION_TOKEN.",
+            err=True,
+        )
+        sys.exit(1)
+
+    plan = build_create_plan(sheet_rows, notion_rows)
+    to_create = [p for p in plan if p["kind"] == KIND_CREATE]
+    already = [p for p in plan if p["kind"] == KIND_EXISTS]
+    no_kw = [p for p in to_create if not (p.get("keyword") or "").strip()]
+
+    click.echo(f"Sheet '{tab}': {total_read} rows read | {len(sheet_rows)} selected")
+    click.echo(f"Notion: {len(notion_rows)} rows already ordered")
+    click.echo(f"To create:        {len(to_create)}")
+    click.echo(f"Already ordered:  {len(already)}")
+    if no_kw:
+        click.echo(f"WARNING: {len(no_kw)} selected row(s) carry no Main Keyword.")
+
+    if to_create:
+        click.echo("\n--- TO CREATE ---")
+        for item in to_create:
+            slug = item["url"].rstrip('/').split('/')[-1]
+            click.echo(f"  row {item['row']:>4}  {slug[:50]:<52} {item['keyword'][:40]!r}")
+
+    # Une URL déjà commandée dont le mot-clé diverge est le cas que
+    # push-keywords traite : on le signale ici plutôt que de créer un doublon.
+    kw_plan = []
+    if already:
+        kw_plan = [
+            p for p in build_plan(sheet_rows, [
+                {"url": a["url"], "keyword": a["notion_keyword"],
+                 "type": "", "page_id": a["page_id"]}
+                for a in already
+            ])
+            if p["kind"] in {KIND_SHIFTED, KIND_MISSING}
+        ]
+        if kw_plan:
+            click.echo(f"\n--- ALREADY ORDERED, KEYWORD DIVERGES ({len(kw_plan)}) ---")
+            for item in kw_plan:
+                slug = item["url"].rstrip('/').split('/')[-1]
+                click.echo(
+                    f"  {slug[:46]:<48} {item['keyword'][:30]!r:<34} "
+                    f"-> {item['sheet_keyword'][:30]!r}"
+                )
+            if not fix_keywords:
+                click.echo("  (left untouched; add --fix-keywords to correct them)")
+
+    if not do_apply:
+        click.echo(f"\nDry-run: {len(to_create)} order(s) would be created"
+                   + (f", {len(kw_plan)} keyword(s) corrected" if fix_keywords and kw_plan else "")
+                   + ". Re-run with --apply.")
+        return
+
+    created, failed, failures = apply_create_plan(blog, plan)
+    click.echo(f"\nCreated: {created} | Failed: {failed}")
+    for item in failures:
+        click.echo(f"  FAILED row {item['row']}: {item['url']}", err=True)
+
+    if fix_keywords and kw_plan:
+        written, kw_failed = apply_plan(blog, kw_plan, {KIND_SHIFTED, KIND_MISSING})
+        click.echo(f"Keywords corrected: {written} | Failed: {kw_failed}")
+        failed += kw_failed
+
+    if failed:
+        sys.exit(1)
